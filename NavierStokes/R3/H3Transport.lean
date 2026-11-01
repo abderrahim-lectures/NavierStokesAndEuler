@@ -86,16 +86,16 @@ theorem weak_transport_zero {w v : Space → Space} {dw dv : Fin 3 → Space →
       (fun n => ∫ x, hv.approx n x i * ⟪hw.approx n x, spatialPartial i (hw.approx n) x⟫_ℝ)
       atTop (𝓝 (∫ x, v x i * ⟪w x, dw i x⟫_ℝ)) := by
     obtain ⟨hp, hlim⟩ := tendsto_toLp_bilinear (transportProduct i)
-      (fun n => (hv.smooth n).continuous.aestronglyMeasurable) hv.memLp.1
+      (fun n => (hv.smooth n).continuous.aestronglyMeasurable) hv.memLp.aestronglyMeasurable
       hw.approx_memLp hw.memLp hav hev hcv hw.tendsto
     have h := tendsto_integral_inner hp (fun n => hw.derivative_approx_memLp n i)
-      (memLp_bilinear_bounded (transportProduct i) hv.memLp.1 hw.memLp hcv)
+      (memLp_bilinear_bounded (transportProduct i) hv.memLp.aestronglyMeasurable hw.memLp hcv)
       (hw.derivative_memLp i) hlim (hw.derivative_tendsto i)
     simpa only [transportProduct_apply, real_inner_smul_left] using! h
   obtain ⟨hp, hlimp⟩ := tendsto_toLp_bilinear realInnerBilinear
-    (fun n => (hw.smooth n).continuous.aestronglyMeasurable) hw.memLp.1
+    (fun n => (hw.smooth n).continuous.aestronglyMeasurable) hw.memLp.aestronglyMeasurable
     hw.approx_memLp hw.memLp haw hew hcw hw.tendsto
-  have hp₀ := memLp_bilinear_bounded realInnerBilinear hw.memLp.1 hw.memLp hcw
+  have hp₀ := memLp_bilinear_bounded realInnerBilinear hw.memLp.aestronglyMeasurable hw.memLp hcw
   have hlimR (i : Fin 3) : Tendsto
       (fun n => ∫ x, ‖hw.approx n x‖ ^ 2 * spatialPartial i (hv.approx n) x i)
       atTop (𝓝 (∫ x, ‖w x‖ ^ 2 * dv i x i)) := by
@@ -127,7 +127,7 @@ theorem weak_transport_zero {w v : Space → Space} {dw dv : Fin 3 → Space →
     simp only [← Finset.mul_sum, hx, mul_zero, Pi.zero_apply]
   rw [hzero, neg_zero] at hid
   rw [integral_finsetSum _ (fun i _ =>
-    integrable_transport hw.memLp hv.memLp.1 hw.derivative_memLp hcv i)]
+    integrable_transport hw.memLp hv.memLp.aestronglyMeasurable hw.derivative_memLp hcv i)]
   linarith
 
 /-- Ordinary H³ velocities have the exact transport energy cancellation.

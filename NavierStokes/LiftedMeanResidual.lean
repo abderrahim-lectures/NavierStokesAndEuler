@@ -127,7 +127,8 @@ noncomputable def liftScalar (f : D → ℝ) (p : D × ℝ) : ℝ := f p.1
 
 theorem liftDirection_smooth {U : Set D} {V : D → D} (hV : ContDiffOn ℝ ∞ V U) :
     ContDiffOn ℝ ∞ (liftDirection V) (cylinder U) :=
-  (hV.comp contDiffOn_fst (fun _ h => h.1)).prodMk contDiffOn_const
+  ((hV.comp (s := cylinder U) (t := U) (contDiffOn_fst (s := cylinder U))
+    (fun _ h => h.1))).prodMk contDiffOn_const
 
 theorem liftScalar_smooth {U : Set D} {f : D → ℝ} (hf : ContDiffOn ℝ ∞ f U) :
     ContDiffOn ℝ ∞ (liftScalar f) (cylinder U) :=

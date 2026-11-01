@@ -5491,7 +5491,7 @@ theorem fourier_L1_le_sobolevNorm (d : ℕ) (s : ℝ) (hs : (d : ℝ) < 2 * s)
     ext ξ
     simp only [Pi.smul_apply', weightedFourier_apply, smul_smul, besselWeight_neg_mul, one_smul]
   have hh := eLpNorm_smul_le_mul_eLpNorm (p := 2) (q := 2) (r := 1)
-    ((weightedFourier d s f).memLp 2 volume).1 (reciprocal_weight_memLp d s hs).1
+    ((weightedFourier d s f).memLp 2 volume).aestronglyMeasurable (reciprocal_weight_memLp d s hs).aestronglyMeasurable
   rw [hid] at hh
   have hfin : eLpNorm (besselWeight d (-s)) 2 volume *
       eLpNorm (weightedFourier d s f) 2 volume ≠ ⊤ :=
@@ -6229,7 +6229,8 @@ theorem multilinear_norm_le_coordinate_sum {F : Type*} [NormedAddCommGroup F] [N
       apply Finset.sum_le_sum
       intro w _
       apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
-      exact Finset.prod_le_prod (fun _ _ => norm_nonneg _) (fun j _ => PiLp.norm_apply_le (m j) (w j))
+      gcongr with j _
+      exact PiLp.norm_apply_le (m j) (w j)
     _ = _ := by rw [← Finset.mul_sum]; ring
 
 theorem besselWeight_one_le_coordinate_sum (d : ℕ) (ξ : Domain d) :
@@ -6498,7 +6499,7 @@ theorem localized_L2_le {F : Type*} [NormedAddCommGroup F]
     (g : 𝓢(Domain 4, ℂ)) (hsupp : Function.support g ⊆ ({z : EulerSobolev.Domain 4 | |z 0| ≤ 2 * period}))
     (B : ℝ≥0) (hb : ∀ z, ‖g z‖ ≤ B * ‖f (euclideanCover period z)‖) :
     ‖g.toLp 2‖ ≤ (B : ℝ) * (6 : ℝ) ^ (1/2 : ℝ) * ‖hf.toLp f‖ := by
-  have h := eLpNorm_localized_le period f hf.1 g hsupp B hb
+  have h := eLpNorm_localized_le period f hf.aestronglyMeasurable g hsupp B hb
   have hfin : (B : ℝ≥0∞) * (6 : ℝ≥0∞) ^ (1/2 : ℝ) *
       eLpNorm f 2 (liftMeasure period) ≠ ⊤ := by
     finiteness
@@ -6697,7 +6698,6 @@ theorem eLpNorm_wordMagnitude_le (n : ℕ) (f : LiftDomain period → F)
     simp [wordMagnitude]
   rw [he]
   simpa only [eLpNorm_norm] using eLpNorm_sum_le
-    (fun w (_ : w ∈ (Finset.univ : Finset (Fin n → Fin 4))) => (hf w).1.norm)
     (by norm_num : (1 : ℝ≥0∞) ≤ 2)
 
 theorem totalMagnitude_memLp (s : ℕ) (f : LiftDomain period → F)
@@ -6717,8 +6717,7 @@ theorem totalMagnitude_L2_le (s : ℕ) (f : LiftDomain period → F)
   have hA : eLpNorm (totalMagnitude period s f) 2 (liftMeasure period) ≤
       ∑ n ∈ Finset.range (s+1), eLpNorm (wordMagnitude period n f) 2 (liftMeasure period) := by
     rw [he]
-    exact eLpNorm_sum_le (fun n hn =>
-      (wordMagnitude_memLp period n f (hf n (by simpa using Finset.mem_range.1 hn))).1) (by norm_num)
+    exact eLpNorm_sum_le (by norm_num)
   have hB : (∑ n ∈ Finset.range (s+1), eLpNorm (wordMagnitude period n f) 2 (liftMeasure period)) ≤
       ∑ n ∈ Finset.range (s+1), ∑ w : Fin n → Fin 4,
         eLpNorm (iteratedFieldDerivative period w f) 2 (liftMeasure period) := by
@@ -6864,7 +6863,7 @@ theorem localized_directional_L2_le (n : ℕ) (i : Fin 4) (f : LiftDomain period
     (directional 4 n (EuclideanSpace.single i 1) (localized period f hf x))
     (directional_localized_support period n i f hf x) (bumpCoefficient period n) hb
   have hnorm : ‖hqt.toLp (translated period q x)‖ = ‖hq.toLp q‖ := by
-    simp only [Lp.norm_toLp, eLpNorm_translated period q hq.1]
+    simp only [Lp.norm_toLp, eLpNorm_translated period q hq.aestronglyMeasurable]
   rw [hnorm] at hA
   exact hA.trans (mul_le_mul_of_nonneg_left (totalMagnitude_L2_le period n f hfL2)
     (mul_nonneg (bumpCoefficient period n).coe_nonneg (Real.rpow_nonneg (by norm_num) _)))
@@ -7447,8 +7446,7 @@ theorem vector_eLpNorm_le_sum_coordinates (q : ℕ) (f : LiftDomain period → D
     funext x
     simp
   rw [he] at hA
-  have hB := eLpNorm_sum_le
-    (fun i (_ : i ∈ (Finset.univ : Finset (Fin q))) => (hf i).1.norm) (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+  have hB := eLpNorm_sum_le (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   simpa only [eLpNorm_norm] using hA.trans hB
 
 theorem vector_word_L2_le_sum_coordinates {s n : ℕ} (hn : n ≤ s) (q : ℕ) (w : Fin n → Fin 4)
@@ -8124,8 +8122,7 @@ theorem derivativeMagnitude_L2_le (s : ℕ) (f : Domain 3 → F)
   have hA : eLpNorm (derivativeMagnitude s f) 2 volume ≤
       ∑ j ∈ Finset.range (s+1), eLpNorm (iteratedFDeriv ℝ j f) 2 volume := by
     rw [he]
-    simpa only [eLpNorm_norm] using eLpNorm_sum_le (fun j hj =>
-      (hfL2 j (by have := Finset.mem_range.1 hj; omega)).1.norm) (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+    simpa only [eLpNorm_norm] using eLpNorm_sum_le (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   have hfin (j : ℕ) (hj : j ∈ Finset.range (s+1)) : eLpNorm (iteratedFDeriv ℝ j f) 2 volume ≠ ⊤ :=
     (hfL2 j (by have := Finset.mem_range.1 hj; omega)).eLpNorm_ne_top
   have hB := ENNReal.toReal_mono (ENNReal.sum_ne_top.2 hfin) hA
@@ -8866,7 +8863,7 @@ theorem gradientMagnitude_L2_le (b : LiftDomain period → ℂ)
   have hA : eLpNorm (gradientMagnitude period b) 2 (liftMeasure period) ≤
       ∑ i : Fin 4, eLpNorm (totalMagnitude period 5 (fieldDerivative period (standardDirection i) b)) 2 (liftMeasure period) := by
     rw [he]
-    exact eLpNorm_sum_le (fun i _ => (totalMagnitude_memLp period 5 _ (hbL2 i)).1) (by norm_num)
+    exact eLpNorm_sum_le (by norm_num)
   have hfin (i : Fin 4) (_hi : i ∈ (Finset.univ : Finset (Fin 4))) :
       eLpNorm (totalMagnitude period 5 (fieldDerivative period (standardDirection i) b)) 2 (liftMeasure period) ≠ ⊤ :=
     (totalMagnitude_memLp period 5 _ (hbL2 i)).eLpNorm_ne_top
@@ -9081,7 +9078,7 @@ theorem fieldFDeriv_L2_le_coordinate_sum (f : LiftDomain period → F)
   have he : (fun x => ∑ i : Fin 4, ‖fieldDerivative period (standardDirection i) f x‖) =
       ∑ i : Fin 4, (fun x => ‖fieldDerivative period (standardDirection i) f x‖) := by funext x; simp
   rw [he] at hA
-  have hB := eLpNorm_sum_le (fun i (_ : i ∈ (Finset.univ : Finset (Fin 4))) => (hD i).1.norm)
+  have hB := eLpNorm_sum_le
     (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   simp only [eLpNorm_norm] at hB
   have hC := ENNReal.toReal_mono (ENNReal.sum_ne_top.2 (fun i _ => (hD i).eLpNorm_ne_top)) (hA.trans hB)
@@ -9282,7 +9279,6 @@ theorem vector_word_commutator_memLp {n : ℕ} (hn : n ≤ 6) (w : Fin n → Fin
     intro x
     exact (iteratedFieldDerivative_smooth period w (fun y => b y • h y) (fun y => (hb y).smul (hh y)) x).sub
       ((hb x).smul (iteratedFieldDerivative_smooth period w h hh x))
-  refine ⟨(smoothField_continuous period _ hs).aestronglyMeasurable, ?_⟩
   exact (vector_eLpNorm_le_sum_coordinates period q _ hcoords).trans_lt
     (ENNReal.sum_lt_top.2 (fun i _ => (hcoords i).eLpNorm_lt_top))
 
@@ -9775,14 +9771,14 @@ theorem finite_set_integral_norm_le (f : LiftDomain period → Vector3)
     (∫ x in K, ‖f x‖ ∂liftMeasure period) ≤
       (eLpNorm f 2 (liftMeasure period)).toReal * (liftMeasure period K).toReal ^ (1/2 : ℝ) := by
   have hA := eLpNorm_le_eLpNorm_mul_rpow_measure_univ (p := (1 : ℝ≥0∞)) (q := 2)
-    (by norm_num) (hf.restrict K).1
+    (by norm_num) (hf.restrict K).aestronglyMeasurable
   norm_num only [ENNReal.toReal_one, ENNReal.toReal_ofNat, one_div, inv_one, Measure.restrict_apply_univ] at hA
   have hB : eLpNorm f 2 ((liftMeasure period).restrict K) * (liftMeasure period K)^(1/2 : ℝ) ≤
       eLpNorm f 2 (liftMeasure period) * (liftMeasure period K)^(1/2 : ℝ) :=
     mul_le_mul' (eLpNorm_mono_measure f (Measure.restrict_le_self (s := K))) le_rfl
   have hfin : eLpNorm f 2 (liftMeasure period) * (liftMeasure period K) ^ (1/2 : ℝ) ≠ ⊤ := by finiteness
   have hC := ENNReal.toReal_mono hfin (hA.trans hB)
-  rw [integral_norm_eq_lintegral_enorm (hf.restrict K).1, ← eLpNorm_one_eq_lintegral_enorm]
+  rw [integral_norm_eq_lintegral_enorm (hf.restrict K).aestronglyMeasurable, ← eLpNorm_one_eq_lintegral_enorm]
   convert hC using 1
   simp only [ENNReal.toReal_mul, ← ENNReal.toReal_rpow]
 

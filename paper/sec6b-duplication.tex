@@ -1,0 +1,97 @@
+\subsection{How much of this duplicates the libraries?}
+\label{sec:dup}
+
+It is natural to suspect that a development of this size, written quickly against a large
+library, consists largely of re-proved library facts. We tested the suspicion, and it is
+false, but the measurement is worth reporting because the way in which it is false is the
+interesting part.
+
+\paragraph{Name overlap.} Extracting every \lean{theorem}, \lean{lemma}, \lean{def},
+\lean{abbrev} and \lean{instance} name from the three trees gives 43{,}101 declarations
+here, 170{,}982 in \Mathlib{} (at the pinned commit) and 237{,}302 in \TauCeti{}.
+
+\begin{center}\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+comparison & declarations & share of the development \\
+\midrule
+exact name also in \Mathlib{} & 438 & 1.0\% \\
+exact name also in \TauCeti{} & 531 & 1.2\% \\
+base name also in \Mathlib{} & 829 & 1.9\% \\
+base name also in \TauCeti{} & 899 & 2.1\% \\
+base name in either & 1{,}159 & 2.7\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Name matching is a weak proxy and it cuts both ways: the project names things
+descriptively (\lean{jetPolynomial}, \lean{majorant\_mul}, \lean{rising\_mono}), so semantic
+duplication is under-counted.
+
+\paragraph{Where the duplication actually is.} The infrastructure layer is the answer. Of
+the 2{,}659 files, eighteen---3{,}777 lines, 382 declarations, 0.6\% of the lines---rebuild
+standard analysis: smooth cutoffs with all-order bounds, the exponential edge
+$\exp(-c/x^2)$, zero extension across it, finite-order jet bookkeeping, the Banach space
+$C^k([-1,1];E)$, differentiation under the integral sign (twice, in incompatible forms),
+Schwartz density, $L^2$ mollification, word-lattice Sobolev spaces, and the derivative gain
+of the heat kernel. That is where \TauCeti{} overlaps, and that is the entire target set for
+a library migration. The remaining 99.4\% of the code has no counterpart in any library,
+because it is the proof: the profiles, the dyadic charts, the reserved patches, the pulse
+covariances, the correction stages, the packet frames.
+
+\paragraph{Duplication of the development with itself.} A different and more serious
+question is internal duplication, and here the answer is less comfortable: 74 modules are
+unreachable from any entry point (Section~\ref{sec:cleanup}), eleven of them literal copies
+of other modules placed in a separate namespace so that a heavy proof could be re-elaborated
+under different heartbeat limits, and the same argument is proved twice in
+\file{SmoothParameterIntegral} and \file{CompactParameterIntegral} because the two files
+were written independently. Internal duplication, not library duplication, is the real
+technical debt here.
+
+\paragraph{Measuring it properly.} The right instrument is a type-level comparison, not a
+name-level one: \Mathlib{} ships \file{Mathlib/Tactic/DuplicateDecls.lean} (Gerbscheid),
+which normalises every theorem type by erasing universes and sorting binders, then hashes
+the result, so that two theorems count as duplicates when their statements agree up to
+binder order, binder information and universe levels. It cannot be used as shipped---its
+declarations are not \lean{public} in the module system, so an importing file cannot call
+them---and we vendored the forty lines of its core into a probe.
+
+We validated the probe before trusting it, and the validation is the reason the numbers
+below are worth reporting. Two controls were placed in a separate module: \lean{plantedA}
+and \lean{plantedB}, the theorems $n=n$ and $m=m$, which duplicate each other; and
+\lean{plantedAddComm}, stating $a+b=b+a$, which duplicates \Mathlib's \lean{Nat.add\_comm}.
+The probe found exactly two groups involving a project declaration: \lean{[plantedA,
+plantedB]} and \lean{[Nat.add\_comm, plantedAddComm]}. It sees what it claims to see.
+
+Running it over 22 of the repository's modules---the infrastructure layer and the first
+\file{NavierStokes} files, i.e.\ deliberately sampling where duplication with a library is
+most likely---gives:
+
+\begin{center}\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+theorem-duplicate groups in the environment & 2{,}401 \\
+project theorems passing the filters & 944 \\
+groups involving a project theorem & 2 (both planted controls) \\
+groups involving a project theorem, controls removed & \textbf{0} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+So not a single theorem in the sample restates a library theorem, even up to binder
+reordering. This does not contradict the infrastructure finding above: the duplication that
+exists is duplication of \emph{concepts}, not of statements. \lean{SmoothCutoffs.one\_le\_growth}
+is not any \Mathlib{} lemma; it is a bespoke weighted bound whose role a library would
+express differently. The cost of that is real, but it is not measured by counting shared
+theorems, and the migration effort should be directed by the concept-level audit of
+Section~\ref{sec:replace}, not by a duplicate-declaration report.
+
+\paragraph{The probe as a regression check.} Both the probe and its controls are kept in
+the repository, in \file{scripts/DuplicateProbe.lean} and
+\file{scripts/PlantedControls.lean}; they are outside every library target, so they cost
+nothing at build time. Rerunning the probe after a refactoring is cheap and it is the only
+mechanical defence against the drift that the \TauCeti{} roadmap warns about: a standard
+notion said in the project's own dialect grows a redundant theory of lemmas the library
+already proves. The probe measures the narrow, syntactic form of that drift. The conceptual
+form---reimplementing a notion with a different statement---is what the table in
+Section~\ref{sec:replace} catalogues, and no automated tool replaces reading the files.

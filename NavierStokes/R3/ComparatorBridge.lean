@@ -67,7 +67,7 @@ def globalSolutionOfComparator {ν : ℝ} {f : VelocityField}
     intro t ht
     constructor
     · simpa only [SquareIntegrableAtTime, fromComparator, norm_norm] using!
-        (memLp_two_iff_integrable_sq_norm (h.integrable t ht).1).mp (h.integrable t ht)
+        (memLp_two_iff_integrable_sq_norm (h.integrable t ht).aestronglyMeasurable).mp (h.integrable t ht)
     · change (1 / 2 : ℝ) * (∫ x : Space, ‖v x t‖ ^ 2) ≤ max 0 (E / 2)
       have hb := (hE t ht).le
       have hm := le_max_right 0 (E / 2)

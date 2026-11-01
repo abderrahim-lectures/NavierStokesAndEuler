@@ -414,12 +414,14 @@ theorem initial_context_overlap (B N : ℕ) :
     (initialAtlas N).ContextOverlap standardRegion.carrier (commonContext B) := by
   intro n hn m hm k hk
   exact ActualInitialCoherence.context_band B
+    (V := overlap h standardRegion.carrier n m)
     (fun s hs => standardRegion.time_pos s hs.1) n m k hk
 
 theorem initial_gauge_overlap (N : ℕ) :
     (initialAtlas N).GaugeOverlap standardRegion.carrier commonGauge := by
   intro n hn m hm k hk
   exact ActualInitialCoherence.commonGauge_on
+    (V := overlap h standardRegion.carrier n m)
     (fun s hs => standardRegion.time_pos s hs.1) n m k hk
 
 theorem initial_rank_overlap (N : ℕ) :

@@ -27,7 +27,8 @@ def rescale {V : Type*} [SMul ℝ V] (a b : ℝ) (g : SpaceTime → V) : SpaceTi
 theorem rescale_smooth_on {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
     {times : Set ℝ} {g : SpaceTime → V} (hg : ContDiffOn ℝ ∞ g (times ×ˢ univ))
     (a b : ℝ) : ContDiffOn ℝ ∞ (rescale a b g) (times ×ˢ univ) := by
-  exact (hg.comp (contDiff_fst.prodMk (contDiff_snd.const_smul b)).contDiffOn
+  exact (hg.comp (s := times ×ˢ univ) (t := times ×ˢ univ)
+    (contDiff_fst.prodMk (contDiff_snd.const_smul b)).contDiffOn
     (fun z hz => ⟨hz.1, mem_univ _⟩)).const_smul a
 
 theorem rescale_smooth {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]

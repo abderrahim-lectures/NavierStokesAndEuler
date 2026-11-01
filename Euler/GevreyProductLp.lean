@@ -32,7 +32,7 @@ theorem finite_domination {ι : Type*} (μ : Measure X) (I : Finset ι)
   have hn : eLpNorm f 2 μ ≤ ∑ i ∈ I, eLpNorm (H i) 2 μ := by
     apply (eLpNorm_mono_ae_real (Eventually.of_forall hdom)).trans
     rw [he]
-    exact eLpNorm_sum_le (fun i hi => (hH i hi).aestronglyMeasurable) (by norm_num)
+    exact eLpNorm_sum_le (by norm_num)
   have hr := ENNReal.toReal_mono (ENNReal.sum_ne_top.mpr (fun i hi => (hH i hi).eLpNorm_ne_top)) hn
   rwa [ENNReal.toReal_sum (fun i hi => (hH i hi).eLpNorm_ne_top)] at hr
 

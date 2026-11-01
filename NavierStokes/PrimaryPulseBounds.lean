@@ -510,8 +510,10 @@ theorem pathFamily_polynomial (D : PhaseJetBounds.Domain ι Q)
   intro t
   rw [SmoothPathFamily.iteratedFDeriv_pathFamily_apply (D.carrier i) (V i)
     (D.isOpen i) (hV i) (hI i) (F i) (hF.smooth i) hp]
-  have hprod : (∏ j, ‖v j‖) ≤ 1 := Finset.prod_le_one (fun _ _ => norm_nonneg _)
-    (fun j _ => hv j)
+  have hprod : (∏ j, ‖v j‖) ≤ 1 := by
+    have hnn : (∏ j, ‖v j‖₊) ≤ 1 :=
+      Finset.prod_le_one (fun j _ => by exact_mod_cast hv j)
+    simpa using NNReal.coe_le_coe.mpr hnn
   exact ((iteratedFDeriv ℝ k (fun q => F i (q, t)) p).le_opNorm v).trans
     ((mul_le_mul (hm i p t ⟨hp, hI i t.2⟩ k hk) hprod
       (Finset.prod_nonneg (fun _ _ => norm_nonneg _)) hC0).trans_eq (mul_one _))

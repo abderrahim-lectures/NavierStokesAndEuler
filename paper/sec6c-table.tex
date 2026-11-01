@@ -1,0 +1,110 @@
+\subsection{The eighteen infrastructure files, one by one}
+\label{sec:infra-table}
+
+Table~\ref{tab:infra} is the concrete form of the claim made above. It lists every file of
+the infrastructure layer with its size, what it builds, the closest library artefact, and a
+verdict. The verdicts are: \emph{free} if the project's statement is the library's statement
+and a one-line restatement suffices; \emph{partial} if the library covers part of the file or
+covers it under hypotheses that have to be discharged; \emph{keep} if the object is
+project-specific and a library would not want it; and \emph{notion} if the library has a
+theory of the same name but a different object, so that replacement is a redesign rather
+than a substitution.
+
+\begin{center}\scriptsize
+\begin{longtable}{@{}p{0.235\textwidth}rrp{0.205\textwidth}p{0.215\textwidth}p{0.09\textwidth}@{}}
+\caption{The eighteen infrastructure files, what they build, the closest library artefact and
+a verdict.}\label{tab:infra}\\
+\toprule
+file & lines & decls & what it builds & library counterpart & verdict \\
+\midrule
+\endfirsthead
+\toprule
+file & lines & decls & what it builds & library counterpart & verdict \\
+\midrule
+\endhead
+\file{NavierStokes/}\newline\file{SmoothCutoffs} & 309 & 35 & smooth cutoffs on balls and
+  strips, all-order derivative bounds, time switch & \Mathlib{} \lean{ContDiffBump},
+  \lean{expNegInvGlue}; \TauCeti{} \file{BumpFunction/Cutoff} & free \\
+\file{NavierStokes/}\newline\file{FlatCutoff} & 204 & 26 & the edge $\exp(-c/x^2)$ and its
+  inverse-power family $x^{-\ell}\exp(-c/x^2)$ & \Mathlib{} \lean{expNegInvGlue}
+  (\emph{without} the $c$-family) & partial \\
+\file{NavierStokes/}\newline\file{FlatZeroExtension} & 243 & 21 & zero extension of a jet
+  across such an edge & none & keep \\
+\file{NavierStokes/}\newline\file{JetBounds} & 311 & 27 & finite-order bounds on
+  \lean{iteratedFDeriv}, Leibniz profile & \Mathlib{} \lean{norm\_iteratedFDerivWithin\_mul\_le};
+  \TauCeti{} \file{IteratedFDeriv/Basic} & partial \\
+\file{NavierStokes/}\newline\file{WeightedClasses} & 517 & 37 & the weighted band-indexed
+  coefficient classes $W_\alpha,M_\alpha,S_\alpha$ & none & keep \\
+\file{NavierStokes/}\newline\file{ClosedIntervalCk} & 337 & 34 & the Banach space
+  $C^k([-1,1];E)$ as a closed submodule of jet data & none (\TauCeti{}
+  \file{IteratedDerivWithin} is pointwise, not a space) & keep \\
+\file{NavierStokes/}\newline\file{ClosedIntervalJetAlgebra} & 293 & 31 & polynomial
+  expressions in jets and their bounds & \Mathlib{} \lean{MvPolynomial} plus a bespoke
+  interval-arithmetic interpreter & partial \\
+\file{NavierStokes/}\newline\file{SmoothParameterIntegral} & 315 & 20 & all-orders
+  differentiation under an integral over an arbitrary measure space & \TauCeti{}
+  \file{Calculus/ParametricIntegral} covers the compact-parameter case & partial \\
+\file{NavierStokes/}\newline\file{SchwartzCompactApproximation} & 180 & 20 & quantitative
+  density of compactly supported smooth functions in $\mathcal S$, and the consequence that
+  compact tests determine a tempered distribution & \Mathlib{} \lean{BumpFunction/SmoothApprox};
+  \TauCeti{} \file{SchwartzSpace/*} & partial \\
+\file{Euler/}\newline\file{OrdinaryMollifier} & 164 & 26 & $L^2$-valued mollification along
+  an isometric action, with rate & \TauCeti{} \file{Sobolev/Mollification} proves the
+  weak-derivative identity instead & notion \\
+\file{Euler/}\newline\file{CylinderSobolevSpace} & 145 & 25 & Sobolev spaces of all orders on
+  a cylinder as a lattice of derivative words, complete by construction & \TauCeti{}
+  \file{Sobolev/*} and \Mathlib{} \lean{BesselPotentialSpace} are Fourier-based and
+  predicate-level & notion \\
+\file{Euler/}\newline\file{SobolevWordLevel} & 54 & 5 & the level structure of that lattice &
+  none & keep \\
+\file{Euler/}\newline\file{SobolevSmoothApproximation} & 109 & 11 & smooth approximation in
+  the word-lattice topology & \TauCeti{} \file{Sobolev/Mollification/Interior} (different
+  carrier) & notion \\
+\file{Euler/}\newline\file{SobolevHeatKernel} & 156 & 11 & heat gain of $k$ derivatives with
+  an explicit parabolic majorant & \TauCeti{} \file{PDE/HeatKernel/Smoothing} (different
+  carrier) & partial \\
+\file{Euler/}\newline\file{CompactParameterIntegral} & 74 & 5 & $C^\infty$ parametric
+  integral over a compact interval, from \emph{local} boundedness of the derivatives &
+  \TauCeti{} \file{Calculus/ParametricIntegral} asks for bounds \emph{uniform in $x$}, which
+  joint smoothness does not give; only the \lean{ContDiffOn} variant applies & partial \\
+\file{Euler/}\newline\file{LpBochnerRealization} & 88 & 6 & $L^2(\mu;L^2(\nu))\cong
+  L^2(\mu\otimes\nu)$ with equality of norms & \Mathlib{} \lean{MeasureTheory.Lp},
+  \lean{integrable\_prod\_iff}; the identification is a short consequence & free \\
+\file{Euler/}\newline\file{FiniteGradeAlgebra} & 109 & 10 & a truncated graded algebra with
+  evaluation and a convolution inverse & \Mathlib{} \lean{Polynomial} evaluation and
+  \lean{Finset.sum\_range} algebra & partial \\
+\file{NavierStokes/}\newline\file{AppendixHeatResults} & 177 & 12 & rising factorials,
+  $\Gamma(b+n)$ recursion, endpoint jets of the radial heat profile & \Mathlib{}
+  \lean{ascPochhammer}, \lean{Real.Gamma\_add\_one}; \lean{rising} is now
+  \lean{(ascPochhammer\ \mathbb{R}\ n).eval\ b} & \textbf{done} \\
+\midrule
+total & 3{,}777 & 382 & & & \\
+\bottomrule
+\end{longtable}
+\end{center}
+\noindent The verdict \lean{free} means a one-line restatement suffices; \lean{partial}
+means the library covers part of the file; \lean{notion} means the library has a different
+object of the same name; \lean{keep} means no library would want it.
+
+\paragraph{What the table says.} Three substitutions have since been made, each verified by a green build.
+\file{AppendixHeatResults} is done: its rising factorial \emph{is} Mathlib's
+\lean{ascPochhammer} evaluated, with \lean{rising\_succ} and \lean{rising\_pos} now one-line
+applications and only the monotonicity lemmas still by induction. In \file{R3/PairedKernelBound}
+a duplicate of \lean{lpNorm\_one\_eq\_integral\_norm} was deleted, the file using the copy in
+\file{R3/LpNormTools}. And in \file{R3/PressureFlux} the identity
+$\|\mathrm{d}f(\lambda y.\,y{:}\mathbb{C})\| = \|\mathrm{d}f\|$ had been proved by an
+antisymmetry argument over the operator norm in fifteen lines; it is now six, because
+\Mathlib{} has \lean{LinearIsometry.norm\_toContinuousLinearMap\_comp} and
+\lean{Complex.ofRealCLM} is \lean{Complex.ofRealLI.toContinuousLinearMap} by \lean{rfl}. The
+net line change is $+3$ across the three files: what was removed is a bespoke proof, not a
+statement. That leaves one file free, nine partial, three notion-level and four to keep. (The parametric-integral file was recorded as
+free in an earlier draft of this table; checking its hypotheses against \TauCeti's showed
+that the library theorem needs bounds uniform in the differentiation variable, which the
+project's joint-smoothness hypothesis does not supply, so it moved to \emph{partial}.) Nothing in the layer is large: the whole of it is
+3{,}777 lines, which is 0.6\% of the development, and the single free replacement is 88 lines. The conclusion is that a library migration of this repository is worth doing for
+the two free files and the nine partial ones, and is \emph{not} worth doing for the
+word-lattice Sobolev spaces: those exist because the classical object was not available in
+the library at the time, and replacing them now would change the meaning of the estimates
+that the Euler development is made of. The honest intermediate step is the bridge lemma
+\lean{SobolevSpace\ q\ →\ MemSobolev\ q\ 2}, which would connect the project's carrier to
+\Mathlib's predicate and let the two theories be used side by side; it is not proved here.

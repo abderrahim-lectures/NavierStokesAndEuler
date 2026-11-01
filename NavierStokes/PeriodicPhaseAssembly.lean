@@ -272,9 +272,12 @@ theorem phase_contDiff (g : Geometry) (w : ClockWindow) {A B : P → ℝ}
 theorem phase_contDiffOn (g : Geometry) (w : ClockWindow) {A B : P → ℝ} {U : Set P}
     (hA : ContDiffOn ℝ ∞ A U) (hB : ContDiffOn ℝ ∞ B U) :
     ContDiffOn ℝ ∞ (phase g w.cutoff A B) (U ×ˢ univ) :=
-  (hA.comp contDiffOn_fst (fun _ hx => hx.1)).sub
-    (((periodicClock_contDiff g w).comp_contDiffOn contDiffOn_snd).mul
-      (hB.comp contDiffOn_fst (fun _ hx => hx.1)))
+  (hA.comp (s := U ×ˢ univ) (t := U) (contDiffOn_fst (s := U ×ˢ univ))
+      (fun _ hx => hx.1)).sub
+    (((periodicClock_contDiff g w).comp_contDiffOn
+        (contDiffOn_snd (s := U ×ˢ univ))).mul
+      (hB.comp (s := U ×ˢ univ) (t := U) (contDiffOn_fst (s := U ×ˢ univ))
+        (fun _ hx => hx.1)))
 
 omit [NormedAddCommGroup P] [NormedSpace ℝ P] in
 theorem phase_periodic (g : Geometry) (χ : Plane → ℝ) (A B : P → ℝ)
@@ -723,7 +726,8 @@ theorem transportPhase_contDiffOn {Φ : P × Plane → ℝ} {φ : Q → P} {U : 
     (hmap : MapsTo φ V U) (gap : ℕ) (K Kr : ℝ) :
     ContDiffOn ℝ ∞ (transportPhase Φ φ gap K Kr) (V ×ˢ univ) :=
   contDiffOn_const.mul (hΦ.comp
-    ((hφ.comp contDiffOn_fst (fun _ hx => hx.1)).prodMk
+    ((hφ.comp (s := V ×ˢ univ) (t := V) (contDiffOn_fst (s := V ×ˢ univ))
+      (fun _ hx => hx.1)).prodMk
       ((coverPower gap).contDiff.comp_contDiffOn contDiffOn_snd))
     (fun _ hx => ⟨hmap hx.1, mem_univ _⟩))
 

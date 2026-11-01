@@ -1,0 +1,202 @@
+\section{The formalized statements}
+\label{sec:results}
+
+This section states exactly what the repository proves. Every statement below is a
+transcription of a Lean declaration; we give the declaration name so that a reader can
+check the transcription against the source. Throughout, $u$ denotes a velocity field
+and $p$ a pressure field on spacetime; the Lean encoding uses
+\[
+  \texttt{Space} := \R^3 = \texttt{EuclideanSpace}\ \R\ (\texttt{Fin}\ 3),
+  \qquad
+  \texttt{SpaceTime} := \R \times \R^3,
+\]
+with time as the \emph{first} coordinate. Vector-valued fields are functions
+$\R\times\R^3 \to \R^3$ and are total; every regularity, support and integrability
+condition that a paper would leave implicit is an explicit hypothesis.
+
+\subsection{The differential operators}
+\label{sec:operators}
+
+The repository does not use a bundled ``solution'' structure with an opaque equation.
+All operators are defined from the Fr\'echet derivative, in
+\file{NavierStokes/ProblemStatement.lean}:
+\begin{align*}
+  \partial_t u(t,x) &:= \mathrm{d}f(\lambda s.\, u(s,x))(t)(1), \\
+  (u\cdot\nabla)u\,(t,x) &:= \mathrm{d}f(\lambda y.\, u(t,y))(x)\bigl(u(t,x)\bigr), \\
+  \nabla\cdot u\,(t,x) &:= \textstyle\sum_{i<3} \mathrm{d}f(\lambda y.\,u(t,y))(x)(e_i)_i, \\
+  \Delta u\,(t,x) &:= \textstyle\sum_{i<3} \mathrm{d}f\bigl(\lambda y.\, \mathrm{d}f(\lambda z.\,u(t,z))(y)(e_i)\bigr)(x)(e_i), \\
+  \nabla p\,(t,x) &:= \textstyle\sum_{i<3} \mathrm{d}f(\lambda y.\,p(t,y))(x)(e_i)\, e_i,
+\end{align*}
+where $e_0,e_1,e_2$ are \lean{coordinateVector i}, the unit coordinate vectors. The
+residual at viscosity $\nu$ is then
+\begin{equation}
+  \mathcal{R}_\nu(u,p) \;=\; \partial_t u + (u\cdot\nabla)u - \nu\,\Delta u + \nabla p,
+  \label{eq:residual}
+\end{equation}
+and the equation is imposed \emph{pointwise at interior times} $0<t<1$ (respectively
+$t>0$), with the initial condition imposed separately at $t=0$. This distinction
+matters: no extension of $u$ to negative times is differentiated at the boundary, and
+the differentiability hypothesis at time zero is taken relative to the physical
+half-domain $\{0\le t<1\}\times\R^3$.
+
+\subsection{Blowup for forced Navier--Stokes on $\R^3$}
+\label{sec:r3}
+
+\begin{theorem}[Whole-space breakdown; \lean{NavierStokesR3.ProblemStatement.breakdownStatement},
+  proved as \lean{NavierStokesR3.theorem_1_1} in \file{NavierStokes/R3/Theorem.lean}]
+\label{thm:ns-r3}
+For every $\nu>0$ there exist a velocity field $u$, a pressure $p$, a force $f$ and a
+compact set $K\subseteq\R^3$ such that:
+\begin{enumerate}[label=\textup{(i\arabic*)}]
+  \item $u$ and $p$ are $C^\infty$ on $\{0\le t<1\}\times\R^3$, and $f$ is
+        $C^\infty$ on $\{t\ge 0\}\times\R^3$;
+  \item $f$ has compact support in spacetime, contained in $\{t>0\}$;
+  \item $u(\cdot,t)$ and $p(\cdot,t)$ are supported in the same fixed compact $K$ for
+        every $0\le t<1$;
+  \item $u(0,x)=0$ for all $x$;
+  \item $\nabla\cdot u(t,x)=0$ for $0\le t<1$;
+  \item $\mathcal{R}_\nu(u,p)(t,x)=f(t,x)$ for $0<t<1$;
+  \item there is $E\ge 0$ with $\int_{\R^3}|u(t,x)|^2\dd x \le 2E$ for every
+        $0\le t<1$ (and each such slice is integrable);
+  \item for every $M$ and every $\delta>0$ there are $t,x$ with $0<t<1$,
+        $1-\delta<t$ and $|u(t,x)|>M$;
+  \item there is \emph{no} velocity field $v$ and pressure $P$, $C^\infty$ on
+        $\{t\ge 0\}\times\R^3$ with $v(0,\cdot)=0$ and $\nabla\cdot v=0$, solving
+        $\mathcal{R}_\nu(v,P)=f$ for all $t>0$ and with uniformly bounded kinetic
+        energy $\sup_{t\ge0}\int|v(t,x)|^2\dd x<\infty$.
+\end{enumerate}
+\end{theorem}
+
+Points (i)--(vi) are the fields \lean{CandidateProperties} of
+\file{NavierStokes/R3/ProblemStatement.lean}; (vii) and (viii) are the components
+\lean{energy_bounded} and \lean{speed_unbounded} of the same structure; (ix) is
+\lean{¬ Nonempty (GlobalFiniteEnergySolution ν f)}. The competitor in (ix) is
+deliberately given \emph{no} support, periodicity, pressure-growth or energy-inequality
+assumption beyond smoothness, the equation, incompressibility, the zero datum and a
+uniform bound on the kinetic energy: it is exactly the class in which the theorem
+claims non-existence. The energy in (vii) is required at every time of the half-open
+interval $[0,1)$, including $t=0$, which is why square integrability is part of the
+statement rather than an afterthought.
+
+\begin{remark}[Two refinements carried by the formal proof]
+\label{rem:r3-refine}
+The repository proves two strengthenings that are not visible in the statement of
+Theorem~\ref{thm:ns-r3}. First, \lean{theorem_1_1_with_initial_rest} produces the same
+witnesses with $u(t,x)=p(t,x)=0$ for all $|t|\le 3/8$: the flow is at rest for a full
+symmetric time interval around zero, so the force is switched on smoothly out of the
+zero state. Second, \lean{theorem_1_1_with_dissipation} proves the energy balance satisfied by the
+same constructed fields: with
+$\mathrm{diss}(t)=\sum_{i}\int_{\R^3}|\partial_i u(t,x)|^2\dd x$ and
+$F(T)=\int_0^T\|f(t)\|_{L^2}\dd t$, it shows that $f$ is interval-integrable,
+$\mathrm{diss}$ is integrable on $[0,1)$, and for every $T\in[0,1)$
+\[
+  \|u(T)\|_{L^2}^2 + 2\nu\int_0^T \mathrm{diss}(t)\dd t \;\le\; F(T)^2 ,
+\]
+so the constructed solution satisfies the energy inequality with equality of constants and,
+in particular, has finite total dissipation before the singular time. This is the
+formal counterpart of Lemma~10.4 of the source paper, and it is a statement about the
+\emph{localized} fields, obtained from the equation rather than from the construction.
+\end{remark}
+
+\subsection{Blowup on the torus}
+\label{sec:torus}
+
+The torus is \emph{not} modelled by a quotient type. It is modelled by
+$\Z^3$-periodic functions on $\R^3$: a field $g$ satisfies \lean{UnitSpatialPeriodsOn}
+on a time set $T$ if $g(t,x+e_i)=g(t,x)$ for all $t\in T$, $x\in\R^3$ and
+$i\in\{0,1,2\}$. Support statements are then intersections with the closed fundamental
+cube, so that a nonzero periodic lift is never claimed to have compact support on
+$\R^3$; that would be false.
+
+\begin{theorem}[Periodic breakdown; \lean{NavierStokes.PeriodicPaper.breakdownStatement},
+  proved as \lean{NavierStokes.PeriodicPaper.periodic_corollary} in
+  \file{NavierStokes/PeriodicPaperTheorem.lean}]
+\label{thm:ns-torus}
+For every $\nu>0$ there exist $u,p,f$ and a compact $K$ contained in the interior of the
+fundamental cube such that:
+\begin{enumerate}[label=\textup{(i\arabic*)}]
+  \item $u,p$ are $C^\infty$ on $\{0\le t<1\}\times\R^3$ and $f$ is $C^\infty$ on
+        $\{t\ge0\}\times\R^3$;
+  \item $u(\cdot,t)$ and $p(\cdot,t)$ are unit-periodic in space for $0\le t<1$, and
+        $f$ is unit-periodic for $t\ge0$;
+  \item $u(\cdot,t)$ and $p(\cdot,t)$ have support meeting the closed fundamental cube
+        in $K$, and $f$ vanishes identically for $t\le 0$ and for all $t\ge T_0$ for
+        some $T_0<\infty$;
+  \item $u(0,\cdot)=0$, $\nabla\cdot u=0$ for $0\le t<1$, and
+        $\mathcal{R}_\nu(u,p)=f$ for $0<t<1$;
+  \item for every $M$ and $\delta>0$ there are $t,x$ with $0<t<1$, $1-\delta<t$ and
+        $|u(t,x)|>M$;
+  \item there is no globally defined, spatially periodic, $C^\infty$ solution of
+        $\mathcal{R}_\nu(v,P)=f$ with $v(0,\cdot)=0$ and $\nabla\cdot v=0$.
+\end{enumerate}
+\end{theorem}
+
+The proof of Theorem~\ref{thm:ns-torus} is not a re-run of the whole construction.
+\lean{periodic_corollary} takes the $\R^3$ witnesses of
+Theorem~\ref{thm:ns-r3}, compresses them by an affine parabolic scaling to bring their
+support into the fundamental domain, and then reads the resulting fields as periodic
+lifts; the ``periodization'' of the equations is the content of
+\file{NavierStokes/PeriodizePDE.lean}. The scaling is a parabolic rather than a plain
+similarity precisely because the equation is not scale invariant at fixed viscosity; the
+clock is preserved, so the singular time stays exactly one.
+
+\subsection{Blowup for the unforced Euler equation}
+\label{sec:euler}
+
+The Euler development is built on the definitions of the \emph{Formal Conjectures}
+project, adapted verbatim in \file{Euler/SolutionDefinitions.lean}, with velocity and
+pressure taking position \emph{before} time. The reference development supplies two
+distinct conclusions: the Beale--Kato--Majda-flavoured non-continuation statement, and a
+quantitative statement that exhibits the maximal lifespan as a genuine object with the
+blowup properties.
+
+\begin{theorem}[Euler non-continuation; \lean{Euler.euler\_breakdown\_R3} in
+  \file{Euler/Solution.lean}]
+\label{thm:euler-bkm}
+There is $u_0\in C^\infty(\R^3;\R^3)$ with $\nabla\cdot u_0=0$, whose every spatial
+derivative decays faster than any polynomial, and such that there is no pair $(v,p)$
+of $C^\infty$ fields on $\{t\ge0\}$ solving
+$\partial_t v+(v\cdot\nabla)v=-\nabla p$, $\nabla\cdot v=0$, $v(\cdot,0)=u_0$, with
+finite uniformly bounded energy.
+\end{theorem}
+
+\begin{theorem}[Quantitative Euler singularity;
+  \lean{Euler.exists\_compact\_smooth\_euler\_singularity} in \file{Euler/Solution.lean}]
+\label{thm:euler-quant}
+There are $u_0\in C^\infty(\R^3;\R^3)$ with $\nabla\cdot u_0=0$, $u_0\ne0$,
+$\operatorname{supp}u_0$ compact, and $T_*\in(0,1]$ such that
+\begin{enumerate}[label=\textup{(i\arabic*)}]
+  \item for every $T>0$, a smooth solution on $[0,T]$ with datum $u_0$ exists if and only
+        if $T<T_*$;
+  \item the velocity stays bounded in $L^2$ uniformly on $[0,T_*)$;
+  \item for every $T<T_*$, $\sup_{0\le t\le T}\|v(t)\|_{C^1}<\infty$ and
+        $\int_0^T\|\operatorname{curl}v(t)\|_\infty\dd t<\infty$, while
+        \[
+          \limsup_{t\uparrow T_*}\|\nabla v(t)\|_\infty=\infty,
+          \qquad
+          \int_0^{T_*}\|\operatorname{curl} v(t)\|_\infty\dd t=\infty .
+        \]
+\end{enumerate}
+\end{theorem}
+
+Theorem~\ref{thm:euler-quant}, in the form \lean{exists_compact_smooth_euler_singularity}
+of \file{Euler/EulerSingularity.lean}, is stated in terms of an explicit structure
+\lean{FiniteLifespan A} which carries the maximal solution: a family of smooth solutions
+on $[0,T]$ for $T<T_*$, their compatibility, and the assertion that no solution exists on
+$[0,T]$ for $T\ge T_*$. The point of this formulation is that ``$T_*$ is the maximal
+lifespan'' is a \emph{proved property of a constructed object}, not a hypothesis: the
+bulk of the Euler development is a construction of that object
+(\file{Euler/EulerProof.lean} is the 20{,}755-line core) together with the identification
+of its norms with the pointwise suprema of the actual velocity, derivative and curl.
+
+\begin{remark}[Statement fidelity]
+\label{rem:fidelity}
+The definitions of \file{Euler/SolutionDefinitions.lean} and
+\file{ComparatorChallenges/Euler.lean} are copied from the Formal Conjectures
+formalization of the Millennium problem statement and are not modified. Consequently the
+Euler results are proved for the reference statement itself, and not for a convenient
+variant of it; the same holds for the Navier--Stokes alternatives \textbf{(C)} and
+\textbf{(D)}, whose reference definitions are imported by
+\file{NavierStokes/ComparatorSolution.lean}. Section~\ref{sec:verification} reports the
+axiom audit that makes this claim checkable.
+\end{remark}

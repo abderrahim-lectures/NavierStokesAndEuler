@@ -782,19 +782,21 @@ theorem correction_family_contDiffOn {n : ℕ} (P : Patch) {S : Set ℝ} {c : �
     ContDiffOn ℝ ∞ (fun z : ℝ × ℝ => correction P (c z.1) z.2) (S ×ˢ univ) := by
   apply ContDiffOn.sum
   intro j _
-  exact ((contDiffOn_pi.mp hc j).comp contDiffOn_fst (fun z hz => hz.1)).mul
+  exact ((contDiffOn_pi.mp hc j).comp (s := S ×ˢ univ) (t := S)
+    contDiffOn_fst (fun z hz => hz.1)).mul
     ((bump_contDiff P j).comp contDiff_snd).contDiffOn
 
 theorem physicalU_family_contDiffOn (P : Patch) {S : Set ℝ} {A G : ℝ → ℝ} {c : ℝ → Coeff}
     (hA : ContDiffOn ℝ ∞ A S) (hG : ContDiffOn ℝ ∞ G S) (hc : ContDiffOn ℝ ∞ c S) :
     ContDiffOn ℝ ∞ (fun z : ℝ × ℝ => physicalU P (A z.1) (G z.1) (c z.1) z.2) (S ×ˢ univ) :=
-  (hG.comp contDiffOn_fst (fun _ hz => hz.1)).add
-    ((hA.comp contDiffOn_fst (fun _ hz => hz.1)).mul (correction_family_contDiffOn P.leftHalf hc.fst))
+  (hG.comp (s := S ×ˢ univ) (t := S) contDiffOn_fst (fun _ hz => hz.1)).add
+    ((hA.comp (s := S ×ˢ univ) (t := S) contDiffOn_fst (fun _ hz => hz.1)).mul
+      (correction_family_contDiffOn P.leftHalf hc.fst))
 
 theorem physicalE_family_contDiffOn (P : Patch) (b : ℝ) {S : Set ℝ} {A : ℝ → ℝ} {c : ℝ → Coeff}
     (hA : ContDiffOn ℝ ∞ A S) (hc : ContDiffOn ℝ ∞ c S) :
     ContDiffOn ℝ ∞ (fun z : ℝ × ℝ => physicalE P b (A z.1) (c z.1) z.2) (S ×ˢ Ioi 0) := by
-  apply (hA.comp contDiffOn_fst (fun z hz => hz.1)).mul
+  apply (hA.comp (s := S ×ˢ Ioi 0) (t := S) contDiffOn_fst (fun z hz => hz.1)).mul
   apply ContDiffOn.add
   · exact contDiffOn_snd.rpow_const_of_ne (fun z hz => ne_of_gt hz.2)
   · exact (correction_family_contDiffOn P.rightHalf hc.snd).mono (fun z hz => ⟨hz.1, mem_univ _⟩)

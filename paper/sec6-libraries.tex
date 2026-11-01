@@ -1,0 +1,274 @@
+\section{The library migration}
+\label{sec:libraries}
+
+The repository was written against Lean \texttt{v4.34.0-rc2} and the \Mathlib{} commit that
+toolchain fixes. This section documents its migration to the current library generation and
+to \TauCeti{}, and reports what the move cost.
+
+\subsection{The target pin}
+\label{sec:pin}
+
+Two upstream constraints determine the possible targets. \TauCeti{} pins a toolchain and a
+\Mathlib{} commit, and Lake refuses to build a package whose dependencies disagree about the
+toolchain. At the time of writing \TauCeti{} is on Lean \texttt{v4.36.0-rc1} with \Mathlib{}
+at \texttt{2cabef97}; the newest \Mathlib{} release is \texttt{v4.36.0-rc2}, whose toolchain
+no \TauCeti{} release uses. We therefore chose the pin that is simultaneously the newest
+\TauCeti{} and the newest \Mathlib{} that \TauCeti{} supports:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+component & old pin & new pin \\
+\midrule
+Lean & \texttt{v4.34.0-rc2} & \texttt{v4.36.0-rc1} \\
+\Mathlib{} & \texttt{v4.34.0-rc2} & \texttt{2cabef97b63d} \\
+\TauCeti{} & --- & \texttt{b8cbc774e9a4} \\
+Comparator & \texttt{v4.34.0-rc2} & dropped (see below) \\
+\bottomrule
+\end{tabular}
+\end{center}
+The \lean{rev} fields are full commit hashes rather than branch names, so that
+\lean{lake update} is deterministic; \lean{lakefile.toml} records the reason for each pin in
+a comment.
+
+\paragraph{Comparator.} Comparator is released per toolchain, and its releases stop at
+\Lean{} \texttt{v4.35.0}, one toolchain below the one \TauCeti{} requires. Since Comparator is
+needed only for the independent re-checking of the four headline theorems and not for their
+proofs, we removed it from the dependency set. The two challenge modules and their JSON
+configurations remain in the repository unchanged---they import only \Mathlib{}---so
+independent checking is still possible with a Comparator installation matching whichever
+toolchain is in use. This is the one place where the migration cost functionality rather
+than just time, and it is recorded in \file{MIGRATION.md}.
+
+\subsection{Practical obstacles}
+\label{sec:obstacles}
+
+The migration is not a version bump; it is a small research project in code archaeology. The
+obstacles we met, in decreasing order of the number of sites they affected, were the
+following.
+
+\paragraph{\lean{MemLp} became a definition.} In the pinned \Mathlib{}, \lean{MemLp f p μ}
+is \emph{defined} to be \lean{eLpNorm f p μ < ∞} rather than a structure with a
+measurability field and a finiteness field. Consequently:
+\begin{itemize}
+\item field projections \lean{hf.1}, \lean{hf.2} must become the lemmas
+      \lean{hf.aestronglyMeasurable} and \lean{hf.eLpNorm\_lt\_top};
+\item anonymous-constructor terms \lean{⟨hmeas, hbound⟩} of type \lean{MemLp f p μ} must
+      become the finiteness proof alone;
+\item any \lean{obtain ⟨hmeas, hfin⟩ := hf} must be rewritten.
+\end{itemize}
+
+\paragraph{Measurability hypotheses moved in and out of the \texorpdfstring{$L^p$}{Lp} API.}
+This is the subtle one. \lean{eLpNorm} used to be $0$ for non-a.e.-strongly-measurable
+functions, which made monotonicity lemmas unconditional; it is now $\infty$ in that case,
+so \lean{eLpNorm\_mono\_ae} gained an explicit measurability hypothesis and
+\lean{eLpNorm\_one\_eq\_lintegral\_enorm} became a lemma \emph{with} a hypothesis. In the
+other direction, \lean{eLpNorm\_add\_le} \emph{lost} its two measurability arguments and now
+takes only the exponent hypothesis \lean{1 ≤ p}. A proof that says
+\lean{eLpNorm\_add\_le hf.aestronglyMeasurable hg.aestronglyMeasurable hp1} must become
+\lean{eLpNorm\_add\_le hp1}, while a proof that says \lean{eLpNorm\_mono\_ae h} must become
+\lean{eLpNorm\_mono\_ae hf h}---possibly with a case split, because the measurability of the
+dominated function is genuinely no longer automatic. One project lemma
+(\lean{lpNorm\_mono\_of\_norm\_le\_ae}) acquired a proof by cases on measurability for exactly
+this reason, and a hypothesis of the corresponding library statement was thereby
+strengthened: a semantic change forced by the library, not a syntactic one.
+
+\paragraph{One change is not a repair but a gap.} The most interesting failure
+found by the migration is in \file{Euler/EulerProof.lean}. Five proofs there apply
+\lean{eLpNorm\_le\_mul\_eLpNorm\_of\_ae\_le\_mul} to an \emph{iterated field derivative}, with no
+measurability hypothesis in hand, because under the old convention \lean{eLpNorm} was $0$ on
+functions that are not a.e.\ strongly measurable and the inequality was therefore free. Under
+the pinned library \lean{eLpNorm} is $\infty$ there, so the lemma needs measurability of that
+derivative, and the development has no lemma producing it: the smoothness it proves is
+smoothness of the \emph{lifted local field}, not measurability of the derivative-valued map on
+the domain. The proofs are not syntactically broken; they are correct only under an
+assumption the library no longer makes, and closing them means proving a measurability lemma
+that the development never needed. This is the clearest instance in the whole migration of a
+library change that alters what has to be proved rather than how it is written, and it is why
+the residual error count in \file{EulerProof} should not be read as a measure of remaining
+effort.
+
+\paragraph{Explicit exponent hypotheses became a structure.}
+\lean{eLpNorm'\_le\_eLpNorm'\_mul\_eLpNorm'} (the interpolation inequality for
+\lean{eLpNorm'}) previously took the three exponent facts as separate arguments; it now takes
+a single \lean{Real.HolderTriple p q r}, and its two measurability arguments moved from the
+front to the middle of the argument list. Interpolation sites must be rewritten to build the
+structure:
+\begin{lstlisting}
+have hpqr : Real.HolderTriple (p.toReal / a) (q.toReal / b) r.toReal :=
+  { inv_add_inv_eq_inv := by simpa only [one_div] using hab.symm
+    left_pos := div_pos hp hpt ha
+    right_pos := div_pos hq hqt hb }
+simpa using eLpNorm'_le_eLpNorm'_mul_eLpNorm'
+  (fun x y : ℝ => x * y) 1
+  (hf.norm.aemeasurable.pow_const a).aestronglyMeasurable
+  (hg.norm.aemeasurable.pow_const b).aestronglyMeasurable
+  (Filter.Eventually.of_forall fun x => by simp [nnnorm_mul])
+  hpqr
+\end{lstlisting}
+
+\paragraph{Hidden arguments became explicit and vice versa.}
+\lean{contDiff\_apply} now takes the differentiability order implicitly, so every application
+in a fixed-order context must say \lean{(n := ∞)}; \lean{norm\_iteratedFDeriv\_fderiv}
+changed from ``$\|D^n(\mathrm{d}f)\| = \|D^{n+1}f\|$'' to a form in which the dependent
+function is implicit, so a two-argument application must be replaced by an explicitly typed
+\lean{have}; \lean{Finset.prod\_le\_prod} now demands a \lean{MulLeftMono} instance that
+$\mathbb{R}$ does not have, so a monotonicity proof for a product of factors of the form $b+k$
+must be restated so that positivity of the factors is available.
+
+\paragraph{The module system.}
+\Lean{} \texttt{v4.36} introduces the module system: a file opened with \lean{module} may
+\lean{public import} and hides its non-public declarations. \Mathlib{} and \TauCeti{} have
+adopted it, and Lean emits a warning for every import of a module file from a file that has
+not declared itself a module:
+\begin{lstlisting}
+warning: NavierStokes/R3/ComparisonGronwall.lean: imports
+  `Mathlib.Analysis.Calculus.Deriv.MeanValue` from package `mathlib`, which is designed for
+  use with the module system; consider adding `module` to the start of this file
+\end{lstlisting}
+The warnings are harmless, but they are also loud: at this scale they run to several per
+file. Adding a \lean{module} header to every file makes them disappear and puts the
+repository on the same footing as its dependencies; a \lean{module} file cannot import a
+non-\lean{module} file, so the change is all-or-nothing.
+
+\subsection{\TauCeti{}: what it supplies}
+\label{sec:tauceti}
+
+\TauCeti{} is a downstream analysis library organised along the same lines as \Mathlib{}
+itself: 2{,}793 files under \file{TauCeti/Analysis/}, of which the areas relevant here are
+Sobolev theory (142 files: weak derivatives, Bessel potentials, embeddings, mollification,
+Poincaré, Rellich--Kondrachov, trace theory on Lipschitz domains), PDE (161 files:
+fundamental solutions, Green functions, the heat kernel with its semigroup and Duhamel
+potential, Caccioppoli and Harnack estimates), distributions (56 files: Schwartz space,
+Littlewood--Paley, tempered distributions, Fourier multipliers), Fourier theory (42 files)
+and parametric integration. It is built on \Mathlib{} and uses the module system throughout.
+
+For this repository the interesting entry points are these.
+
+\begin{center}\small
+\begin{longtable}{@{}p{0.36\textwidth}p{0.58\textwidth}@{}}
+\toprule
+\TauCeti{} module & relevance \\
+\midrule
+\file{Analysis/Calculus/ParametricIntegral} & $C^n$ regularity of compact-parameter
+integrals, iterated derivatives under an interval integral with individually bounded
+derivatives; replaces the project's \file{SmoothParameterIntegral} and
+\file{CompactParameterIntegral} \\
+\file{Analysis/Sobolev/Mollification} & the mollification identity
+$D_v(u\star\rho) = u'\star\rho$ for weak derivatives, followed by density \\
+\file{Analysis/Sobolev/Embedding}, \file{Morrey}, \file{LipschitzDomain/*} & Sobolev
+embeddings, trace and extension theorems on Lipschitz domains \\
+\file{Analysis/PDE/HeatKernel/*} & heat kernel, semigroup, smoothing, Duhamel potential
+--- the analytic core of the exterior swirl field \\
+\file{Analysis/Distribution/SchwartzSpace/LittlewoodPaley} & frequency localisation at the
+level the dyadic charts use informally \\
+\file{Analysis/Fourier/MihlinHormander} & Fourier-multiplier bounds for the pressure
+recovery \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\subsection{What can actually be replaced}
+\label{sec:replace}
+
+It is easy to overstate this. The project's analysis is not organised the way a textbook
+library is organised: its Sobolev spaces are word lattices over a cylinder designed to be
+complete \emph{as defined}, its cutoffs are built with explicit all-order bounds tied to
+reserved logarithmic patches, and its heat kernel is tied to a specific radial similarity
+ansatz. Replacing such objects wholesale would be a redesign of the development, not a
+migration. What is genuinely replaceable divides into three classes.
+
+\emph{Replaceable now, because the statement matches.} Compact-parameter integration is the
+clearest case: \TauCeti{} proves exactly the regularity statement the project needs and
+proves it for a general compact parameter space with a weight, which is strictly more general
+than the project's version. Smooth functions with prescribed support are another: the project
+constructs its own bump and cutoffs from $\exp(-1/x)$, while both \Mathlib{} and \TauCeti{}
+already provide them.
+
+\emph{Replaceable after a statement change.} The project defines Sobolev spaces of all
+orders on a cylinder as a lattice of words to obtain completeness without a completion; a
+library Sobolev space is a predicate on distributions. Moving to the library notion would
+change the meaning of the objects the estimates are about, so this is a refactoring of the
+Euler development rather than a substitution, and it should be done (if at all) only with the
+estimates in view.
+
+\emph{Not replaceable today.} The weighted band-indexed coefficient classes $W_\alpha$,
+$M_\alpha$, $S_\alpha$ of the Navier--Stokes construction, the pulse envelopes and their
+logarithmic edge weights, and the exponent ledger \eqref{eq:sigma} are bespoke objects of
+this proof. A library would not want them.
+
+\subsection{Outcome of the migration}
+\label{sec:migration-results}
+
+The dependency move itself is complete: the repository resolves, \Mathlib{}'s oleans are
+fetched from the cache (9{,}057 files, about 4.8\,GB of build artifacts, under a minute on
+a warm connection), and \TauCeti{}'s own modules build from its published cache (5{,}521
+jobs, nine seconds). What remains is the repair of the project's own 644k lines against the
+new API.
+
+We worked through the failures reported by the compiler file by file. The sites we
+repaired, and the shape of each repair, are the following.
+
+\begin{center}\small
+\begin{longtable}{@{}p{0.36\textwidth}p{0.58\textwidth}@{}}
+\toprule
+file & repair \\
+\midrule
+\file{R3/LpNormTools} & \lean{MemLp} projections; \lean{eLpNorm\_add\_le} lost its
+  measurability arguments; \lean{eLpNorm\_one\_eq\_lintegral\_enorm} gained one; one lemma
+  reproved by cases on measurability \\
+\file{R3/PairedKernelBound} & the same, plus \lean{eLpNorm\_smul\_le\_mul\_eLpNorm}
+  reordered (the scalar field comes first) and \lean{eLpNorm\_norm} needing its hypothesis \\
+\file{R3/WeightedInterpolation} & \lean{Real.HolderTriple} construction; a measurability
+  hypothesis added to the interpolation lemma and threaded to its call site;
+  \lean{eLpNorm\_eq\_eLpNorm'} now needs its function named explicitly \\
+\file{R3/PressureFunctionals}, \file{R3/H3Products} & \lean{MemLp} projections replaced by
+  \lean{hf.aestronglyMeasurable} \\
+\file{R3/ComparisonCutoffs} & \lean{norm\_iteratedFDeriv\_fderiv} restated with an explicit
+  type; \lean{Finset.prod\_le\_prod} replaced by \lean{gcongr} \\
+\file{AppendixHeatResults} & the same \lean{gcongr} replacement for a product of linear factors \\
+\file{R3/ComparisonFiniteEnergy} & \lean{MemLp} projections (\lean{hf.1} to
+  \lean{hf.aestronglyMeasurable}), including on a difference \lean{hf.sub\ hg} \\
+\file{EdgeWeightJets}, \file{WeightedRadialPrimitive} & \lean{Finset.prod\_le\_one} needs
+  \lean{MulLeftMono}, which $\mathbb{R}$ lacks; replaced by writing the product of equal
+  factors as a power and using \lean{pow\_le\_one\textsubscript{0}} \\
+\file{SmoothCovariance}, \file{SquaredPartition} & \lean{contDiff\_apply} and
+  \lean{contDiff\_apply\_apply} now take the order implicitly and the family explicitly:
+  \lean{contDiff\_apply\ \mathbb{R}\ (fun\ \_\ =>\ \mathbb{R})\ i} \\
+\file{TauCetiBridge} (new) & imports \TauCeti{} and restates its parametric-integration
+  theorems at project names; requires \lean{[CompleteSpace\ F]} on the codomain \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\paragraph{Status.} \textbf{The \file{NavierStokes} library builds.} Under the pinned
+toolchain, \lean{lake build NavierStokes} completes with 19{,}645 jobs and exit code $0$ and no
+diagnostics of any kind: all 816 modules elaborate. The two challenge modules of
+\file{ComparatorChallenges} build as well (18{,}136 jobs), so of the repository's three
+targets only \file{Euler} fails. Fifteen rounds of repair took it from 228
+modules to the whole library, and no theorem statement was modified --- every change is a
+proof, an explicit implicit argument, or, in exactly one place, a measurability hypothesis
+added to a private helper lemma (\lean{lpNorm\_ofReal}) because the library lemma it calls now
+demands one.
+
+Two things made the difference, and both are worth recording for anyone else doing this.
+First, \emph{read the goals, do not guess them}: inserting \lean{trace\_state} before each
+failing line showed that the set a \lean{mono} expects is usually an intermediate one
+manufactured by an enclosing \lean{apply}, not the theorem's own set. On that evidence the
+eleven failures in \file{NominalProfile} fell in one pass, after two earlier attempts had
+guessed wrong and made the file worse. Second, \emph{the two \lean{mono} lemmas do not name
+their sets alike}:
+\[
+  \lean{IntegrableOn.mono\_set}\ (h : \lean{IntegrableOn}\ f\ t\ \mu)\ (hst : s \subseteq t)
+  \quad\text{and}\quad
+  \lean{ContDiffOn.mono}\ (h : \lean{ContDiffOn}\ f\ s)\ \{t\}\ (hst : t \subseteq s),
+\]
+so the target is \lean{s} in the first and \lean{t} in the second. Seven of the eleven sites
+needed \lean{(s\ :=\ ...)} and four \lean{(t\ :=\ ...)}; applying one convention to all of them
+does nothing and looks as though the argument had been ignored.
+
+The \file{Euler} library is a different story and we do not dress it up. Its 1{,}839 modules
+stand at 42 elaborated; \file{Euler/EulerProof} rejects 28 sites, five of which need a
+measurability lemma the development never had (see below), three are \lean{case hf}
+hypotheses, two are \lean{ContinuousAdd} instances that no longer resolve, and eighteen are
+one-offs spread over 20{,}755 lines.
+

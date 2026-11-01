@@ -40,7 +40,7 @@ theorem freeU_contDiff (F : Profile) : ContDiff ℝ ∞ (freeU F) := by
     unfold FiveProfileMoments.u FiveProfileMoments.correction
     apply ContDiff.sum
     intro i _
-    exact ((contDiff_apply ℝ ℝ i).comp contDiff_fst.snd.fst).mul
+    exact ((contDiff_apply ℝ (fun _ => ℝ) i).comp contDiff_fst.snd.fst).mul
       ((FiveProfileMoments.bump_contDiff NominalProfile.resetPatch.leftHalf i).comp contDiff_snd.fst.exp)
   exact ((contDiff_const.mul contDiff_snd.snd).add
     ((contDiff_const.sub (OutgoingSchedule.sigma_contDiff.comp
@@ -53,7 +53,7 @@ theorem freeE_contDiff (F : Profile) : ContDiff ℝ ∞ (freeE F) := by
     unfold FiveProfileMoments.e FiveProfileMoments.correction
     apply ContDiff.sum
     intro i _
-    exact ((contDiff_apply ℝ ℝ i).comp contDiff_fst.snd.snd).mul
+    exact ((contDiff_apply ℝ (fun _ => ℝ) i).comp contDiff_fst.snd.snd).mul
       ((FiveProfileMoments.bump_contDiff NominalProfile.resetPatch.rightHalf i).comp contDiff_snd.fst.exp)
   exact ((NominalProfile.idealAmplitude_smooth F).comp contDiff_snd.snd).mul
     ((contDiff_snd.fst.div_const 10).exp.add hb)

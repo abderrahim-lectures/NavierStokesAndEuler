@@ -1,4 +1,5 @@
 import NavierStokes.R3.ComparisonSetup
+import NavierStokes.R3.LpNormTools
 import Mathlib.MeasureTheory.Function.LpSeminorm.CompareExp
 import Mathlib.MeasureTheory.Group.Integral
 import Mathlib.MeasureTheory.Integral.Prod
@@ -41,14 +42,6 @@ private instance fourThirds_four_holder :
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-omit [NormedSpace ℝ E] in
-/-- The real `L¹` comparison norm is the integral of the pointwise norm. -/
-theorem lpNorm_one_eq_integral_norm {f : Space → E}
-    (hf : AEStronglyMeasurable f volume) :
-    comparisonLpNorm 1 f = ∫ x, ‖f x‖ := by
-  rw [comparisonLpNorm, eLpNorm_one_eq_lintegral_enorm,
-    integral_norm_eq_lintegral_enorm hf]
-
 /-- Nonnegative constant factors pass through the real comparison norm. -/
 theorem lpNorm_const_smul_of_nonneg {f : Space → E} {p : ℝ≥0∞}
     {D : ℝ} (hD : 0 ≤ D) :
@@ -75,12 +68,11 @@ theorem integrable_smul_and_integral_norm_le
   have hbound : eLpNorm (fun y => k y • r y) 1 volume ≤
       eLpNorm k (4 / 3) volume * eLpNorm r 4 volume :=
     eLpNorm_smul_le_mul_eLpNorm (𝕜 := ℝ) (p := 4 / 3) (q := 4) (r := 1)
-      hr.aestronglyMeasurable hk.aestronglyMeasurable
+      hk.aestronglyMeasurable hr.aestronglyMeasurable
   have hmul : MemLp (fun y => k y • r y) 1 volume :=
-    ⟨hk.aestronglyMeasurable.smul hr.aestronglyMeasurable,
-      hbound.trans_lt (ENNReal.mul_lt_top hk.eLpNorm_lt_top hr.eLpNorm_lt_top)⟩
+    hbound.trans_lt (ENNReal.mul_lt_top hk.eLpNorm_lt_top hr.eLpNorm_lt_top)
   refine ⟨memLp_one_iff_integrable.mp hmul, ?_⟩
-  rw [← lpNorm_one_eq_integral_norm hmul.aestronglyMeasurable]
+  rw [← LpNormTools.lpNorm_one_eq_integral_norm (memLp_one_iff_integrable.mp hmul)]
   simpa only [comparisonLpNorm, ENNReal.toReal_mul] using
     ENNReal.toReal_mono (ENNReal.mul_ne_top hk.eLpNorm_ne_top hr.eLpNorm_ne_top) hbound
 
@@ -103,11 +95,11 @@ theorem dominated_section_memLp_and_lpNorm_le
     calc
       eLpNorm m (4 / 3) volume ≤
           eLpNorm (fun y => k (x - y)) (4 / 3) volume :=
-        eLpNorm_mono_ae_real hbound
+        eLpNorm_mono_ae_real hm hbound
       _ = eLpNorm k (4 / 3) volume :=
         eLpNorm_comp_measurePreserving hk.aestronglyMeasurable
           (measurePreserving_reflect_translate x)
-  exact ⟨⟨hm, hbound'.trans_lt hk.eLpNorm_lt_top⟩,
+  exact ⟨hbound'.trans_lt hk.eLpNorm_lt_top,
     ENNReal.toReal_mono hk.eLpNorm_ne_top hbound'⟩
 
 /-- Hölder for one section dominated by a translated `L^(4/3)` majorant. -/
@@ -235,7 +227,7 @@ theorem norm_paired_kernel_le
           (section_integrable_and_integral_norm_le hK hk hr hbound x).2)
         (norm_nonneg (g x))
     _ = comparisonLpNorm 1 g * comparisonLpNorm (4 / 3) k * comparisonLpNorm 4 r := by
-      rw [integral_mul_const, ← lpNorm_one_eq_integral_norm hg.aestronglyMeasurable]
+      rw [integral_mul_const, ← LpNormTools.lpNorm_one_eq_integral_norm hg]
       exact (mul_assoc _ _ _).symm
 
 /-- Explicit constants in the kernel bound pass through the pairing bound. -/
@@ -276,7 +268,7 @@ theorem norm_convolution_pairing_le
     (hr : MemLp r 4 volume) (hg : Integrable g volume) :
     ‖∫ x, g x • ∫ y, k (x - y) • r y‖ ≤
       comparisonLpNorm 1 g * comparisonLpNorm (4 / 3) k * comparisonLpNorm 4 r := by
-  simpa only [comparisonLpNorm, eLpNorm_norm] using
+  simpa only [comparisonLpNorm, eLpNorm_norm k hk.aestronglyMeasurable] using
     norm_paired_kernel_le (K := fun x y => k (x - y))
       (hkm.comp (measurable_fst.sub measurable_snd)) hk.norm hr hg
       (fun _ _ => le_rfl)

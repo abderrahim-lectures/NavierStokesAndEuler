@@ -180,8 +180,9 @@ theorem cutoff_iteratedFDeriv_le {R : ℝ} (hR : 0 < R) (n : ℕ) (x : Space) :
     _ ≤ ‖iteratedFDeriv ℝ n baseCutoff (dilation R x)‖ * (R⁻¹) ^ n := by
       apply mul_le_mul_of_nonneg_left _ (norm_nonneg _)
       calc
-        ∏ _ : Fin n, ‖dilation R‖ ≤ ∏ _ : Fin n, R⁻¹ :=
-          Finset.prod_le_prod (fun _ _ => norm_nonneg _) (fun _ _ => norm_dilation_le hR)
+        ∏ _ : Fin n, ‖dilation R‖ ≤ ∏ _ : Fin n, R⁻¹ := by
+          gcongr with i _
+          exact norm_dilation_le hR
         _ = (R⁻¹) ^ n := by simp
     _ ≤ derivativeConstant n * (R⁻¹) ^ n :=
       mul_le_mul_of_nonneg_right (baseCutoff_iteratedFDeriv_le n _) (by positivity)
@@ -189,7 +190,9 @@ theorem cutoff_iteratedFDeriv_le {R : ℝ} (hR : 0 < R) (n : ℕ) (x : Space) :
 
 theorem cutoff_fderiv_le {R : ℝ} (hR : 0 < R) (x : Space) :
     ‖fderiv ℝ (cutoff R) x‖ ≤ derivativeConstant 1 / R := by
-  have hn := norm_iteratedFDeriv_fderiv (𝕜 := ℝ) (f := cutoff R) (x := x) (n := 0)
+  have hn : ‖iteratedFDeriv ℝ 0 (fderiv ℝ (cutoff R)) x‖ =
+      ‖iteratedFDeriv ℝ 1 (cutoff R) x‖ :=
+    norm_iteratedFDeriv_fderiv (𝕜 := ℝ) (f := cutoff R) (x := x) (n := 0)
   simp only [norm_iteratedFDeriv_zero] at hn
   rw [hn]
   simpa only [pow_one] using cutoff_iteratedFDeriv_le hR 1 x

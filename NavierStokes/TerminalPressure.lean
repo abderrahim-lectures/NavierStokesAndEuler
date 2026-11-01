@@ -894,7 +894,7 @@ theorem integrableOn_Ioi_of_eventually_zero {g : ℝ → ℝ} {r : ℝ} (hr : 0 
     IntegrableOn g (Ioi r) := by
   obtain ⟨b, hb⟩ := Filter.eventually_atTop.1 hz
   have hi : IntegrableOn g (Icc r (max r b)) :=
-    (hg.mono (fun u hu => hr.trans_le hu.1)).integrableOn_Icc
+    (hg.mono (s := Ioi 0) (t := Icc r (max r b)) (fun u hu => hr.trans_le hu.1)).integrableOn_Icc
   apply (hi.integrable_indicator measurableSet_Icc).integrableOn.congr
   filter_upwards [ae_restrict_mem measurableSet_Ioi] with u hu
   by_cases hm : u ≤ max r b
@@ -1222,12 +1222,13 @@ theorem terminal_tilt_bound {C h t z r R Y Λ : ℝ} {f : ℝ → ℝ}
           simpa only [mul_assoc] using mul_le_mul_of_nonneg_left hcarrier hr.le) (by positivity)
       _ ≤ _ := div_le_div_of_nonneg_left
         (mul_nonneg hr.le (TerminalStress.heatAmplitude_pos hC (by linarith) ht (hr.trans_le hrR)).le)
-        (by positivity) (mul_le_mul_of_nonneg_left (timeDenominator_le_q hh hh1 ht) (by norm_num))
+        (mul_pos two_pos (TerminalStress.timeDenominator_pos hh hh1 ht))
+        (mul_le_mul_of_nonneg_left (timeDenominator_le_q hh hh1 ht) (by norm_num))
   have hS : 0 < S := (mul_pos (div_pos (mul_pos (mul_pos hr hbpos) hK) (by positivity)) hE).trans_le hlow
   refine ⟨hS, ?_⟩
   have hax := (axialBackwardStress_bound hC hh hh1 ht hr hrR hf hb hmono hplateau hR).2
   have hlength : (R ^ 2 - r ^ 2) / (2 * r) ≤ (Λ - 1) * r / 2 := by
-    apply (div_le_iff₀ (by positivity : 0 < 2 * r)).mpr
+    apply (div_le_iff₀ (by linarith : 0 < 2 * r)).mpr
     nlinarith
   have hB : |axialBackwardStress C h f t z r| ≤
       ((Λ - 1) * r / 2) * (c * q ^ (-CoordinateAlgebra.D h)) * K ^ 2 * E := by

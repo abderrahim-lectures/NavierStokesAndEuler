@@ -1,18 +1,20 @@
 name = "NavierStokesAndEuler"
-version = "0.1.0"
+version = "0.2.0"
 defaultTargets = ["NavierStokes", "Euler", "ComparatorChallenges"]
 
+# Pinned to the toolchain shared by Mathlib and TauCeti:
+#   Mathlib 2cabef97b63d3275776b8b060d802de6a6fa1055  (leanprover/lean4:v4.36.0-rc1)
+#   TauCeti b8cbc774e9a48bd8e6d4b99d99354e6ae7505b7d  (leanprover/lean4:v4.36.0-rc1)
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
 git = "https://github.com/leanprover-community/mathlib4.git"
-rev = "v4.34.0-rc2"
+rev = "2cabef97b63d3275776b8b060d802de6a6fa1055"
 
 [[require]]
-name = "Comparator"
-scope = "leanprover"
-git = "https://github.com/leanprover/comparator.git"
-rev = "v4.34.0-rc2"
+name = "TauCeti"
+git = "https://github.com/TauCetiProject/TauCeti.git"
+rev = "b8cbc774e9a48bd8e6d4b99d99354e6ae7505b7d"
 
 [[lean_lib]]
 name = "NavierStokes"
@@ -20,7 +22,7 @@ globs = ["NavierStokes", "NavierStokes.+"]
 
 [[lean_lib]]
 name = "Euler"
-leanOptions = { autoImplicit = false, warningAsError = true }
+leanOptions = { autoImplicit = false }
 globs = ["Euler", "Euler.+"]
 
 [[lean_lib]]

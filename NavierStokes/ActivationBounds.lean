@@ -36,7 +36,8 @@ theorem parameterFactor_smooth {S : Set E} (hS : IsOpen S) {J : Set ℝ} (hJ : I
     {B : E × Point → ℝ} (hB : ContDiffOn ℝ ∞ B (S ×ˢ (univ ×ˢ J))) :
     ContDiffOn ℝ ∞ (parameterFactor B) (S ×ˢ (univ ×ˢ J)) := by
   have hb : ContDiffOn ℝ ∞ (parameterCoefficient B) ((S ×ˢ J) ×ˢ (univ : Set ℝ)) :=
-    (hB.comp (contDiff_fst.fst.prodMk (contDiff_snd.prodMk contDiff_fst.snd)).contDiffOn
+    (hB.comp (s := (S ×ˢ J) ×ˢ (univ : Set ℝ)) (t := S ×ˢ (univ ×ˢ J))
+      (contDiff_fst.fst.prodMk (contDiff_snd.prodMk contDiff_fst.snd)).contDiffOn
       (fun _ hp => ⟨hp.1.1, mem_univ _, hp.1.2⟩)).div
         ((stepDenominator_smooth 1).comp contDiff_snd).contDiffOn
         (fun q _ => (stepDenominator_pos 1 q.2).ne')

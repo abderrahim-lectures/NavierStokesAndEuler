@@ -290,7 +290,8 @@ theorem closedWindow_card_le (d : ℝ) (x : WindowPoint) (F : Finset SlotColorin
     (hF : ∀ l ∈ F, 1 ≤ l.1 ∧ x ∈ closedWindow d l) : F.card ≤ 2250 := by
   classical
   have hi : Set.InjOn SlotColoring.colorData (F : Set SlotColoring.Label) :=
-    (closedWindow_color_injective d x).mono hF
+    Set.InjOn.mono (s₂ := {l : SlotColoring.Label | 1 ≤ l.1 ∧ x ∈ closedWindow d l}) hF
+      (closedWindow_color_injective d x)
   have hc := Finset.card_le_card_of_injOn (t := Finset.univ) SlotColoring.colorData
     (fun _ _ => Finset.mem_univ _) hi
   simpa only [Finset.card_univ, SlotColoring.palette_card] using hc

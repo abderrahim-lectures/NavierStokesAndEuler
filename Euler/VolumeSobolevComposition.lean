@@ -72,8 +72,7 @@ theorem compositionTensorLp_norm_le :
     funext x
     simp only [Finset.sum_apply]
   rw [he] at hA
-  have hB := eLpNorm_sum_le (fun i (_ : i ∈ (Finset.univ : Finset (Fin (n+1)))) =>
-    (composedJetNorm_memLp f g n hmp hLp i).aestronglyMeasurable)
+  have hB := eLpNorm_sum_le
     (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   have hc (i : Fin (n+1)) : eLpNorm (fun x => ‖iteratedFDeriv ℝ i.val g (f x)‖) 2 volume =
       eLpNorm (iteratedFDeriv ℝ i.val g) 2 volume := by

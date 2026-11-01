@@ -54,7 +54,7 @@ theorem difference_rate_le {w v dt g : Space → Space}
     2 * (∫ x, ⟪w x, dt x⟫_ℝ) ≤ 2 * G * (∫ x, ‖w x‖ ^ 2) := by
   have hAw : MemLp (fun x => A x (w x)) 2 volume := by
     apply hw.memLp.of_le_mul
-      ((continuous_fst.clm_apply continuous_snd).comp_aestronglyMeasurable (hA.prodMk hw.memLp.1))
+      ((continuous_fst.clm_apply continuous_snd).comp_aestronglyMeasurable (hA.prodMk hw.memLp.aestronglyMeasurable))
     exact Filter.Eventually.of_forall (fun x =>
       ((A x).le_opNorm (w x)).trans (mul_le_mul_of_nonneg_right (hG x) (norm_nonneg _)))
   have hiC := integrable_inner_of_memLp hw.memLp hAw
@@ -63,7 +63,7 @@ theorem difference_rate_le {w v dt g : Space → Space}
     simp only [inner_sum]
     exact integrable_finsetSum _ (fun i _ => integrable_inner_of_memLp hw.memLp (hw.second_memLp i i))
   have hiT : Integrable (fun x => ∑ i : Fin 3, v x i * ⟪w x, dw i x⟫_ℝ) :=
-    integrable_finsetSum _ (fun i _ => integrable_transport hw.memLp hv.memLp.1 hw.derivative_memLp
+    integrable_finsetSum _ (fun i _ => integrable_transport hw.memLp hv.memLp.aestronglyMeasurable hw.derivative_memLp
       (H3Embedding.norm_le_weakH3Norm hv hcv) i)
   have hid : (∫ x, ⟪w x, dt x⟫_ℝ) =
       ν * (∫ x, ⟪w x, ∑ i : Fin 3, ddw i i x⟫_ℝ) -
@@ -85,7 +85,7 @@ theorem difference_rate_le {w v dt g : Space → Space}
   have hnonneg : 0 ≤ ∑ i : Fin 3, ∫ x, ‖dw i x‖ ^ 2 :=
     Finset.sum_nonneg (fun _ _ => integral_nonneg (fun _ => sq_nonneg _))
   have hie : Integrable (fun x => ‖w x‖ ^ 2) :=
-    (memLp_two_iff_integrable_sq_norm hw.memLp.1).mp hw.memLp
+    (memLp_two_iff_integrable_sq_norm hw.memLp.aestronglyMeasurable).mp hw.memLp
   have hneg : -(∫ x, ⟪w x, A x (w x)⟫_ℝ) ≤ G * (∫ x, ‖w x‖ ^ 2) := by
     rw [← integral_neg, ← integral_const_mul]
     apply integral_mono hiC.neg (hie.const_mul G)

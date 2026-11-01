@@ -90,7 +90,6 @@ theorem composition_memLp_and_bound
     funext x
     simp only [Finset.sum_apply]
   have hsumNorm := eLpNorm_sum_le
-    (fun c (_ : c ∈ (Finset.univ : Finset (OrderedFinpartition n))) => (hHLp c).aestronglyMeasurable)
     (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   have hLpNorm : eLpNorm (iteratedFDeriv ℝ n (g ∘ f)) 2 μ ≤
       ∑ c : OrderedFinpartition n, eLpNorm (H c) 2 μ := by

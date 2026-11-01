@@ -68,8 +68,11 @@ theorem copySolveRepresentative_eq (k : Frequency)
 theorem copySolve_contDiffOn_closed_within (k : Frequency) :
     ContDiffOn ℝ ∞ (d.copySolve g hab k)
       {p : P × Plane | p.1 ∈ U ∧ (g.coordinates k p.2).2 ∈ Icc a b} := by
-  apply ((d.copySolveRepresentative_contDiffOn g hU hu hA hB hf k (a := a)).mono
-    (fun p hp => ⟨hp.1, mem_univ _⟩)).congr
+  have hmono : ContDiffOn ℝ ∞ (d.copySolveRepresentative g (a := a) k)
+      {p : P × Plane | p.1 ∈ U ∧ (g.coordinates k p.2).2 ∈ Icc a b} :=
+    (d.copySolveRepresentative_contDiffOn g hU hu hA hB hf k (a := a)).mono
+      (fun p hp => ⟨hp.1, mem_univ _⟩)
+  apply hmono.congr
   intro p hp
   exact (d.copySolveRepresentative_eq g hab k hA.continuousOn hB.continuousOn hf.continuousOn
     hp.1 hp.2).symm

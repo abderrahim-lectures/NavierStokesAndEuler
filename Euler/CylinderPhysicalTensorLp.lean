@@ -66,8 +66,7 @@ theorem physicalTensorLp_norm_le :
     funext x
     simp only [Finset.sum_apply]
   rw [he] at hA
-  have hB := eLpNorm_sum_le (fun w (_ : w ∈ (Finset.univ : Finset (Fin n → Fin 4))) =>
-    (graphWord_memLp P k m f n u hu w).1.norm) (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+  have hB := eLpNorm_sum_le (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   simp only [eLpNorm_norm] at hB
   have hfinit : (β : ℝ≥0∞) * ∑ w : Fin n → Fin 4,
       eLpNorm (fun x => iteratedFieldDerivative P w f (cylinderGraph P k m x)) 2 volume ≠ ⊤ := by

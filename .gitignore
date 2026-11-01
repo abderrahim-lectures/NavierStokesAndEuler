@@ -1,1 +1,13 @@
 .lake/
+.scratch/
+.ultramath/
+.skill/
+
+# paper build artifacts
+paper/*.aux
+paper/*.log
+paper/*.toc
+paper/*.out
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.xdv

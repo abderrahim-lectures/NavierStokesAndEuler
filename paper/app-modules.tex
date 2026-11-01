@@ -1,0 +1,58 @@
+\section{Module index}
+\label{app:modules}
+
+The table lists modules a reader should open first, with their size and the first sentence of
+their own module docstring (compressed and stripped of markup). It is a reading guide, not a
+complete index; the full tree is 2{,}659 files.
+
+\begin{center}\footnotesize
+\begin{longtable}{@{}p{0.38\textwidth}r p{0.46\textwidth}@{}}
+\toprule
+module & lines & role \\
+\midrule
+\endfirsthead
+\toprule
+module & lines & role \\
+\midrule
+\endhead
+\multicolumn{3}{@{}l}{\textbf{Statements and entry points}}\\
+\file{NavierStokes/ProblemStatement} & 168 & OPEN target: the candidate forced Navier--Stokes construction This module states the primary existential assertion of Candidate Theorem 1.1.\\
+\file{NavierStokes/R3/ProblemStatement} & 222 & The whole-space assertion of Part II, Theorem 1.1 This module states the R³ theorem, including its comparison claim, independently of the existing per\\
+\file{NavierStokes/R3/Theorem} & 81 & Theorem 1.1: unconditional whole-space forced Navier–Stokes blowup The actual selected construction supplies the viscosity-one fields.\\
+\file{NavierStokes/PeriodicPaperTheorem} & 164 & The full periodic corollary of the paper The torus is represented by spatially periodic lifts to R³.\\
+\file{NavierStokes/ComparatorSolution} & 32 & Navier–Stokes Comparator submission: options (C) and (D) Expose the project's proof adapters under the reference theorem names.\\
+\file{Euler/SolutionDefinitions} & 138 & Solution-side definitions for the Euler Comparator challenge Adapted from FormalConjectures/Millenium/NavierStokes.lean at https://github.com/google\\
+\file{Euler/Solution} & 75 & The independent solution to the unforced Euler Comparator challenge.\\
+\file{Euler/EulerSingularity} & 153 & The final statement for the concrete packet construction.\\
+\multicolumn{3}{@{}l}{\textbf{Infrastructure}}\\
+\file{NavierStokes/SmoothCutoffs} & 309 & Constructed smooth cutoffs for the diagonal sum and time switch The fixed cutoff is an actual Mathlib ContDiffBump, centered at zero, with inner rad\\
+\file{NavierStokes/FlatCutoff} & 204 & A concrete smooth exponential-flat edge For c > 0, this file constructs the actual function exp (-c / x\textasciicircum{}2) on x > 0, extended by zero on x $\leq$ 0\\
+\file{NavierStokes/JetBounds} & 311 & Bounds for actual Fréchet jets Finite jet bounds on open domains, using iteratedFDeriv itself.\\
+\file{NavierStokes/WeightedClasses} & 517 & Indexed weighted classes of actual stripped derivatives The index is a band, not a differentiable variable.\\
+\file{NavierStokes/ClosedIntervalCk} & 337 & The Banach space of finite jets on a closed interval A finite tuple of continuous functions is a genuine jet when neighboring components satisfy the f\\
+\file{NavierStokes/SmoothParameterIntegral} & 315 & Smooth parameter integrals with local integrable majorants The Taylor coefficients below are integrals of the actual iteratedFDeriv of the integrand\\
+\file{Euler/CompactParameterIntegral} & 74 & Smooth parameter dependence of an actual integral over a compact interval.\\
+\file{Euler/OrdinaryMollifier} & 164 & Symmetric compact smooth approximate identities on ordinary spatial L².\\
+\file{Euler/CylinderSobolevSpace} & 145 & A complete cylinder Sobolev space constructed from closed graphs of actual L² derivatives.\\
+\file{Euler/SobolevHeatKernel} & 156 & Jointly continuous positive-time heat kernels with an explicit integrable parabolic bound.\\
+\multicolumn{3}{@{}l}{\textbf{Navier-Stokes construction}}\\
+\file{NavierStokes/CorrectionStep} & 9849 & Exact field bookkeeping for one correction cycle The residuals in this file are the differentiated nonlinear fields in (32).\\
+\file{NavierStokes/ExponentLedger} & 321 & Arithmetic of the residual-order ledger The candidate manuscript, Proposition 10.3, assigns real exponents to analytic estimates.\\
+\file{NavierStokes/ReservedPatches} & 701 & Four disjoint reservations on the actual outgoing shaped wait The log intervals are the four examples in the manuscript: (-25,-20), (-20,-15), (-14,-9\\
+\file{NavierStokes/NominalProfile} & 2679 & A common witness for nominal-profile assembly The outgoing schedule, angular reset, corrected amplitude, and pressure datum are fixed first.\\
+\file{NavierStokes/ParticularWaveAssembly} & 2015 & Actual particular-wave assembly The residual source is the coefficient of HarmonicResidual.residualBlock.\\
+\file{NavierStokes/ActualCandidateAssembly} & 1187 & Literal physical data for the actual candidate The initial fields use the same primary choice and the same initialized mean state as ActualCandidateC\\
+\file{NavierStokes/R3/ActualCandidate} & 155 & The full whole-space candidate from the selected construction The selected construction supplies its actual compact spatial fields and a globally smoo\\
+\file{NavierStokes/R3/CandidateBreakdown} & 79 & A compact singular candidate excludes a global finite-energy solution The comparison theorem identifies the two velocities before time one.\\
+\file{NavierStokes/R3/ViscosityScaling} & 197 & Spatial changes of viscosity preserving the singular time Only the spatial coordinate changes.\\
+\file{NavierStokes/R3/WholeSpaceComparisonClosure} & 159 & Closing the whole-space comparison estimate This module isolates the final PDE energy calculation.\\
+\multicolumn{3}{@{}l}{\textbf{Euler construction}}\\
+\file{Euler/EulerProof} & 20755 & Explicit numerical estimates for the factorial majorants used in the proposed Euler construction.\\
+\file{Euler/PacketActivationConstructed} & 70 & A fully constructed normal and terminal coordinate for a positive activation time.\\
+\file{Euler/EulerC1Limsup} & 92 & Exact infinite upper limits at the maximal time.\\
+\file{Euler/OrdinaryEulerBKM} & 39 & The ordinary Euler vorticity blowup criterion, with the whole-space logarithmic estimate proved and instantiated.\\
+\file{Euler/OrdinaryEulerClassicalClass} & 276 & The reverse bridge from ordinary scalar-pressure Euler to the projected equation.\\
+\file{Euler/TransverseGramInverse} & 126 & The genuine transverse Gram inverse The inverse of Q*Q, for Q = F R$\bot$, is constructed from the lower frame bound.\\
+\bottomrule
+\end{longtable}
+\end{center}

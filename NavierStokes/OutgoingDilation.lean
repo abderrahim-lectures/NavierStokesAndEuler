@@ -153,7 +153,8 @@ theorem U_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) : ContDiffOn ℝ �
   F.U_contDiffOn.comp (dilation_contDiffOn XR) (dilation_mapsTo XR hXR)
 
 theorem H_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) : ContDiffOn ℝ ∞ (H F XR) domain :=
-  ((contDiffOn_const.mul contDiffOn_fst).sqrt
+  have h1 : ContDiffOn ℝ ∞ (Prod.fst : ℝ × ℝ → ℝ) domain := contDiffOn_fst
+  ((contDiffOn_const.mul h1).sqrt
     (fun _ hp => ne_of_gt (mul_pos (by norm_num) hp.1))).mul (E_contDiffOn F XR hXR)
 
 theorem Pi_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) : ContDiffOn ℝ ∞ (Pi F XR) domain :=
@@ -163,8 +164,9 @@ def familyDomain : Set (ℝ × (ℝ × ℝ)) := Ioi 0 ×ˢ domain
 
 theorem dilation_family_contDiffOn :
     ContDiffOn ℝ ∞ (fun z : ℝ × (ℝ × ℝ) => (z.2.1 / z.1, z.2.2)) familyDomain :=
-  (contDiff_snd.fst.contDiffOn.div contDiff_fst.contDiffOn
-    (fun _ hz => ne_of_gt hz.1)).prodMk contDiff_snd.snd.contDiffOn
+  (contDiff_snd.fst.contDiffOn (s := familyDomain)).div
+    (contDiff_fst.contDiffOn (s := familyDomain))
+    (fun _ hz => ne_of_gt hz.1) |>.prodMk (contDiff_snd.snd.contDiffOn (s := familyDomain))
 
 theorem dilation_family_mapsTo :
     MapsTo (fun z : ℝ × (ℝ × ℝ) => (z.2.1 / z.1, z.2.2)) familyDomain domain := by
@@ -182,7 +184,9 @@ theorem U_family_contDiffOn (F : Profile) :
 
 theorem H_family_contDiffOn (F : Profile) :
     ContDiffOn ℝ ∞ (fun z : ℝ × (ℝ × ℝ) => H F z.1 z.2) familyDomain :=
-  ((contDiffOn_const.mul contDiff_snd.fst.contDiffOn).sqrt
+  have h1 : ContDiffOn ℝ ∞ (fun z : ℝ × (ℝ × ℝ) => z.2.1) familyDomain :=
+    contDiff_snd.fst.contDiffOn (s := familyDomain)
+  ((contDiffOn_const.mul h1).sqrt
     (fun _ hz => ne_of_gt (mul_pos (by norm_num) hz.2.1))).mul (E_family_contDiffOn F)
 
 theorem Pi_family_contDiffOn (F : Profile) :

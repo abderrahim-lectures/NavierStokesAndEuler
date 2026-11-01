@@ -32,12 +32,38 @@ near that time, and the time integral of the vorticity’s $L^\infty$ norm diver
 
 ## Building the formalizations
 
-The project uses Lean 4.34.0-rc2, Mathlib, and Lake. With
-[elan](https://github.com/leanprover/elan) installed, fetch the mathlib cache and build the formalizations with:
+The project uses Lean 4.36.0-rc1, [Mathlib](https://github.com/leanprover-community/mathlib4)
+at `2cabef97` and [TauCeti](https://github.com/TauCetiProject/TauCeti) at `b8cbc77`.
+With [elan](https://github.com/leanprover/elan) installed, fetch the Mathlib cache and build:
 
 ```sh
-lake exe cache get
-lake build
+lake update          # resolves the pins; Mathlib's prebuilt oleans are fetched for you
+lake build NavierStokes        # green: 816 modules, 19,645 jobs
+lake build ComparatorChallenges # green: the two challenge modules
+lake build Euler               # does not build yet; see below
+```
+
+Both pins are full commit hashes, so the resolution is deterministic.
+
+**Migration status.** The repository was written against Lean `v4.34.0-rc2` and has been
+moved to the pins above. `NavierStokes` and `ComparatorChallenges` build; `Euler` does not
+(42 of its 1,839 modules elaborate, and `Euler/EulerProof` rejects 28 sites). Five of those
+sites are not syntax: they apply `eLpNorm_le_mul_eLpNorm_of_ae_le_mul` to an iterated field
+derivative with no measurability hypothesis, which the old Mathlib did not need — `eLpNorm`
+was `0` on non-a.e.-strongly-measurable functions and is now `∞`. Closing them requires a
+measurability lemma the development never had. The full record is in
+[MIGRATION.md](MIGRATION.md).
+
+The four headline theorems are unaffected: `lake build NavierStokes` typechecks them, and
+`#print axioms` reports `[propext, Classical.choice, Quot.sound]` for each.
+
+## Paper
+
+A paper describing the formalization, its statement audit and the library migration is in
+[`paper/`](paper/main.tex). Build it with:
+
+```sh
+cd paper && latexmk -xelatex main.tex
 ```
 
 ## Independent proof checking

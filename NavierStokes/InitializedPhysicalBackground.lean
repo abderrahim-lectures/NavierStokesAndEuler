@@ -132,6 +132,7 @@ theorem initializedPotential_smooth (upper : ℝ) (B : ℕ)
     ContDiffOn ℝ ∞ (initializedPotential H v upper B WA MA)
       (CutStageEstimates.physicalSublevel F.data.h qbig) :=
   ((TailGaugePotential.finalPotential_smooth H v upper B).mono
+    (t := CutStageEstimates.physicalSublevel F.data.h qbig)
     (fun _ hw => ⟨hw.1, mem_univ _⟩)).add
       (potentialIncrement_smooth WA MA F.data.h_pos F.data.h_lt_half hq)
 

@@ -39,7 +39,8 @@ theorem normalize_smooth {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
     {ν a b : ℝ} (hν : 0 < ν) {g : SpaceTime → V}
     (hg : ContDiffOn ℝ ∞ g (slab a b)) (amplitude : ℝ) :
     ContDiffOn ℝ ∞ (rescale amplitude ν⁻¹ g) (slab (ν * a) (ν * b)) := by
-  apply (hg.comp ((contDiff_fst.const_smul ν⁻¹).prodMk contDiff_snd).contDiffOn
+  apply (hg.comp (s := slab (ν * a) (ν * b)) (t := slab a b)
+    ((contDiff_fst.const_smul ν⁻¹).prodMk contDiff_snd).contDiffOn
     (fun z hz => ⟨normalized_time_mem_Icc hν hz.1, mem_univ _⟩)).const_smul amplitude
 
 theorem normalize_periodic {V : Type*} [SMul ℝ V] {ν a b : ℝ}

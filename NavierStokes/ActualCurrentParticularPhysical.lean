@@ -386,7 +386,8 @@ theorem nativePotential_contDiffOn (x : CycleState (Label B N0)) (l : Label B N0
   · apply contDiffOn_pi.mpr
     intro i
     exact HarmonicCalculus.contDiffOn_mode _ hphi
-      (contDiffOn_pi.mp ((hnormal.mono (fun _ hx => hx.1)).const_smul
+      (contDiffOn_pi.mp ((hnormal.mono (t := ActualWaveRegularityData.particularPositive)
+        (fun _ hx => hx.1)).const_smul
         (CurlClassBounds.inverseCarrier ((copyData x l j).background.frequency n))) i)
   · intro z hm hr
     have ho : ActualWaveRegularityData.radius (ActualWaveRegularity.particularChart.symm z) ∉
@@ -416,8 +417,8 @@ theorem nativePressure_re_contDiffOn (x : CycleState (Label B N0)) (l : Label B 
     (ActualParticularStageControls.assembly x l).gaussianInput
     (ActualParticularStageControls.assembly x l).aliasInput j hphase hp
     (fun m z hm hr => (hz m z hm hr).2) n
-  have he := hs.comp ActualWaveRegularity.particularChart.symm.contDiff.contDiffOn
-    (fun _ hx => hx)
+  have he := hs.comp (ActualWaveRegularity.particularChart.symm.contDiff.contDiffOn
+    (s := ActualWaveRegularity.particularChart.symm ⁻¹' ActualWaveRegularity.fullDomain ActualPrimary.standardRegion) (n := ∞)) (fun _ hx => hx)
   simp only [Function.comp_def, LinearIsometryEquiv.apply_symm_apply] at he
   exact he
 

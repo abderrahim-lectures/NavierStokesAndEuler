@@ -27,7 +27,7 @@ theorem memLp_bilinear_bounded (B : E →L[ℝ] F →L[ℝ] G)
     MemLp (fun x => B (f x) (g x)) 2 volume := by
   have hmeas : AEStronglyMeasurable (fun x => B (f x) (g x)) volume :=
     ((B.continuous.comp continuous_fst).clm_apply continuous_snd).comp_aestronglyMeasurable
-      (hf.prodMk hg.1)
+      (hf.prodMk hg.aestronglyMeasurable)
   apply hg.of_le_mul hmeas
   exact Filter.Eventually.of_forall (fun x =>
     (bilinear_norm_le B (f x) (g x)).trans

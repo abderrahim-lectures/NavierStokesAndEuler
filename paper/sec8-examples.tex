@@ -1,0 +1,203 @@
+\section{Worked examples}
+\label{sec:examples}
+
+The preceding sections describe the construction in general terms. This section works
+four small computations through explicitly, and ends with two code-level examples from the
+migration. Each numerical example is chosen so that it can be checked against a specific
+Lean declaration, named in the text.
+
+\subsection{The energy budget of the concentrating core}
+\label{ex:energy}
+
+Take $h=1/100$, so that the velocity exponent is $A=\tfrac12+h=0.51$ and the axial length
+exponent is $D=\tfrac12-h=0.49$. At distance $\tau=1-t$ from the singular time:
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+quantity & scale & at $\tau=10^{-8}$ \\
+\midrule
+radial scale $\ell_r\asymp\tau^{1/2}$ & $\tau^{0.5}$ & $10^{-4}$ \\
+axial scale $\ell_z\asymp\tau^{1/2-h}$ & $\tau^{0.49}$ & $10^{-3.92}$ \\
+slenderness $\ell_r/\ell_z\asymp\tau^{h}$ & $\tau^{0.01}$ & $0.83$ \\
+azimuthal/axial speed & $\tau^{-0.51}$ & $10^{4.08}$ \\
+radial speed & $\tau^{-0.5}$ & $10^{4}$ \\
+core volume & $\tau^{3/2-h}=\tau^{1.49}$ & $10^{-11.92}$ \\
+kinetic energy $\int_{C_\tau}|u|^2$ & $\tau^{1/2-3h}=\tau^{0.47}$ & $10^{-3.76}$ \\
+squared radial gradient $\int_{C_\tau}|\nabla u|^2$ & $\tau^{-1/2-3h}=\tau^{-0.53}$ & $10^{4.24}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Two things are worth extracting from the table. First, the energy \emph{decreases} to zero
+like $\tau^{0.47}$ even though the pointwise speed grows like $\tau^{-0.51}$: the growth is
+paid for by the shrinking volume, and the exponent arithmetic
+$(3/2-h)-2(1/2+h)=1/2-3h$ is positive exactly when $h<1/6$. Second, the same threshold
+controls integrability of the dissipation: the integrand is $\tau^{-1/2-3h}$, whose integral
+over $(0,\tau_0)$ converges exactly when $h<1/6$. The paper's condition $h<1/100$ is
+therefore not a technical convenience but the statement that both inequalities hold with
+room to spare. In the formalization these two facts are the estimates
+\lean{CompactEnergy.candidate_energy_estimates} used in
+\lean{NavierStokesR3.theorem_1_1_with_dissipation}.
+
+\subsection{The exponent ledger, and what flatness costs}
+\label{ex:ledger}
+
+The correction cycle improves the residual order according to $\sigma_j=\tfrac15+\tfrac{j}{10}$,
+i.e.\ $\sigma_0=0.2$, $\sigma_1=0.3$, $\sigma_2=0.4$, $\sigma_3=0.5$. The residual after
+stage $j$ is bounded by $C q^{h\sigma_j}$ in the concentration scale $q$. With $h=1/100$
+the exponent is $0.01\,\sigma_j$:
+
+\[
+\sigma_j = \frac15+\frac{j}{10}
+\quad\Longrightarrow\quad
+h\sigma_j = \frac{1}{500}+\frac{j}{1000}.
+\]
+
+To force the residual below $q^{N}$ for a prescribed $N$ one needs
+\begin{equation}
+j \;\ge\; 10\left(\frac{N}{h}-\frac15\right) \;=\; 1000N-2 .
+\label{eq:cycles}
+\end{equation}
+For $N=10$ that is $9{,}998$ correction cycles; for $N=100$, $99{,}998$. No explicit value
+of $j$ is ever needed, and none is produced: the construction only requires that for each
+$N$ \emph{some} finite stage exists, and \eqref{eq:cycles} exhibits it. This is why the
+paper can afford a per-cycle improvement of $1/10$ in the exponent while the velocity
+growth is only $h=1/100$---the two constants are independent. In Lean the arithmetic of
+this section is isolated in \file{NavierStokes/ExponentLedger.lean}, which proves the
+recursion and its consequences for real numbers and contains no analysis at all.
+
+\subsection{Viscosity scaling, checked term by term}
+\label{ex:viscosity}
+
+Theorem~\ref{thm:ns-r3} is proved at viscosity $1$; the general case follows from a purely
+spatial rescaling. For $a>0$ set
+\[
+u_a(t,x) = a\,u(t,x/a), \qquad p_a(t,x) = a^2 p(t,x/a), \qquad f_a(t,x) = a\,f(t,x/a),
+\]
+and $\mu_a = a^2\mu$. Each term of the residual \eqref{eq:residual} scales as follows,
+using $\nabla_x = a^{-1}\nabla$ at $x/a$:
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+term & computation & scale \\
+\midrule
+$\partial_t u_a$ & $a\,\partial_t u$ & $a$ \\
+$(u_a\cdot\nabla)u_a$ & $a^2\cdot a^{-1}\,(u\cdot\nabla)u$ & $a$ \\
+$\mu_a\,\Delta u_a$ & $a^2\mu\cdot a\cdot a^{-2}\,\Delta u$ & $a\mu$ \\
+$\nabla p_a$ & $a^2\cdot a^{-1}\,\nabla p$ & $a$ \\
+\midrule
+$\nabla\cdot u_a$ & $a\cdot a^{-1}\,\nabla\cdot u$ & $1$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Hence
+\[
+\mathcal{R}_{a^2\mu}(u_a,p_a)(t,x) \;=\; a\,\mathcal{R}_\mu(u,p)(t,x/a),
+\]
+which is exactly the Lean statement \lean{NavierStokesR3.ViscosityScaling.rescale\_residual}
+(with \lean{rescale\ a\ a⁻¹\ u} read as $u_a$). Three consequences are immediate and are the
+content of \lean{rescale\_candidate} and \lean{candidate\_at\_viscosity}:
+
+\begin{itemize}
+\item the equation is preserved up to the scalar $a$, so a zero residual stays zero and a
+      prescribed force $f$ transforms into the prescribed force $f_a$;
+\item incompressibility is preserved exactly, because $a\cdot a^{-1}=1$;
+\item \emph{time is untouched}, so the singular time stays at $t=1$ and the force's support
+      in strictly positive time is unchanged.
+\end{itemize}
+
+Taking $a=\sqrt\nu$ gives $\mu_a=\nu$, i.e.\ \lean{scaledVelocity\ ν\ u \ =\ rescale\ (√ν)\ (√ν)⁻¹\ u}.
+Note what does \emph{not} transform simply: the kinetic energy picks up the factor
+$a^5$---two powers from the amplitude and three from the Jacobian $dx=a^3\dd y$---so at
+$a=\sqrt\nu$ the bound becomes $\nu^{5/2}$ times the original. The construction is the same
+and the singular time is the same, but the energy estimate has to be transported, which is
+why \lean{rescale\_candidate} proves all fields of \lean{CandidateProperties} rather than
+only the equation.
+
+\subsection{Euler packet amplitudes}
+\label{ex:packet}
+
+In the Euler construction the packet \eqref{eq:packet} has three free parameters: the
+frequency $k$, the concentration $\delta$ of the profile $f_\delta$, and the amplitude
+$\alpha$. The design equations are
+\begin{equation}
+\text{leading gradient} \;=\; \alpha\,\delta^{-1}\,|v|\,|m| \;=\; h_{\text{child}},
+\qquad
+\text{velocity size} \;=\; \frac{\ell\alpha}{k}\,.
+\label{eq:packet-design}
+\end{equation}
+A concrete choice: let the parent shear at the target time have size
+$h_{\text{child}}=10^{-2}$, the profile concentration be $\delta=10^{-6}$, and normalise
+$|v|=|m|=1$. Then the first equation gives
+\[
+\alpha \;=\; h_{\text{child}}\,\delta \;=\; 10^{-8},
+\]
+and with localisation length $\ell=10^{-3}$ and frequency $k=10^{12}$ the packet's velocity
+amplitude is $\ell\alpha/k=10^{-23}$ while its gradient is $10^{-2}$---a ratio of
+$10^{21}$. This is the whole point of the construction: the \emph{gradient} is what the next
+stage inherits, and it is large, while the \emph{velocity} increment is negligible, so the
+initial data converge in every Sobolev norm, as required by
+\eqref{eq:euler-iteration}. The frequency $k$ appears only in the velocity size, so it can
+be taken as large as the estimate \eqref{eq:packet-design} requires without changing the
+gradient.
+
+\subsection{Code example: what an API change looks like}
+\label{ex:code}
+
+The migration's most common repair, in the original and in the new form. The old proof:
+
+\begin{lstlisting}[language=ML]
+theorem lpNorm_mono_of_norm_le_ae {p : ℝ≥0∞} {f : Space → E} {g : Space → F}
+    (hg : MemLp g p volume) (hfg : ∀ᵐ x ∂volume, ‖f x‖ ≤ ‖g x‖) :
+    comparisonLpNorm p f ≤ comparisonLpNorm p g :=
+  ENNReal.toReal_mono hg.eLpNorm_lt_top.ne (eLpNorm_mono_ae hfg)
+\end{lstlisting}
+
+The new proof, which has to split on the measurability of $f$ because the library changed
+the value of \lean{eLpNorm} on non-measurable functions from $0$ to $\infty$:
+
+\begin{lstlisting}[language=ML]
+theorem lpNorm_mono_of_norm_le_ae {p : ℝ≥0∞} {f : Space → E} {g : Space → F}
+    (hg : MemLp g p volume) (hfg : ∀ᵐ x ∂volume, ‖f x‖ ≤ ‖g x‖) :
+    comparisonLpNorm p f ≤ comparisonLpNorm p g := by
+  by_cases hf : AEStronglyMeasurable f volume
+  · exact ENNReal.toReal_mono hg.eLpNorm_lt_top.ne (eLpNorm_mono_ae hf hfg)
+  · rw [comparisonLpNorm, eLpNorm_of_not_aestronglyMeasurable hf, ENNReal.toReal_top]
+    exact ENNReal.toReal_nonneg
+\end{lstlisting}
+
+The statement did not change, the mathematics did not change, and the proof is four lines
+longer. The interesting part is the second branch: it exists because in the non-measurable
+case both sides of the inequality are now ``infinite'' in the extended sense, so the
+inequality holds for a reason that never occurs in the paper.
+
+\subsection{Code example: the TauCeti bridge}
+\label{ex:tauceti}
+
+The whole dependency of this repository on \TauCeti{} is one module, and its shape is the
+pattern any further migration should follow: import the library theorem, restate it at the
+project's names, and prove the restatement by the library's own proof term.
+
+\begin{lstlisting}[language=ML]
+import TauCeti.Analysis.Calculus.ParametricIntegral
+
+theorem contDiff_intervalIntegral
+    {μ : Measure ℝ} {u : ℝ → E → F} {a b : ℝ} {N : ℕ}
+    (hu : ∀ᵐ s ∂μ.restrict (Ι a b), ContDiff ℝ N (u s))
+    (hmeas : ∀ k ≤ N, ∀ x,
+      AEStronglyMeasurable (fun s => iteratedFDeriv ℝ k (u s) x) (μ.restrict (Ι a b)))
+    {bound : ℕ → ℝ → ℝ} (hb : ∀ k ≤ N, IntervalIntegrable (bound k) μ a b)
+    (hub : ∀ k ≤ N, ∀ᵐ s ∂μ.restrict (Ι a b), ∀ x,
+      ‖iteratedFDeriv ℝ k (u s) x‖ ≤ bound k s) :
+    ContDiff ℝ N fun x => ∫ s in a..b, u s x ∂μ :=
+  TauCeti.contDiff_intervalIntegral hu hmeas hb hub
+\end{lstlisting}
+
+The proof term is one line because the statements are the same statement. That is the test
+to apply before replacing anything else in the infrastructure layer: if the restatement
+needs a hypothesis that the library theorem does not have, the project's version is weaker
+and should be derived from the library's, not the other way round; if it needs a hypothesis
+the library theorem \emph{does} have, the replacement is free.

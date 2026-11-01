@@ -1,0 +1,28 @@
+We report on a complete, machine-checked formalization of two recent results on
+singularity formation in three-dimensional incompressible fluid mechanics: the
+construction, for every positive viscosity, of a smooth compactly supported force and
+zero initial data whose Navier--Stokes solution develops unbounded velocity in finite
+time while its kinetic energy stays uniformly bounded (Clay alternatives \textbf{(C)}
+and \textbf{(D)} of the Millennium Prize problem statement), and the construction of a
+smooth compactly supported divergence-free initial velocity whose solution of the
+unforced incompressible Euler equations breaks down in finite time, with unbounded
+$C^1$ norm and divergent time integral of the vorticity $L^\infty$ norm. The
+formalization comprises \textbf{2{,}588 Lean~4 files} and \textbf{618{,}000 lines} of
+proof text, with \textbf{36{,}825} theorem and lemma declarations and no gaps in the
+proof libraries; every headline result depends only on the three standard axioms
+\texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}. Beyond stating the
+results, the paper has two purposes. First, it gives a reader's guide to what was
+actually formalized: the statement engineering that pins each analytic claim to its
+literal $\R^3$ or $\T^3$ meaning, the module architecture of the two developments, and
+the way the oscillatory constructions of the source papers---similarity coordinates,
+dyadic charts, pulse and packet families, correction cycles and summation with
+shrinking cuts---are represented as Lean objects. Second, it reports an engineering
+migration of the repository from its original pin (Lean \texttt{v4.34.0-rc2}) to the
+current library generation (Lean \texttt{v4.36.0-rc1}, \Mathlib{} at \texttt{2cabef97},
+\TauCeti{} at \texttt{b8cbc77}), with the API breakage that this caused classified and
+repaired where encountered, a catalogue of which project-local analysis gadgets a
+library such as \TauCeti{} can and cannot replace, a measurement of how much of the code
+duplicates the libraries (little, and concentrated in one layer of eighteen files) against
+how much duplicates itself, and an assessment of what a migration of this kind costs at this
+scale. Worked examples---the core's energy budget, the exponent ledger, the viscosity
+rescaling term by term, and the packet amplitudes---are given with explicit numbers.

@@ -1,0 +1,95 @@
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{The problem}
+
+The Clay Mathematics Institute's formulation of the Navier--Stokes problem
+\cite{clay} asks, among other things, for a decision on four alternatives. Two of them are
+blowup statements: \textbf{(C)} that there exist smooth compactly supported data and a
+smooth force on $\R^3$ for which no global smooth solution with uniformly bounded kinetic
+energy exists, and \textbf{(D)} the same on the torus $\R^3/\Z^3$. Two recent papers of
+OpenAI \cite{ns-paper,euler-paper} prove both, and prove in addition that the
+\emph{unforced} three-dimensional Euler equations admit a smooth compactly supported
+initial velocity whose solution develops a singularity in finite time. Those three
+theorems are the subject of this paper.
+
+The mechanisms are different and both are intricate. The Navier--Stokes construction builds
+a self-similar vortex whose core contracts anisotropically towards a point as $t\uparrow1$,
+whose azimuthal and axial velocities grow like $\tau^{-1/2-h}$ with $\tau=1-t$, and whose
+residual is not zero but is concentrated in an annulus where it is realised, exactly, as
+the divergence of a tangential stress. Two families of spatially oscillatory pulses are
+placed in the annulus; their averaged quadratic fluxes supply that stress, and a fixed
+cycle of four corrections then improves the decay of the residual until it is flat---all
+Cartesian derivatives vanish to every order at the singular point---at which point it can be
+absorbed into a smooth compactly supported force. The energy of the whole field tends to
+zero at the singular time, which is what makes the result a statement about
+\emph{non-existence} of a bounded-energy continuation. The Euler construction is an
+iteration on exact solutions: a localized oscillation (a \emph{packet}) is added to a
+smooth flow, its gradient is amplified by the shear of the flow it sits in, and the
+amplified gradient becomes the shear that amplifies the next packet; the initial data
+converge in every Sobolev norm while the gradients at the target times diverge.
+
+\subsection{What has been done}
+
+Both results, and both Navier--Stokes alternatives, have been formalized in Lean~4
+\cite{lean} on top of \Mathlib{} \cite{mathlib}. The development reported here consists of
+2{,}659 files and 643{,}986 lines of Lean source containing 36{,}825 theorem and lemma
+declarations. It has no \lean{sorry} in its proof libraries and no axioms beyond
+\lean{propext}, \lean{Classical.choice} and \lean{Quot.sound} (Section~\ref{sec:verification}).
+The headline statements are the reference statements: the Euler definitions and both
+challenge modules are adapted from the Formal Conjectures formalization
+\cite{formalconj} of the Millennium problem, not paraphrased.
+
+\subsection{What this paper does}
+
+A development of this size is not useful if the only thing that can be said about it is
+that it compiles. The paper therefore has three aims.
+
+\emph{A reader's guide.} Sections~\ref{sec:results} and~\ref{sec:scheme} state what is
+actually proved, with exact declaration names, and describe the construction at the level
+of detail the Lean development encodes---including the objects that a paper leaves implicit
+and a formalization cannot: the dyadic charts, the auxiliary tori used to separate
+oscillating pulses, the reserved logarithmic patches, the exponent ledger. A reader who
+wants to know whether a specific estimate of the source paper was really formalized, and
+where, should be able to find out.
+
+\emph{An architecture report.} Section~\ref{sec:architecture} describes how the development
+is organised---three layers (statements, infrastructure, construction), an unusually flat
+import graph, a naming discipline that follows the mathematics---and reports measurements:
+file sizes, import-graph depth, the 74 modules that no entry point reaches.
+
+\emph{A verification and migration record.} Section~\ref{sec:verification} reports the trust
+base and the statement audit. Section~\ref{sec:libraries} documents the migration of the
+repository from Lean \texttt{v4.34.0-rc2} to \texttt{v4.36.0-rc1}, from its original
+\Mathlib{} pin to \Mathlib{} \texttt{2cabef97}, and to the downstream analysis library
+\TauCeti{} \cite{tauceti}, together with a catalogue of what the migration broke and why.
+Section~\ref{sec:assessment} is an assessment, including what the formalization does
+\emph{not} establish.
+
+\subsection{Related work}
+
+Machine-checked formalizations of research-level mathematics have moved in a decade from
+individual theorems (the odd order theorem, the Kepler conjecture \cite{flyspeck}) to
+whole areas: the sphere eversion, the liquid tensor experiment, the polynomial Freiman--Ruzsa
+conjecture, Fermat's Last Theorem for regular primes. What distinguishes the present
+development is that its objects are \emph{partial differential equations} and that its
+statements are \emph{non-existence} statements obtained by explicit construction: every
+field appearing in the headline theorems is built, not postulated, and the properties are
+proved of the constructed object. The closest formal neighbours are the Formal Conjectures
+statements \cite{formalconj}, which supply the reference formulations used here but no
+proofs, and the general \Mathlib{} analysis library, which supplies most of the
+point-set, measure-theoretic and functional-analytic infrastructure but has, at the pinned
+version, only a predicate-level theory of Sobolev spaces.
+
+\subsection{Organisation}
+
+Section~\ref{sec:results} states the theorems. Section~\ref{sec:scheme} describes the two
+constructions and their formal counterparts. Section~\ref{sec:architecture} is the
+architecture report. Section~\ref{sec:verification} is the verification report.
+Section~\ref{sec:libraries} is the migration report, including a measurement of how much
+of the code duplicates the libraries and where the real duplication lies.
+Section~\ref{sec:examples} works four computations through explicitly---the energy budget of
+the core, the exponent ledger, the viscosity rescaling and the packet amplitudes---and gives
+two code-level examples of the migration. Section~\ref{sec:assessment} assesses.
+The appendices reproduce the headline statements verbatim, index the modules a reader
+should open first, and record the migration's changes to the repository.

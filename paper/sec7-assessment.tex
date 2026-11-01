@@ -1,0 +1,103 @@
+\section{Assessment}
+\label{sec:assessment}
+
+\subsection{What the formalization shows}
+
+The repository proves, with no axioms beyond the classical base, that the two mechanisms in
+the source papers actually produce what they claim: a forced Navier--Stokes flow that stays
+in bounded energy while its velocity blows up, and an unforced Euler flow that leaves every
+Sobolev class in finite time. The statements are the reference statements of the Millennium
+problem, not paraphrases, and the two-dimensional structure of the argument---an explicit
+self-similar core with an annular stress that is realised by oscillating pulses, and a
+packet iteration that transfers a shear from one generation to the next---is visible in the
+module structure rather than buried inside single monolithic proofs.
+
+For a mathematician the interesting content is in the details that a paper leaves to the
+reader and a proof assistant does not. Three examples from this development:
+
+\begin{itemize}
+\item \emph{Flatness is preserved, not re-derived.} The claim that the residual vanishes to
+      every order at the singular point survives four different operations in the correction
+      cycle. In a paper each operation gets a sentence (``the cutoffs are chosen so that the
+      tails are smaller than any prescribed power''); in the formalization there is one
+      predicate and a preservation lemma per operation, and the preservation lemmas are
+      where the logarithmic weights come from.
+\item \emph{The exponent ledger is arithmetic.} $\sigma_j=1/5+j/10$ is the whole content of
+      the convergence of the correction scheme, and it is checked as a statement about real
+      numbers in a file that knows nothing about fluid mechanics.
+\item \emph{The pressure is never free.} In the Euler development the pressure is not stored
+      as a field but as a gradient in a closed subspace of $L^2$, and the scalar pressure of
+      the reference statement is reconstructed at the end. This is a stronger discipline than
+      the papers' ``$p$ is determined up to a constant'', and it is what makes the
+      reconstruction of the classical solution from the weak one checkable.
+\end{itemize}
+
+\subsection{What it does not show}
+
+A formalization theorem is a statement about Lean terms, and the reader should keep in mind
+what lies outside it.
+
+\begin{itemize}
+\item \emph{No new mathematics.} Every result here is a theorem of the source papers. The
+      contribution is verification, not discovery.
+\item \emph{Readability is not verified.} A proof term that typechecks can still be
+      unreadable, and much of this development is machine-generated in style: long tactic
+      blocks whose intermediate goals are only visible when replayed. The module docstrings
+      and the statement layer are the parts written for humans.
+\item \emph{Statement fidelity is an argument, not a theorem.} We argued in
+      Section~\ref{sec:fidelity} that the statements say what the papers say. No formal
+      system can check that argument; only a referee can.
+\item \emph{Performance is part of correctness in practice.} A file that takes an hour to
+      elaborate is a file nobody will modify. The largest file in this repository,
+      \file{Euler/EulerProof.lean}, is 20{,}755 lines in one module, and it is the place
+      where a future change is most expensive.
+\end{itemize}
+
+\subsection{What the migration shows}
+
+The migration from \Lean{} \texttt{v4.34.0-rc2} to \texttt{v4.36.0-rc1} is a controlled
+experiment on how much of a large development depends on the exact shape of a library API.
+Our observations:
+
+\emph{The breakage is concentrated in the analysis API, not in the proofs.} The failures we
+found are overwhelmingly of three kinds---a structure became a definition, a hypothesis moved
+from implicit to explicit, an argument was reordered---and each is repaired locally, in a
+handful of lines. What made them expensive is not their difficulty but their number and the
+fact that each requires a full re-elaboration of a file to test.
+
+\emph{Statement changes propagate.} When \lean{eLpNorm} changed its value on
+non-measurable functions from $0$ to $\infty$, a project lemma
+(\lean{lpNorm\_mono\_of\_norm\_le\_ae}) became false without an extra measurability
+hypothesis. A proof repair would have hidden this; the correct response was to strengthen the
+hypothesis and let the call sites fail. Formalization projects should expect a small number of
+such semantic changes per library generation, and should budget for them.
+
+\emph{Downstream libraries pin harder than \Mathlib{}.} \TauCeti{} follows \Mathlib{}
+\texttt{master} and pins its own toolchain; Comparator is released per toolchain. A project
+that wants all three is forced onto the intersection of their toolchains, which in our case
+excluded the newest \Mathlib{} release candidate and excluded Comparator altogether. The
+ecosystem would benefit from a released ``analysis layer'' that tracks a \Mathlib{} release
+cycle rather than its development branch.
+
+\subsection{Recommendations}
+
+For projects of this kind we would recommend four things, each of which we would have wanted
+here.
+
+\begin{enumerate}
+\item \emph{Write the statement layer first and keep it small.} A reader, and a referee,
+      should be able to check the meaning of the theorem without reading the proof. The
+      module \file{NavierStokes/R3/ProblemStatement.lean} is a good model: it contains the
+      theorem as a named proposition, states that nothing in the module proves it, and lets
+      the proof live elsewhere under the same name.
+\item \emph{Quarantine arithmetic bookkeeping.} Exponent ledgers, smallness hierarchies and
+      ``choose $\varepsilon$ so that $C\varepsilon^a<1$'' chains should be their own modules
+      about real numbers. They are where errors in a paper hide, and they are cheap to check.
+\item \emph{Adopt the module system and pin full commit hashes.} The module system makes
+      import hygiene checkable and removes a whole class of warnings; full hashes make the
+      build reproducible and the migration a decision rather than an accident.
+\item \emph{Record the trust base in the repository.} \lean{\#print axioms} next to the
+      headline theorems, a list of intentional \lean{sorry}s, and a note on which parts are
+      conditional. The cost is a few lines; the benefit is that the claim ``this is verified''
+      becomes checkable by a reader who does not trust the authors.
+\end{enumerate}

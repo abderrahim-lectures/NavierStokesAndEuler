@@ -24,36 +24,35 @@ namespace NavierStokesR3.PressureFlux
 
 open ProblemStatement Comparison
 
-theorem lpNorm_ofReal (p : ℝ≥0∞) (f : Space → ℝ) :
+theorem lpNorm_ofReal (p : ℝ≥0∞) (f : Space → ℝ) (hf : AEStronglyMeasurable f volume) :
     comparisonLpNorm p (fun x => (f x : ℂ)) = comparisonLpNorm p f := by
   apply congrArg ENNReal.toReal
-  exact eLpNorm_congr_norm_ae (Eventually.of_forall fun x => Complex.norm_real (f x))
+  exact eLpNorm_congr_norm_ae (Complex.continuous_ofReal.comp_aestronglyMeasurable hf) hf
+    (Eventually.of_forall fun x => Complex.norm_real (f x))
 
 theorem norm_fderiv_ofReal {f : Space → ℝ} {x : Space}
     (hf : DifferentiableAt ℝ f x) :
     ‖fderiv ℝ (fun y => (f y : ℂ)) x‖ = ‖fderiv ℝ f x‖ := by
-  have hd := (Complex.ofRealCLM.hasFDerivAt.comp x hf.hasFDerivAt).fderiv
-  simp only [Function.comp_def, Complex.ofRealCLM_apply] at hd
-  rw [hd]
-  apply le_antisymm
-  · apply ContinuousLinearMap.opNorm_le_bound _ (norm_nonneg _)
-    intro y
-    change ‖(fderiv ℝ f x y : ℂ)‖ ≤ ‖fderiv ℝ f x‖ * ‖y‖
-    simpa only [Complex.norm_real] using (fderiv ℝ f x).le_opNorm y
-  · apply ContinuousLinearMap.opNorm_le_bound _ (norm_nonneg _)
-    intro y
-    have h := (Complex.ofRealCLM.comp (fderiv ℝ f x)).le_opNorm y
-    change ‖(fderiv ℝ f x y : ℂ)‖ ≤ _ at h
-    simpa only [Complex.norm_real] using h
+  have hd : fderiv ℝ (fun y => (f y : ℂ)) x = Complex.ofRealCLM.comp (fderiv ℝ f x) := by
+    simpa only [Function.comp_def, Complex.ofRealCLM_apply] using
+      (Complex.ofRealCLM.hasFDerivAt.comp x hf.hasFDerivAt).fderiv
+  rw [hd, show Complex.ofRealCLM = Complex.ofRealLI.toContinuousLinearMap from rfl]
+  exact LinearIsometry.norm_toContinuousLinearMap_comp Complex.ofRealLI
 
 theorem lpNorm_fderiv_realTest (p : ℝ≥0∞) (f : Space → ℝ)
     (hf : ContDiff ℝ ∞ f) (hc : HasCompactSupport f) :
     comparisonLpNorm p (fderiv ℝ (fun x => PressureRecovery.realTest f hf hc x)) =
       comparisonLpNorm p (fderiv ℝ f) := by
+  have hmeas : AEStronglyMeasurable
+      (fderiv ℝ (fun x => PressureRecovery.realTest f hf hc x)) volume := by
+    have hEq : (fun x => PressureRecovery.realTest f hf hc x) = fun x => (f x : ℂ) := rfl
+    rw [hEq]
+    exact ((Complex.ofRealCLM.contDiff.comp hf).continuous_fderiv
+      (by simp)).aestronglyMeasurable
   apply congrArg ENNReal.toReal
-  apply eLpNorm_congr_norm_ae
-  exact Eventually.of_forall fun x =>
-    norm_fderiv_ofReal ((contDiff_infty.1 hf 1).differentiable (by simp) x)
+  refine eLpNorm_congr_norm_ae hmeas ?_ (Eventually.of_forall fun x =>
+    norm_fderiv_ofReal ((contDiff_infty.1 hf 1).differentiable (by simp) x))
+  exact ((contDiff_infty.1 hf 1).continuous_fderiv (by simp)).aestronglyMeasurable
 
 theorem cutoff_lipschitz {R : ℝ} (hR : 0 < R) (x y : Space) :
     |ComparisonCutoffs.cutoff R x - ComparisonCutoffs.cutoff R y| ≤
@@ -87,16 +86,17 @@ theorem norm_holder_pair_le {f : Space → ℝ} {g : Space → ℂ}
   have he : eLpNorm (fun x => (f x : ℂ) * g x) 1 volume ≤
       eLpNorm (fun x => (f x : ℂ)) (6 / 5) volume * eLpNorm g 6 volume := by
     simpa only [ENNReal.coe_one, one_mul] using
-      eLpNorm_le_eLpNorm_mul_eLpNorm_of_nnnorm hfc.1 hg.1
-        (fun a b : ℂ => a * b) 1
-        (Eventually.of_forall fun x => by simp [nnnorm_mul])
+      eLpNorm_le_eLpNorm_mul_eLpNorm_of_norm (fun a b : ℂ => a * b) 1
+        continuous_mul hfc.aestronglyMeasurable
+        hg.aestronglyMeasurable
+        (Eventually.of_forall fun x => by simp [norm_mul])
   have ht := ENNReal.toReal_mono (ENNReal.mul_ne_top hfc.eLpNorm_ne_top hg.eLpNorm_ne_top) he
   change comparisonLpNorm 1 (fun x => (f x : ℂ) * g x) ≤
     (eLpNorm (fun x => (f x : ℂ)) (6 / 5) volume * eLpNorm g 6 volume).toReal at ht
   rw [ENNReal.toReal_mul] at ht
   change comparisonLpNorm 1 (fun x => (f x : ℂ) * g x) ≤
     comparisonLpNorm (6 / 5) (fun x => (f x : ℂ)) * comparisonLpNorm 6 g at ht
-  rw [lpNorm_ofReal] at ht
+  rw [lpNorm_ofReal _ _ hf.aestronglyMeasurable] at ht
   calc
     ‖∫ x, (f x : ℂ) * g x‖ ≤ ∫ x, ‖(f x : ℂ) * g x‖ := norm_integral_le_integral_norm _
     _ = comparisonLpNorm 1 (fun x => (f x : ℂ) * g x) :=
@@ -179,7 +179,7 @@ theorem fluxTest_eq_multiplier_rTest (R : ℝ) (hR : 0 < R) (w : Space → Space
 theorem lpNorm_rTest (R : ℝ) (hR : 0 < R) (w : Space → Space)
     (hw : ContDiff ℝ ∞ w) (p : ℝ≥0∞) :
     comparisonLpNorm p (rTest R hR w hw : Space → ℂ) = comparisonLpNorm p (PressureFluxTest.cutoffTest R w) :=
-  lpNorm_ofReal _ _
+  lpNorm_ofReal _ _ (PressureFluxTest.cutoffTest_smooth R hw).continuous.aestronglyMeasurable
 
 theorem lpNorm_fderiv_rTest (R : ℝ) (hR : 0 < R) (w : Space → Space)
     (hw : ContDiff ℝ ∞ w) :

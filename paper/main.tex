@@ -1,0 +1,108 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\setmainfont{Latin Modern Roman}
+\setsansfont{Latin Modern Sans}
+\setmonofont{DejaVu Sans Mono}[Scale=0.82]
+\setmathfont{Latin Modern Math}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amsthm,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc,decorations.pathreplacing}
+\usepackage{listings}
+\usepackage{microtype}
+
+\lstdefinestyle{lean}{
+  language=ML,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue!60!black}\bfseries,
+  commentstyle=\color{green!40!black}\itshape,
+  stringstyle=\color{red!50!black},
+  showstringspaces=false,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framerule=0.3pt,
+  rulecolor=\color{black!30},
+  xleftmargin=1em,
+}
+\lstset{style=lean}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\Ltwo}{L^2}
+\newcommand{\Linf}{L^\infty}
+\newcommand{\Hs}{H^s}
+\newcommand{\Lp}{L^p}
+\newcommand{\Cont}{C^\infty}
+\newcommand{\Contc}{C^\infty_c}
+\newcommand{\Conts}{C^\infty_\sigma}
+\newcommand{\lean}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\file}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
+\newcommand{\ip}[2]{\left\langle #1, #2 \right\rangle}
+\newcommand{\TauCeti}{\textsf{TauCeti}}
+\newcommand{\Mathlib}{\textsf{Mathlib}}
+\newcommand{\Lean}{\textsf{Lean}}
+
+\title{\bfseries Finite-Time Blowup for the\\ Three-Dimensional Navier--Stokes and Euler Equations\\[4pt]
+\large A Complete Machine-Checked Formalization, and Its Migration to\\
+Current \Mathlib{} and \TauCeti{}}
+\author{Open Math Model Project\thanks{Formalization originally produced by OpenAI;
+this report documents the statement audit, library migration and verification of the
+repository \texttt{NavierStokesAndEuler}.}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{sec1-introduction}
+\input{sec2-results}
+\input{sec3-scheme}
+\input{sec4-architecture}
+\input{sec5-verification}
+\input{sec6-libraries}
+\input{sec6b-duplication}
+\input{sec6c-table}
+\input{sec7-assessment}
+\input{sec8-examples}
+
+\appendix
+\input{app-statements}
+\input{app-modules}
+\input{app-changes}
+
+\input{refs}
+
+\end{document}

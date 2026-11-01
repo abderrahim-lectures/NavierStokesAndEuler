@@ -1,0 +1,149 @@
+\section{Statements, verbatim}
+\label{app:statements}
+
+This appendix reproduces, without editing, the Lean text of the declarations that
+Sections~\ref{sec:r3}--\ref{sec:euler} paraphrase. Comments inside the excerpts are the
+repository's own.
+
+\subsection*{Whole-space candidate data and the non-existence clause}
+
+\noindent\file{NavierStokes/R3/ProblemStatement.lean}, lines 92--160:
+
+\begin{lstlisting}[language=ML]
+structure CandidateProperties (ν : ℝ) (u : VelocityField) (p : PressureField)
+    (f : VelocityField) (K : Set Space) : Prop where
+  velocity_smooth : ContDiffOn ℝ ∞ u preSingularDomain
+  pressure_smooth : ContDiffOn ℝ ∞ p preSingularDomain
+  support_compact : IsCompact K
+  velocity_support : ∀ t ∈ Ico (0 : ℝ) 1,
+    tsupport (fun x : Space => u (t, x)) ⊆ K
+  pressure_support : ∀ t ∈ Ico (0 : ℝ) 1,
+    tsupport (fun x : Space => p (t, x)) ⊆ K
+  force_smooth : ContDiff ℝ ∞ f
+  force_support : CompactPositiveTimeSupport f
+  zero_initial_velocity : ∀ x : Space, u (0, x) = 0
+  divergence_free : ∀ t ∈ Ico (0 : ℝ) 1, ∀ x : Space,
+    NavierStokes.ProblemStatement.spatialDivergence u t x = 0
+  navier_stokes : ∀ t ∈ Ioo (0 : ℝ) 1, ∀ x : Space,
+    navierStokesResidual ν u p t x = f (t, x)
+  energy_bounded : UniformFiniteEnergy (Ico 0 1) u
+  speed_unbounded : SpeedUnboundedAtOne u
+
+/-- Data realizing the primary existence assertion at one viscosity. -/
+structure Candidate (ν : ℝ) where
+  velocity : VelocityField
+  pressure : PressureField
+  force : VelocityField
+  support : Set Space
+  properties : CandidateProperties ν velocity pressure force support
+
+/-- A global smooth solution with uniformly bounded kinetic energy for the
+given viscosity and the given force, starting from the same zero datum.
+
+There are no support, periodicity, pressure-growth, derivative-growth, or energy
+inequality assumptions on a competitor. The square-integrability requirement
+and its uniform energy bound use all of R³ and all nonnegative times. -/
+structure GlobalFiniteEnergySolution (ν : ℝ) (f : VelocityField) where
+  velocity : VelocityField
+  pressure : PressureField
+  velocity_smooth : ContDiffOn ℝ ∞ velocity futureDomain
+  pressure_smooth : ContDiffOn ℝ ∞ pressure futureDomain
+  zero_initial_velocity : ∀ x : Space, velocity (0, x) = 0
+  divergence_free : ∀ t ∈ Ici (0 : ℝ), ∀ x : Space,
+    NavierStokes.ProblemStatement.spatialDivergence velocity t x = 0
+  navier_stokes : ∀ t ∈ Ioi (0 : ℝ), ∀ x : Space,
+    navierStokesResidual ν velocity pressure t x = f (t, x)
+  energy_bounded : UniformFiniteEnergy (Ici 0) velocity
+
+/-- The primary existence assertion at one fixed viscosity. -/
+def candidateStatement (ν : ℝ) : Prop :=
+  ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
+    CandidateProperties ν u p f K
+
+/-- The primary existence assertion for every positive viscosity. -/
+def coreBreakdownStatement : Prop :=
+  ∀ ν : ℝ, 0 < ν → candidateStatement ν
+
+/-- The full assertion of Theorem 1.1: at every positive viscosity there is a
+candidate whose same prescribed force and zero datum have no global smooth
+solution with uniformly bounded kinetic energy. This is a target proposition,
+not an asserted theorem. -/
+def breakdownStatement : Prop :=
+  ∀ ν : ℝ, 0 < ν →
+    ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
+      CandidateProperties ν u p f K ∧ ¬ Nonempty (GlobalFiniteEnergySolution ν f)
+
+/-- Bundling the witnesses in `Candidate` does not change any hypothesis of
+the explicit primary existence assertion. -/
+theorem candidateStatement_iff_nonempty (ν : ℝ) :
+    candidateStatement ν ↔ Nonempty (Candidate ν) := by
+  constructor
+  · rintro ⟨u, p, f, K, h⟩
+\end{lstlisting}
+
+\subsection*{The periodic statement}
+
+\noindent\file{NavierStokes/PeriodicPaperTheorem.lean}, lines 26--50:
+
+\begin{lstlisting}[language=ML]
+structure CandidateProperties (ν : ℝ) (u : VelocityField) (p : PressureField)
+    (f : VelocityField) (K : Set Space) : Prop where
+  velocity_smooth : ContDiffOn ℝ ∞ u preSingularDomain
+  pressure_smooth : ContDiffOn ℝ ∞ p preSingularDomain
+  force_smooth : ContDiff ℝ ∞ f
+  velocity_periodic : UnitSpatialPeriodsOn (Ico 0 1) u
+  pressure_periodic : UnitSpatialPeriodsOn (Ico 0 1) p
+  force_periodic : UnitSpatialPeriodsOn (Ici 0) f
+  support_compact : IsCompact K
+  support_interior : K ⊆ fundamentalInterior
+  velocity_support : ∀ t ∈ Ico (0 : ℝ) 1,
+    tsupport (fun x : Space => u (t, x)) ∩ fundamentalCube ⊆ K
+  pressure_support : ∀ t ∈ Ico (0 : ℝ) 1,
+    tsupport (fun x : Space => p (t, x)) ∩ fundamentalCube ⊆ K
+  zero_initial_velocity : ∀ x : Space, u (0, x) = 0
+  force_time_support : CompactFutureTimeSupport f
+  force_zero_nonpos : ∀ t ≤ (0 : ℝ), ∀ x : Space, f (t, x) = 0
+  divergence_free : ∀ t ∈ Ico (0 : ℝ) 1, ∀ x : Space,
+    spatialDivergence u t x = 0
+  navier_stokes : ∀ t ∈ Ioo (0 : ℝ) 1, ∀ x : Space,
+    NavierStokesR3.ProblemStatement.navierStokesResidual ν u p t x = f (t, x)
+  speed_unbounded : SpeedUnboundedAtOne u
+
+/-- A global smooth periodic competitor for precisely the prescribed force
+and zero initial datum. No energy or pressure normalization is required. -/
+\end{lstlisting}
+
+\subsection*{The Euler statements as submitted to the reference challenge}
+
+\noindent\file{Euler/Solution.lean}, lines 33--60:
+
+\begin{lstlisting}[language=ML]
+theorem euler_breakdown_R3 :
+    ∃ u₀ : ℝ³ → ℝ³, InitialVelocityConditionDecay u₀ ∧
+      ¬ (∃ v p, EulerExistenceAndSmoothnessR3 u₀ v p) := by
+  exact ⟨initialDatum.field,
+    initialVelocityConditionDecay_of_compact initialDatum.field initialDatum.smooth
+      initialDatum_compact initialDatum_divergence, initialDatum_no_global_solution⟩
+
+-- Match the reference's elaboration of ENNReal suprema independently of import order.
+attribute [local instance] CompletePartialOrder.toSupSet
+
+theorem exists_compact_smooth_euler_singularity :
+    ∃ (u₀ : ℝ³ → ℝ³) (Tstar : ℝ) (v : ℝ³ → ℝ → ℝ³) (p : ℝ³ → ℝ → ℝ),
+      InitialVelocityConditionDecay u₀ ∧ HasCompactSupport u₀ ∧ u₀ ≠ 0 ∧
+      0 < Tstar ∧ Tstar ≤ 1 ∧
+      EulerSobolevExistenceAndSmoothnessR3On (Ico 0 Tstar) u₀ v p ∧
+      (∃ E : ℝ, ∀ t ∈ Ico (0 : ℝ) Tstar, (∫ x : ℝ³, ‖v x t‖ ^ 2) < E) ∧
+      (∀ T : ℝ, 0 < T →
+        ((∃ w q, EulerSobolevExistenceAndSmoothnessR3On (Icc 0 T) u₀ w q) ↔ T < Tstar)) ∧
+      (∀ T ∈ Ioo 0 Tstar,
+        (⨆ t ∈ Icc (0 : ℝ) T, velocityC1Norm (v · t)) < ⊤ ∧
+        (∫⁻ t in Ico (0 : ℝ) T, vorticityNorm (v · t)) < ⊤) ∧
+      Filter.limsup (fun t : ℝ => velocityC1Norm (v · t)) (𝓝[<] Tstar) = ⊤ ∧
+      (∫⁻ t in Ico (0 : ℝ) Tstar, vorticityNorm (v · t)) = ⊤ ∧
+      ¬ (∃ w q, EulerExistenceAndSmoothnessR3 u₀ w q) := by
+  refine ⟨initialDatum.field, lifespan.duration, maximalVelocityExtension lifespan,
+    maximalPressureExtension lifespan, ?_, initialDatum_compact, initialDatum_nonzero,
+    lifespan.duration_pos, lifespan_le_one, maximal_sobolevSolution lifespan,
+    maximalVelocityExtension_bounded_energy lifespan, ?_, ?_,
+\end{lstlisting}

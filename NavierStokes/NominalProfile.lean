@@ -1079,7 +1079,9 @@ theorem baseRegularF_smooth
     ContDiffOn ℝ ∞ c.baseRegularF c.preparedDomain.carrier := by
   apply splice_smoothOn c.preparedDomain.isOpen matchFraction_pos
     (Real.exp_lt_exp.mpr (by norm_num : (-5 : ℝ) < -4)) c.preparedProfiles.f_smooth
-  · exact (F.E_contDiffOn.mono (fun _ hp => ⟨hp.2, mem_univ _⟩)).div
+  · exact (F.E_contDiffOn.mono
+      (t := c.preparedDomain.carrier ∩ {p : Point | 0 < p.1})
+      (fun _ hp => ⟨hp.2, mem_univ _⟩)).div
       ((contDiffOn_const.mul contDiffOn_fst).sqrt
         (fun p hp => (mul_pos (by norm_num : (0 : ℝ) < 2) hp.2).ne'))
       (fun p hp => (Real.sqrt_pos.2 (mul_pos (by norm_num : (0 : ℝ) < 2) hp.2)).ne')
@@ -1293,7 +1295,7 @@ theorem outgoing_density_integrable (F : Profile) (eta r : ℝ) (i : Fin 5) :
   fin_cases i
   · exact (F.mass_integrable eta).mono_set (fun _ hx => hx.1)
   · exact outgoing_H_integrable_prefix F eta r
-  · apply IntegrableOn.congr_fun ((F.angular_integrable eta).mono_set (fun _ hx => hx.1))
+  · apply IntegrableOn.congr_fun ((F.angular_integrable eta).mono_set (s := Ioc 0 r) (fun _ hx => hx.1))
       _ measurableSet_Ioc
     intro x _
     change (Real.sqrt (2 * x) * F.E (x, eta)) * F.U (x, eta) =
@@ -1301,7 +1303,8 @@ theorem outgoing_density_integrable (F : Profile) (eta r : ℝ) (i : Fin 5) :
     ring
   · exact (F.energy_integrable eta).mono_set (fun _ hx => hx.1)
   · apply IntegrableOn.congr_fun
-      (((F.canonicalKernel_integrable eta).mono_set (fun _ hx => hx.1)).div_const 2) _ measurableSet_Ioc
+      (((F.canonicalKernel_integrable eta).mono_set (s := Ioc 0 r)
+        (fun _ hx => hx.1)).div_const 2) _ measurableSet_Ioc
     intro x _
     change (F.E (x, eta) ^ 2 / x) / 2 = F.E (x, eta) ^ 2 / (2 * x)
     rw [div_div, mul_comm x 2]
@@ -1388,8 +1391,8 @@ theorem moment_difference_split (U E V G : Field) (eta : ℝ) {r b : ℝ} (hr : 
   ext i
   dsimp only [moments, Pi.sub_apply, Pi.add_apply]
   rw [prefix_integral_split hr hrb (hU i), prefix_integral_split hr hrb (hV i),
-    integral_sub ((hU i).mono_set (fun _ hx => ⟨hr.trans_lt hx.1, hx.2⟩))
-      ((hV i).mono_set (fun _ hx => ⟨hr.trans_lt hx.1, hx.2⟩))]
+    integral_sub ((hU i).mono_set (s := Ioc r b) (fun _ hx => ⟨hr.trans_lt hx.1, hx.2⟩))
+      ((hV i).mono_set (s := Ioc r b) (fun _ hx => ⟨hr.trans_lt hx.1, hx.2⟩))]
   ring
 
 noncomputable def manuscriptIdealRows (F : Profile) (r eta : ℝ) : Debt :=
@@ -1884,7 +1887,9 @@ theorem heatedE_smooth {B : ℝ} (w : HeatedOutgoing.CompensationWitness F c.rad
     intro p hp
     exact (c.E_smoothAt hsep hp.1.1 (physical_band_in_parameterInterval hp.1.2) hp.2).contDiffWithinAt
   exact hc.add (((c.heatBlend_smooth.comp contDiff_fst).contDiffOn).mul
-    ((HeatedOutgoing.E_contDiffOn F c.radius c.radius_pos w.smooth).mono (fun _ hp => hp.1) |>.sub hc))
+    ((HeatedOutgoing.E_contDiffOn F c.radius c.radius_pos w.smooth).mono
+      (t := {p | p ∈ HeatedOutgoing.domain ∧ SmallDebt F c.debt p.2})
+      (fun _ hp => hp.1) |>.sub hc))
 
 end Controls
 
@@ -1918,7 +1923,7 @@ theorem heated_outgoing_density_integrable {F : Profile} {R B : ℝ}
         Real.sqrt (2 * x) * (HeatedOutgoing.E F R w.coefficients (x, eta) - OutgoingDilation.E F R (x, eta)) =
       Real.sqrt (2 * x) * HeatedOutgoing.E F R w.coefficients (x, eta)
     ring
-  · apply IntegrableOn.congr_fun ((w.angular_integrable eta).mono_set (fun _ hx => hx.1))
+  · apply IntegrableOn.congr_fun ((w.angular_integrable eta).mono_set (s := Ioc 0 r) (fun _ hx => hx.1))
       _ measurableSet_Ioc
     intro x _
     change (Real.sqrt (2 * x) * HeatedOutgoing.E F R w.coefficients (x, eta)) *
@@ -1927,7 +1932,8 @@ theorem heated_outgoing_density_integrable {F : Profile} {R B : ℝ}
     ring
   · exact (w.energy_integrable eta hη).mono_set (fun _ hx => hx.1)
   · apply IntegrableOn.congr_fun
-      (((w.canonicalKernel_integrable eta hη).mono_set (fun _ hx => hx.1)).div_const 2)
+      (((w.canonicalKernel_integrable eta hη).mono_set (s := Ioc 0 r)
+        (fun _ hx => hx.1)).div_const 2)
       _ measurableSet_Ioc
     intro x _
     change (HeatedOutgoing.E F R w.coefficients (x, eta) ^ 2 / x) / 2 =
@@ -1938,7 +1944,7 @@ theorem prefix_integrable_replace {f g : ℝ → ℝ} {a r : ℝ} (ha : 0 ≤ a)
     (hf : IntegrableOn f (Ioc 0 a)) (hg : IntegrableOn g (Ioc 0 r))
     (tail : ∀ x, a < x → f x = g x) : IntegrableOn f (Ioc 0 r) := by
   have ht : IntegrableOn f (Ioc a r) := by
-    apply IntegrableOn.congr_fun (hg.mono_set (fun _ hx => ⟨ha.trans_lt hx.1, hx.2⟩))
+    apply IntegrableOn.congr_fun (hg.mono_set (s := Ioc a r) (fun _ hx => ⟨ha.trans_lt hx.1, hx.2⟩))
       _ measurableSet_Ioc
     exact fun x hx => (tail x hx.1).symm
   rw [← Ioc_union_Ioc_eq_Ioc ha har]
@@ -2280,7 +2286,9 @@ theorem heatedPi_smooth {B : ℝ} (w : HeatedOutgoing.CompensationWitness F c.ra
     intro p hp
     exact (c.Pi_smoothAt hsep hp.1.1 (physical_band_in_parameterInterval hp.1.2) hp.2).contDiffWithinAt
   apply (hc.add (((c.heatBlend_smooth.comp contDiff_fst).contDiffOn).mul
-    ((w.Pi_contDiffOn.mono (fun _ hp => hp.1)).sub hc))).congr
+    ((w.Pi_contDiffOn.mono
+      (t := {p | p ∈ HeatedOutgoing.domain ∧ SmallDebt F c.debt p.2})
+      (fun _ hp => hp.1)).sub hc))).congr
   intro p hp
   exact c.heated_pressure_blend w hsep hp.1.1 hp.1.2 hp.2
 

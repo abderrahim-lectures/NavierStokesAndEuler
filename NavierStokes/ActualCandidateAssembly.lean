@@ -225,6 +225,7 @@ theorem zerothPotential_smooth (B N0 : ℕ) :
 theorem zerothPressure_smooth (B N0 : ℕ) :
     ContDiffOn ℝ ∞ (zerothPressure B N0) (ActualCandidateConstruction.physicalDomain B N0) :=
   ((FinalSlowBase.pressure_smooth certificate modulation upper B).mono
+    (t := ActualCandidateConstruction.physicalDomain B N0)
     (fun _ hw => ⟨hw.1, mem_univ _⟩)).add (initialPressure_smooth B N0)
 
 /-! ## The particular fields come from the same current state

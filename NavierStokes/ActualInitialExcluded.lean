@@ -48,12 +48,16 @@ theorem stressForce_contDiffAt {f g : SimilarityProfile.PhysicalProfile}
   have hR : ContDiffAt ℝ ∞ (fun z : SpaceTime =>
       Real.sqrt (2 * AxisymmetricFields.radialEnergy z.2)) z :=
     (contDiffAt_const.mul (AxisymmetricFields.contDiff_radialEnergy.contDiffAt.comp z
-      contDiffAt_snd)).sqrt (by positivity)
+      contDiffAt_snd)).sqrt (by
+        have h2 : 0 < 2 * AxisymmetricFields.radialEnergy z.2 := by linarith
+        simpa using h2.ne')
   have hf' := (radialDivergence_contDiffAt hf hr 2).comp z hp
   have hg' := (radialDivergence_contDiffAt hg hr 1).comp z hp
   have hx (i : Fin 3) : ContDiffAt ℝ ∞ (fun z : SpaceTime => z.2 i) z :=
     (AxisymmetricFields.projection i).contDiff.contDiffAt.comp z contDiffAt_snd
-  exact (((hx 1).div hR (by positivity)).mul hf').smul contDiffAt_const |>.add
+  exact (((hx 1).div hR (by
+    have hpos : 0 < 2 * AxisymmetricFields.radialEnergy z.2 := by linarith
+    exact (Real.sqrt_pos.mpr hpos).ne')).mul hf').smul contDiffAt_const |>.add
     (((((hx 0).neg).div hR (by positivity)).mul hf').smul contDiffAt_const) |>.add
       (hg'.neg.smul contDiffAt_const)
 

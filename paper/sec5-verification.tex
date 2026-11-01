@@ -1,0 +1,93 @@
+\section{What is verified, and how}
+\label{sec:verification}
+
+\subsection{No gaps}
+\label{sec:nogaps}
+
+A search of all 2,659 Lean files for the token \lean{sorry} returns five occurrences.
+One is inside a docstring. The other four are in
+\file{ComparatorChallenges/NavierStokes.lean} (lines 277 and 284) and
+\file{ComparatorChallenges/Euler.lean} (lines 88 and 184), i.e.\ in the \emph{challenge
+statements} that reproduce the Formal Conjectures placeholders for the Millennium problem.
+Those four are not used by any proof: the challenge modules import only \Mathlib, and
+nothing imports them. The two proof libraries contain no \lean{sorry}. A search for
+\lean{axiom}, \lean{native\_decide}, \lean{implemented\_by}, \lean{@[extern]},
+\lean{unsafe}, \lean{partial} and \lean{opaque} finds none in \file{NavierStokes/} or
+\file{Euler/} either; the occurrences of the word ``axiom'' in those directories are
+docstrings explaining that something is \emph{not} an axiom, for example
+\file{NavierStokes/ProblemStatement.lean}: ``There is no proof, witness, or axiom
+asserting this proposition in this module.''
+
+\subsection{Axioms}
+\label{sec:axioms}
+
+The four headline declarations carry explicit \lean{\#print axioms} commands in the
+repository: \file{NavierStokes/ComparatorSolution.lean} lines 31--32 for the two
+Navier--Stokes alternatives, and \file{Euler/Solution.lean} lines 73 and 75 for the two
+Euler statements. The reported dependency sets are
+\[
+  \{\lean{propext},\ \lean{Classical.choice},\ \lean{Quot.sound}\},
+\]
+the standard classical base of \Mathlib{} analysis. Section~\ref{sec:migration-results}
+reports the same commands re-run after the migration.
+
+We re-ran those commands at the pinned toolchain after the migration, and can now report
+the compiler's own answer rather than the repository's claim:
+
+\begin{lstlisting}[language=ML]
+'NavierStokesR3.breakdownStatement' depends on axioms: [propext, Classical.choice, Quot.sound]
+'NavierStokes.PeriodicPaper.breakdownStatement' depends on axioms: [propext, Classical.choice, Quot.sound]
+'NavierStokes.Comparator.navier_stokes_breakdown_R3' depends on axioms: [propext, Classical.choice, Quot.sound]
+'NavierStokes.Comparator.navier_stokes_breakdown_periodic' depends on axioms: [propext, Classical.choice, Quot.sound]
+\end{lstlisting}
+
+This matters more than it might appear. A formalization of this size has many places
+where a proof could in principle be closed by a stronger assumption---an inverse function
+theorem asserted as an axiom, a well-posedness theorem assumed for the class at hand. The
+axiom audit is what rules that out: an unproved input would show up as an extra axiom in
+the dependency set of the headline theorem, and there is none.
+
+\subsection{Statement fidelity}
+\label{sec:fidelity}
+
+Typechecking a theorem says nothing about whether it states the intended mathematics. We
+checked the statements in three ways.
+
+\emph{Definitions copied, not paraphrased.} The Euler definitions
+(\file{Euler/SolutionDefinitions.lean}) and both challenge modules are adapted from the
+Formal Conjectures formalization of the Millennium problem statement, with a comment
+recording the upstream commit. The task was therefore to prove \emph{that} statement, not
+a convenient variant.
+
+\emph{Every hypothesis is explicit.} The Navier--Stokes statement's force class, for
+example, is \lean{CompactPositiveTimeSupport f}, defined as
+\lean{HasCompactSupport f ∧ tsupport f ⊆ Ioi 0 ×ˢ univ}: smooth, compactly supported in
+spacetime, supported at strictly positive times. The energy condition is
+\lean{UniformFiniteEnergy (Ico 0 1) u}, which asks for a single $E\ge0$ with
+\lean{SquareIntegrableAtTime u t} and \lean{kineticEnergy u t ≤ E} for every $t\in[0,1)$.
+Neither condition can be satisfied vacuously, and neither hides an assumption about the
+\emph{competitor}, which is quantified with no support, growth or energy-inequality
+hypothesis beyond the bound.
+
+\emph{No statement is vacuous.} The two constructions are explicit: the repository builds
+the fields and then proves the properties, so the existential statements have witnesses
+that can be inspected. Theorems that are only \emph{conditional} are named as such; for
+example \file{NavierStokes/ProblemStatement.lean} contains the proposition
+\lean{candidateStatement} together with a docstring saying that nothing in the module
+proves it, and the proof that it holds is in \file{NavierStokes/R3/Theorem.lean} under the
+same name. This is a good convention: a reader who searches for a statement finds, at the
+statement, a pointer to where it is discharged.
+
+\subsection{Independent checking}
+\label{sec:comparator}
+
+The repository ships a Comparator configuration (\file{ComparatorChallenges/}), which
+exports the four headline theorems to Lean's kernel-independent proof format and replays
+them through a separate checker after translation. This is a defence against a bug in
+Lean's own kernel or in the elaborator, and it is the strongest available form of
+independent verification for a Lean development. The migration described in
+Section~\ref{sec:libraries} forced a choice here: Comparator is released per toolchain and
+its releases stop at \Lean{} \texttt{v4.35.0}, one version below the toolchain that
+\TauCeti{} requires. We kept the migration and the challenge definitions and dropped the
+Comparator \emph{library} dependency; the challenge files remain in the repository and can
+be re-checked with a Comparator installation matching whichever toolchain is in use.

@@ -1,0 +1,169 @@
+\section{Architecture of the formalization}
+\label{sec:architecture}
+
+\subsection{Scale and shape}
+
+Table~\ref{tab:scale} gives the size of the repository. The two developments are
+deliberately kept in separate libraries with separate roots, so that the Euler material
+cannot depend on the Navier--Stokes material or conversely.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+library & \Lean{} files & lines & \lean{theorem}/\lean{lemma} \\
+\midrule
+\file{NavierStokes} & 753 & 405{,}375 & 24{,}694 \\
+\file{Euler} & 1{,}829 & 212{,}155 & 10{,}594 \\
+\file{ComparatorChallenges} & 2 & 474 & 9 \\
+\midrule
+total & 2{,}584 & 618{,}004 & 35{,}297 \\
+\bottomrule
+\end{tabular}
+\caption{Size of the development after the dead-code removal of
+Section~\ref{sec:cleanup}, counted over the library directories
+(\file{NavierStokes.lean} and \file{Euler.lean} add two root files, for 2{,}588 in the tree). Lines are physical
+lines of Lean source including comments.}
+\label{tab:scale}
+\end{table}
+
+The import graph is unusually \emph{flat}. On average a file imports 2.74 modules, of
+which 2.30 are project-local; 73 files import no project-local module at all (they sit
+directly on \Mathlib); the longest chain of project-local imports is 96 modules; and only
+57 modules are imported by eight or more others. The largest single files are
+\file{Euler/EulerProof.lean} (20{,}755 lines), \file{NavierStokes/CorrectionStep.lean}
+(9{,}849), \file{NavierStokes/CorrectionInitializationNoOptions.lean} (5{,}573) and
+\file{NavierStokes/CorrectionInitialization.lean} (5{,}562); everything else is under
+3{,}000 lines, ninety per cent of them are under 600 lines, and the median file is 114
+lines long.
+
+This shape is a consequence of how the development was produced and is worth commenting
+on for anyone planning a large formalization. Each file introduces a small number of
+definitions and proves the lemmas about them; because the files are small, elaboration is
+parallel, failures are local, and a reader can find the place where a specific estimate is
+proved by searching for the constant it mentions. The price is that there is almost no
+reuse: the same argument is often repeated in two files that cannot see each other,
+because the module that would have shared it would have to be an ancestor of both. We
+measured the extreme case: 74 of the 2,659 modules are not reachable from any of the
+repository's entry points (Section~\ref{sec:cleanup}).
+
+\subsection{Three layers}
+\label{sec:layers}
+
+It is useful to separate three layers, because they are checked against different
+standards.
+
+\paragraph{The statement layer.} A handful of modules contain no analysis at all:
+\file{NavierStokes/ProblemStatement.lean} (the torus statement),
+\file{NavierStokes/R3/ProblemStatement.lean} (the whole-space statement),
+\file{Euler/SolutionDefinitions.lean} and \file{ComparatorChallenges/*.lean}. These are
+where fidelity to the source papers and to the Millennium problem statement is decided.
+They define the carriers, the differential operators \eqref{eq:residual} and the
+structures \lean{CandidateProperties}, \lean{GlobalFiniteEnergySolution},
+\lean{GlobalSmoothSolution} and \lean{InitialVelocityConditionDecay} that spell out what
+``a solution'' is. Everything in this layer is short ($\sim$150 lines each) and is meant to
+be read by a referee.
+
+\paragraph{The infrastructure layer.} About 3{,}800 lines in 18 modules supply analysis
+that \Mathlib{} does not have: smooth cutoffs with all-order derivative bounds, a
+one-sided exponential edge $\exp(-c/x)$ with its inverse-power family, zero extension
+across such an edge, finite-order jet bookkeeping in weighted band-indexed classes, the
+Banach space $C^k([-1,1];E)$ as a closed submodule of jet data, all-orders differentiation
+under the integral sign, nested $L^2$ as a product $L^2$, mollification on $L^2$, Sobolev
+spaces on a cylinder as a word lattice, and a heat-kernel gain of derivatives. These
+modules are the natural candidates for replacement by a general library, and they are the
+subject of Section~\ref{sec:libraries}.
+
+\paragraph{The construction layer.} Everything else: the selected profiles, the geometric
+regions, the dyadic charts, the wave labels, the correction stages, the packet estimates,
+and the assembly theorems that instantiate the statement layer. This is where the
+mathematics lives, and it is where a reader will spend their time.
+
+\subsection{The dependency chain of a headline theorem}
+\label{sec:chain}
+
+The two Navier--Stokes alternatives are proved along the following path. The whole-space
+statement is the primitive one; the periodic corollary is derived from it.
+
+\begin{center}
+\begin{tikzpicture}[node distance=5mm and 7mm,
+   box/.style={draw,rounded corners=1pt,fill=blue!6,align=center,font=\scriptsize,inner sep=3pt,text width=3.05cm},
+   arr/.style={-{Latex[length=2mm]},draw=black!70}]
+ \node[box] (ps) {\file{ProblemStatement}\\operators, residual};
+ \node[box,right=of ps] (r3ps) {\file{R3/ProblemStatement}\\whole-space structures};
+ \node[box,right=of r3ps] (act) {\file{R3/ActualCandidate}\\selected construction};
+ \node[box,below=of act] (brk) {\file{R3/CandidateBreakdown}\\no global competitor};
+ \node[box,left=of brk] (vis) {\file{R3/ViscosityScaling}\\$\nu$-scaling};
+ \node[box,left=of vis] (thm) {\file{R3/Theorem}\\Theorem~\ref{thm:ns-r3}};
+ \node[box,below=of thm] (par) {\file{R3/ParabolicScaling}\\compression};
+ \node[box,right=of par] (pp) {\file{PeriodizePDE}\\periodic lift};
+ \node[box,right=of pp] (pc) {\file{PeriodicPaperTheorem}\\Theorem~\ref{thm:ns-torus}};
+ \node[box,below=of thm,yshift=-11mm] (cmp) {\file{ComparatorSolution}\\(C) and (D)};
+ \draw[arr] (ps)--(r3ps); \draw[arr] (r3ps)--(act); \draw[arr] (act)--(brk);
+ \draw[arr] (brk)--(vis); \draw[arr] (vis)--(thm);
+ \draw[arr] (thm)--(par); \draw[arr] (par)--(pp); \draw[arr] (pp)--(pc);
+ \draw[arr] (pc.south) -- ++(0,-3mm) -| (cmp.east);
+ \draw[arr] (thm.south) -- ++(0,-3mm) -| ([xshift=6mm]cmp.north);
+\end{tikzpicture}
+\end{center}
+
+The Euler chain is different in kind: the non-continuation statement
+(Theorem~\ref{thm:euler-bkm}) is a corollary of the quantitative one
+(Theorem~\ref{thm:euler-quant}) through the Beale--Kato--Majda criterion, and the
+quantitative statement is assembled from the iteration.
+
+\subsection{Naming and documentation}
+\label{sec:naming}
+
+Two conventions carried the development and are worth recording.
+
+\emph{Names say what is being proved, not where it is used.}
+There are modules called \file{ReservedPatches}, \file{ExponentLedger},
+\file{FiveProfileMoments}, \file{MeanLocalDefectBounds}, \file{OutgoingEntranceCone},
+\file{SignedRequestContinuation}. A reader who knows the source paper can find the Lean
+counterpart of a numbered proposition by looking for the object it is about. This is the
+opposite of a ``Chapter3\_Lemma7'' convention, and it is the right choice at this scale.
+
+\emph{Module docstrings state the role, and often the caveat.}
+\file{NavierStokes/ExponentLedger.lean} opens with ``The candidate manuscript,
+Proposition 10.3, assigns real exponents to analytic estimates. This file checks the
+arithmetic of those assignments, conditional on the estimates being valid. It does not
+define the analytic classes, construct a correction, or prove an estimate for a PDE.''
+A formalization whose docstrings say what they do \emph{not} prove is much easier to audit
+than one whose docstrings only advertise.
+
+\subsection{Dead code, removed}
+\label{sec:cleanup}
+
+Reachability analysis from the repository's entry points
+(\file{NavierStokes.lean}, \file{Euler.lean}, \file{Euler/Solution.lean},
+\file{ComparatorChallenges/NavierStokes.lean}, \file{ComparatorChallenges/Euler.lean},
+\file{NavierStokes/TauCetiBridge.lean}) left 75 modules that no entry point reaches. 74 of
+them were deleted during the migration---26{,}089 lines, 4.0\% of the tree:
+
+\begin{center}\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+ & files & lines \\
+\midrule
+before & 2{,}659 & 643{,}986 \\
+removed (\lean{*NoOptions*} copies of existing modules, in a separate namespace) & 11 & 7{,}032 \\
+removed (investigations and orphaned fragments of earlier constructions) & 63 & 19{,}057 \\
+after & 2{,}585 & 617{,}967 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The deletion is safe by construction rather than by inspection: no remaining file imports any
+of the removed modules, which was checked after the removal (zero dangling imports), so no
+reachable declaration changed meaning. It is also reversible with a single \lean{git revert}.
+The one unreachable module that was kept is \file{NavierStokes/TauCetiBridge.lean}, which is
+deliberately a leaf.
+
+This is the only substantial reduction of code available in the repository, and it is worth
+being precise about why. Removing dead code took out 4\% of the lines at zero risk. Replacing
+project code by library code would take out 162 lines (the two ``free'' files of
+Table~\ref{tab:infra}) plus part of nine others, and carries the risk of touching
+declarations the unfinished build depends on. The remaining 99\% of the code is not
+duplicated library material and cannot be reduced by substitution; it is the proof.

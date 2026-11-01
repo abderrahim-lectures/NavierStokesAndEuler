@@ -1342,7 +1342,9 @@ theorem scalar_fields_continuousOn (F : Profile) {XR C : ℝ} (w : CompensationW
     ContinuousOn (HeatSwitchCone.radialA F XR w.coefficients) closedLogDomain := by
   let G : (ℝ × ℝ) → HeatSwitchCone.Control × (ℝ × ℝ) := fun p => (HeatSwitchCone.controls F w p.2,p)
   have hc : ContinuousOn G closedLogDomain :=
-    ((controls_continuousOn F w).comp continuousOn_snd (fun _ hp => hp.2)).prodMk continuousOn_id
+    ((controls_continuousOn F w).comp (s := closedLogDomain)
+      (t := HeatedOutgoing.parameterDomain) (continuousOn_snd (s := closedLogDomain))
+      (fun _ hp => hp.2)).prodMk continuousOn_id
   have he : ContinuousOn (fun p => HeatSwitchCone.value (HeatSwitchCone.freeE F) (G p)) closedLogDomain :=
     (HeatSwitchCone.value_contDiff (HeatSwitchCone.freeE_contDiff F)).continuous.comp_continuousOn hc
   have heq (p : ℝ × ℝ) (hp : p ∈ closedLogDomain) :

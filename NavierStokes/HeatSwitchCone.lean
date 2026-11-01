@@ -89,7 +89,7 @@ theorem freeE_contDiff (F : Profile) : ContDiff ℝ ∞ (freeE F) := by
       (Real.exp (z.2.1 - OutgoingDilation.patchClock F))) := by
     apply ContDiff.sum
     intro j _
-    exact ((contDiff_apply ℝ ℝ j).comp contDiff_fst.snd).mul
+    exact ((contDiff_apply ℝ (fun _ => ℝ) j).comp contDiff_fst.snd).mul
       ((TerminalCompensation.bump_contDiff OutgoingDilation.compensationPatch j).comp
         (contDiff_snd.fst.sub contDiff_const).exp)
   exact (he.mul (contDiff_const.add (hs.mul (hh.sub contDiff_const)))).add

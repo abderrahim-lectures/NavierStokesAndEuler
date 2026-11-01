@@ -74,7 +74,6 @@ theorem tensor_eLpNorm_le (f : LiftDomain P → V)
     simp only [Finset.sum_apply]
   rw [he] at hA
   have hB := eLpNorm_sum_le
-    (fun w (_ : w ∈ (Finset.univ : Finset (Fin n → Fin 4))) => (hLp w).1.norm)
     (by norm_num : (1 : ℝ≥0∞) ≤ 2)
   simp only [eLpNorm_norm] at hB
   have hC : (C : ℝ≥0∞) * ∑ w : Fin n → Fin 4,

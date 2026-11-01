@@ -412,24 +412,29 @@ theorem forcingAlong_continuousOn (k : Frequency)
     (hB : ContinuousOn d.forcingMap (U ×ˢ univ))
     (hf : ContinuousOn d.source (U ×ˢ univ)) :
     ContinuousOn (d.forcingAlong g k) ((U ×ˢ univ) ×ˢ univ) :=
-  (hB.comp (g.nativeArgument_contDiff k).continuous.continuousOn
+  (hB.comp (s := (U ×ˢ univ) ×ˢ univ) (t := U ×ˢ univ)
+    (g.nativeArgument_contDiff k).continuous.continuousOn
     (fun _ hw => ⟨hw.1.1, mem_univ _⟩)).clm_apply
-    (hf.comp (g.pathArgument_contDiff k).continuous.continuousOn
+    (hf.comp (s := (U ×ˢ univ) ×ˢ univ) (t := U ×ˢ univ)
+      (g.pathArgument_contDiff k).continuous.continuousOn
       (fun _ hw => ⟨hw.1.1, mem_univ _⟩))
 
 theorem coefficientAlong_contDiffOn (k : Frequency)
     (hA : ContDiffOn ℝ ∞ d.coefficient (U ×ˢ univ)) :
     ContDiffOn ℝ ∞ (d.coefficientAlong g k) ((U ×ˢ univ) ×ˢ univ) :=
-  hA.comp (g.nativeArgument_contDiff k).contDiffOn
+  hA.comp (s := (U ×ˢ univ) ×ˢ univ) (t := U ×ˢ univ)
+    (g.nativeArgument_contDiff k).contDiffOn
     (fun _ hw => ⟨hw.1.1, mem_univ _⟩)
 
 theorem forcingAlong_contDiffOn (k : Frequency)
     (hB : ContDiffOn ℝ ∞ d.forcingMap (U ×ˢ univ))
     (hf : ContDiffOn ℝ ∞ d.source (U ×ˢ univ)) :
     ContDiffOn ℝ ∞ (d.forcingAlong g k) ((U ×ˢ univ) ×ˢ univ) :=
-  (hB.comp (g.nativeArgument_contDiff k).contDiffOn
+  (hB.comp (s := (U ×ˢ univ) ×ˢ univ) (t := U ×ˢ univ)
+    (g.nativeArgument_contDiff k).contDiffOn
     (fun _ hw => ⟨hw.1.1, mem_univ _⟩)).clm_apply
-    (hf.comp (g.pathArgument_contDiff k).contDiffOn
+    (hf.comp (s := (U ×ˢ univ) ×ˢ univ) (t := U ×ˢ univ)
+      (g.pathArgument_contDiff k).contDiffOn
       (fun _ hw => ⟨hw.1.1, mem_univ _⟩))
 
 variable [CompleteSpace E] {a b : ℝ} (hab : a ≤ b)

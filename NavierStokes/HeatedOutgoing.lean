@@ -74,7 +74,10 @@ theorem extendedHeatE_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) :
 
 theorem heatE_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) :
     ContDiffOn ℝ ∞ (heatE F XR) domain := by
-  apply ((extendedHeatE_contDiffOn F XR hXR).mono (fun _ hp => ⟨hp.1, mem_univ _⟩)).congr
+  have hm : ContDiffOn ℝ ∞ (extendedHeatE F XR) domain :=
+    (extendedHeatE_contDiffOn F XR hXR).mono (t := domain)
+      (fun p hp => ⟨hp.1, mem_univ _⟩)
+  apply hm.congr
   intro p hp
   exact heatE_eq_extended F XR hp
 
@@ -95,7 +98,8 @@ theorem U_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) : ContDiffOn ℝ �
 
 theorem H_contDiffOn (F : Profile) (XR : ℝ) (hXR : 0 < XR) {c : ℝ → Coeff}
     (hc : ContDiffOn ℝ ∞ c parameterDomain) : ContDiffOn ℝ ∞ (H F XR c) domain :=
-  ((contDiffOn_const.mul contDiffOn_fst).sqrt
+  have h1 : ContDiffOn ℝ ∞ (Prod.fst : ℝ × ℝ → ℝ) domain := contDiffOn_fst
+  ((contDiffOn_const.mul h1).sqrt
     (fun _ hp => ne_of_gt (mul_pos (by norm_num) hp.1))).mul (E_contDiffOn F XR hXR hc)
 
 theorem heatE_before (F : Profile) (XR eta X : ℝ) (hXR : 0 < XR) (hX : 0 < X)
@@ -587,7 +591,7 @@ theorem freeLogE_contDiff (F : Profile) (XR : ℝ) (hXR : 0 < XR) :
       TerminalCompensation.correction compensationPatch z.1.1 (Real.exp z.2 / patchRadius F XR)) := by
     apply ContDiff.sum
     intro j _
-    exact ((contDiff_apply ℝ ℝ j).comp contDiff_fst.fst).mul
+    exact ((contDiff_apply ℝ (fun _ => ℝ) j).comp contDiff_fst.fst).mul
       ((TerminalCompensation.bump_contDiff compensationPatch j).comp
         (contDiff_snd.exp.div_const _))
   exact he.add (((OutgoingDilation.shapedPatchAmplitude_contDiff F).comp contDiff_fst.snd).mul hc)
@@ -682,7 +686,8 @@ theorem Pi_log_contDiffOn : ContDiffOn ℝ ∞
   have hi := anchoredPrimitive_contDiff _ hf (Real.log (patchRadius F XR))
   have hc : ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => ((w.coefficients p.2, p.2), p.1))
       (univ ×ˢ parameterDomain) :=
-    ((w.smooth.comp contDiffOn_snd (fun _ hp => hp.2)).prodMk contDiffOn_snd).prodMk contDiffOn_fst
+    ((w.smooth.comp (s := univ ×ˢ parameterDomain) (t := parameterDomain)
+      contDiffOn_snd (fun _ hp => hp.2)).prodMk contDiffOn_snd).prodMk contDiffOn_fst
   have hb : ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => OutgoingDilation.Pi F XR (patchRadius F XR, p.2))
       (univ ×ˢ parameterDomain) :=
     (OutgoingDilation.Pi_contDiffOn F XR w.radius_pos).comp
@@ -694,7 +699,7 @@ theorem Pi_log_contDiffOn : ContDiffOn ℝ ∞
 
 theorem Pi_contDiffOn : ContDiffOn ℝ ∞ (Pi F XR w.coefficients) domain := by
   have hl : ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => (Real.log p.1, p.2)) domain :=
-    (contDiffOn_fst.log (fun p hp => ne_of_gt hp.1)).prodMk contDiffOn_snd
+    ((contDiffOn_fst (s := domain)).log (fun p hp => ne_of_gt hp.1)).prodMk contDiffOn_snd
   apply (w.Pi_log_contDiffOn.comp hl (fun _ hp => ⟨mem_univ _, hp.2⟩)).congr
   intro p hp
   dsimp only [Function.comp_def]

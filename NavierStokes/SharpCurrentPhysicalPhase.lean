@@ -146,7 +146,7 @@ theorem remainder_smoothNear {n : ℕ} {i : ActualPhaseJetBounds.CopyIndex B N0}
   refine ⟨g ⁻¹' ActualPhaseJetBounds.jetDomain.carrier i.1,
     (ActualPhaseJetBounds.jetDomain.isOpen i.1).preimage hg.continuous,hxg,?_⟩
   have hb := (ActualPhaseJetBounds.nativeRemainder_polynomial.smooth i.1).comp
-    hg.contDiffOn (fun _ hy => hy)
+    (hg.contDiffOn (s := g ⁻¹' ActualPhaseJetBounds.jetDomain.carrier i.1)) (fun _ hy => hy)
   change ContDiffOn ℝ ∞ (remainder n i) (g ⁻¹' ActualPhaseJetBounds.jetDomain.carrier i.1)
   apply hb.congr
   intro y _

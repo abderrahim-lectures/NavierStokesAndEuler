@@ -100,12 +100,14 @@ def normalizedAnnulus (r : ℝ) : Set SpaceTime :=
 
 theorem normalizedAnnulus_compact (r : ℝ) : IsCompact (normalizedAnnulus r) := by
   have hclosed : IsClosed (normalizedAnnulus r) := by
-    apply IsClosed.inter
-    · exact isClosed_Icc.preimage continuous_fst
-    · apply IsClosed.inter
-      · exact isClosed_eq ((EuclideanSpace.proj 2).continuous.comp continuous_snd) continuous_const
-      · exact isClosed_Icc.preimage
-          ((AxisymmetricFields.contDiff_radialEnergy (n := ∞)).continuous.comp continuous_snd)
+    have h1 : IsClosed {w : SpaceTime | w.1 ∈ Icc 0 1} :=
+      isClosed_Icc.preimage continuous_fst
+    have h2 : IsClosed {w : SpaceTime | w.2 2 = 0} :=
+      isClosed_eq ((EuclideanSpace.proj 2).continuous.comp continuous_snd) continuous_const
+    have h3 : IsClosed {w : SpaceTime | AxisymmetricFields.radialEnergy w.2 ∈ Icc r 1} :=
+      isClosed_Icc.preimage
+        ((AxisymmetricFields.contDiff_radialEnergy (n := ∞)).continuous.comp continuous_snd)
+    exact h1.inter (h2.inter h3)
   apply (isCompact_closedBall (0 : SpaceTime) 3).of_isClosed_subset hclosed
   intro w hw
   have hs := EuclideanSpace.real_norm_sq_eq w.2
