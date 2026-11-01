@@ -155,35 +155,7 @@ theorem pressure_bound (upper : ℝ) (B m : ℕ) :
 def baseLoss (m : ℕ) : ℝ :=
   ActualBaseVelocityBounds.heatLoss m + ActualBasePressureBounds.pressureLoss m
 
-theorem baseLoss_nonneg (m : ℕ) : 0 ≤ baseLoss m :=
-  add_nonneg (ActualBaseVelocityBounds.heatLoss_nonneg m)
-    (ActualBasePressureBounds.pressureLoss_nonneg m)
 
-/-- One derivative-order loss controls both actual base fields throughout
-the same unbounded physical domain, independently of the Borel index. -/
-theorem velocity_pressure_bound (upper : ℝ) (B m : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ w ∈ preterminal, physicalQ F.data.h w ≤ 1 →
-      ‖iteratedFDeriv ℝ m (FinalSlowBase.velocity H v upper B) w‖ +
-        ‖iteratedFDeriv ℝ m (FinalSlowBase.pressure H v upper B) w‖ ≤
-          C * physicalQ F.data.h w ^ (-baseLoss m) := by
-  obtain ⟨A,hA,hAb⟩ := velocity_bound H v upper B m
-  obtain ⟨C,hC,hCb⟩ := pressure_bound H v upper B m
-  refine ⟨A+C,add_nonneg hA hC,?_⟩
-  intro w hw hq
-  have hq0 := physicalQ_pos F.data.h_pos F.data.h_lt_half hw
-  have hv : ‖iteratedFDeriv ℝ m (FinalSlowBase.velocity H v upper B) w‖ ≤
-      A * physicalQ F.data.h w ^ (-baseLoss m) :=
-    (hAb w hw hq).trans (mul_le_mul_of_nonneg_left
-      (Real.rpow_le_rpow_of_exponent_ge hq0 hq (by
-        unfold baseLoss
-        linarith [ActualBasePressureBounds.pressureLoss_nonneg m])) hA)
-  have hp : ‖iteratedFDeriv ℝ m (FinalSlowBase.pressure H v upper B) w‖ ≤
-      C * physicalQ F.data.h w ^ (-baseLoss m) :=
-    (hCb w hw hq).trans (mul_le_mul_of_nonneg_left
-      (Real.rpow_le_rpow_of_exponent_ge hq0 hq (by
-        unfold baseLoss
-        linarith [ActualBaseVelocityBounds.heatLoss_nonneg m])) hC)
-  simpa only [add_mul] using add_le_add hv hp
 
 end Actual
 

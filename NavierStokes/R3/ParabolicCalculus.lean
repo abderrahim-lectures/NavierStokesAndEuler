@@ -23,10 +23,6 @@ theorem pull_temporalDerivative (a l : ℝ) (u : VelocityField) (t : ℝ) (x : S
     (a * l ^ 2) • deriv (fun s => u (s, l • x)) (clock l t)
   simpa only [Function.comp_def, Pi.smul_def, smul_smul] using hd.deriv
 
-theorem pull_spatialDerivative (a l : ℝ) (u : VelocityField) (t : ℝ) (x : Space) :
-    spatialDerivative (pull a l u) t x = (a * l) • spatialDerivative u (clock l t) (l • x) := by
-  exact ViscosityScaling.rescale_spatialDerivative a l
-    (fun z => u (clock l z.1, z.2)) t x
 
 theorem pull_divergence (a l : ℝ) (u : VelocityField) (t : ℝ) (x : Space) :
     spatialDivergence (pull a l u) t x = (a * l) * spatialDivergence u (clock l t) (l • x) := by

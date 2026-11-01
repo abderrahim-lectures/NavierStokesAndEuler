@@ -15,10 +15,6 @@ namespace NavierStokes.AxisModelBounds
 /-- The comparison function `f₀` in the axis construction. -/
 def model (z : ℝ) : ℝ := AxisSeries.profile 1 z
 
-theorem model_eq_series (z : ℝ) :
-    model z = ∑' n : ℕ,
-      (-z / 2) ^ n / ((n.factorial : ℝ) * ((n + 1).factorial : ℝ)) := by
-  simpa only [model, neg_mul, one_mul] using AxisSeries.profile_eq_tsum 1 z
 
 /-- The cubic truncation is bounded below by its exact endpoint value. -/
 theorem cubicLower_ge_endpoint (t : ℝ) (ht : t ≤ 41 / 20) :
@@ -51,10 +47,5 @@ theorem profile_bounds (χ Y : ℝ) (hχ0 : 0 ≤ χ) (hχ1 : χ ≤ 1)
   exact ⟨bessel_one_lower _ ht0 ht,
     AxisSeries.bessel_one_le_one _ ht0 (by linarith)⟩
 
-/-- The exact rational and decimal bounds printed for `f₀`. -/
-theorem model_bounds (z : ℝ) (hz0 : 0 ≤ z) (hz1 : z ≤ 41 / 10) :
-    (53 / 200 : ℝ) < (305719 / 1152000 : ℝ) ∧
-      (305719 / 1152000 : ℝ) ≤ model z ∧ model z ≤ 1 := by
-  exact ⟨by norm_num, profile_bounds 1 z (by norm_num) (by norm_num) hz0 hz1⟩
 
 end NavierStokes.AxisModelBounds

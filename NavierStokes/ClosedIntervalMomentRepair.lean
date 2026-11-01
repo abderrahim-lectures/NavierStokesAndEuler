@@ -44,17 +44,8 @@ def debtNorm (k : ℕ) : ℝ := ‖D.debt k‖
 
 def Small (k : ℕ) : Prop := 8 * D.inverseNorm k ^ 2 * D.quadraticNorm k * D.debtNorm k ≤ 1
 
-/-- The C⁰ constants coincide with the pointwise suprema printed in the appendix. -/
-theorem inverseNorm_zero : D.inverseNorm 0 = ⨆ x : I, ‖(D.B x).inverse‖ :=
-  norm_coefficientOperator_zero (fun x => (D.B x).inverse)
-    (inverse_coefficient_smooth D.B (D.hB.of_le (by simp)) D.invertible)
 
-theorem quadraticNorm_zero : D.quadraticNorm 0 = ⨆ x : I, ‖D.A x‖ :=
-  norm_quadraticOperator_zero D.A (D.hA.of_le (by simp))
 
-theorem debtNorm_zero : D.debtNorm 0 = ⨆ x : I, ‖D.d x‖ := by
-  rw [debtNorm, norm_zero_eq_value]
-  exact (value 0 (D.debt 0)).norm_eq_iSup_norm
 
 @[simp] theorem matrix_value (k : ℕ) (f : CK (E := E) k) (x : I) :
     value k (D.matrix k f) x = D.B x (value k f x) :=
@@ -206,31 +197,6 @@ theorem exists_smooth_same_branch (hsmall : D.Small 0) :
     exact hv
   · rwa [hembed]
 
-/-- In the linear case the exact solution needs no smallness condition. -/
-theorem linear_solution (hA : ∀ x ∈ I, D.A x = 0) :
-    ∃ hc : ContDiffOn ℝ ∞ (fun x => (D.B x).inverse (D.d x)) I,
-      (∀ x ∈ I, D.B x ((D.B x).inverse (D.d x)) +
-        D.A x ((D.B x).inverse (D.d x)) ((D.B x).inverse (D.d x)) = D.d x) ∧
-      ∀ k : ℕ, ‖ofContDiffOn (fun x => (D.B x).inverse (D.d x))
-        (hc.of_le (by simp : (k : ℕ∞ω) ≤ ∞))‖ ≤ D.inverseNorm k * D.debtNorm k := by
-  have hi : ContDiffOn ℝ ∞ (fun x => (D.B x).inverse) I := by
-    intro x hx
-    exact ((D.invertible x hx).contDiffAt_map_inverse (𝕜 := ℝ) (n := ∞)).comp_contDiffWithinAt x
-      (D.hB x hx)
-  refine ⟨hi.clm_apply D.hd, ?_, ?_⟩
-  · intro x hx
-    simp only [hA x hx, zero_apply, add_zero]
-    exact (D.invertible x hx).self_apply_inverse _
-  intro k
-  have he : ofContDiffOn (fun x => (D.B x).inverse (D.d x))
-      ((hi.clm_apply D.hd).of_le (by simp : (k : ℕ∞ω) ≤ ∞)) = (D.matrix k).symm (D.debt k) := by
-    apply value_injective k
-    ext x
-    change (D.B x).inverse (D.d x) =
-      value k (coefficientOperator k (fun x => (D.B x).inverse) _ (D.debt k)) x
-    rw [coefficientOperator_value, debt_value]
-  rw [he]
-  exact (D.matrix k).symm.toContinuousLinearMap.le_opNorm (D.debt k)
 
 end Data
 end NavierStokes.ClosedIntervalMomentRepair

@@ -86,28 +86,6 @@ theorem actual_finite_fields_bound (B N0 : ℕ)
     (pow_le_pow_right₀ hL (Nat.le_add_left Q P)) (mul_nonneg hD (Real.rpow_nonneg hq0.le _)))
   exact (add_le_add hv' hp').trans_eq (by ring)
 
-/-- Whole-domain physical-loss estimates for the actual iteration: every
-stage uses the same positive scale, every finite prefix uses the same
-derivative loss, and each increment has the manuscript's printed loss. -/
-theorem physical_stage_estimates (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) :
-    0 < commonQ B N0 ∧
-    (∀ J m, LogBound h (commonQ B N0) (finiteVelocity B N0 hN J) m (-finiteLoss B N0 m) ∧
-      LogBound h (commonQ B N0) (finitePressure B N0 hN J) m (-finiteLoss B N0 m)) ∧
-    (∀ J m, ∃ C : ℝ, 0 ≤ C ∧ ∀ w ∈ CutStageEstimates.physicalSublevel h (commonQ B N0),
-      ‖iteratedFDeriv ℝ m (fun z => navierStokesResidual
-        (finiteVelocity B N0 hN J) (finitePressure B N0 hN J) z.1 z.2) w‖ ≤
-        C * physicalQ h w ^ (h*ActualIterationLedger.sigma J-ActualCycleResidualBounds.fixedLoss m)) ∧
-    (∀ j m, LogBound h (commonQ B N0)
-      (MixedFiniteBackground.stageVelocity (potentialStages B N0 hN) (directStages B N0 hN) (j+1)) m
-      (ActualIterationLedger.gain h (j+1)-SharpPhysicalCarrier.physicalLoss h m) ∧
-      LogBound h (commonQ B N0) (pressureStages B N0 hN (j+1)) m
-      (ActualIterationLedger.gain h (j+1)-SharpPhysicalCarrier.physicalLoss h m)) := by
-  refine ⟨commonQ_pos B N0,?_,actual_finite_residual_bound B N0 hN,?_⟩
-  · exact fun J m => ⟨actual_finite_velocity_bound B N0 hN J m,actual_finite_pressure_bound B N0 hN J m⟩
-  · exact fun j m => ⟨(SharpParticularStageBounds.actual_velocity_bound B N0 hN j m).mono_domain
-      (commonQ_lt_original B N0).le,
-      (SharpParticularStageBounds.actual_pressure_bound B N0 hN j m).mono_domain (commonQ_lt_original B N0).le⟩
 
 /-- Every component of `Z_j = (A_j, B_j, p_j)` and the recovered velocity
 increment obey one common constant and logarithmic power. -/
@@ -235,59 +213,5 @@ private theorem finite_power_bounds (B N0 m : ℕ) (F : ℕ → SpaceTime → �
     (Finset.single_le_sum (fun t _ => hC t) (Finset.mem_univ i))
     (Real.rpow_nonneg (physicalQ_pos outgoing.data.h_pos outgoing.data.h_lt_half hw.1).le _))
 
-/-- The complete printed physical-loss statement. All components of `Z_j`
-and the velocity increment are included, and each bound simultaneously covers
-every derivative through order `m`, as required by the manuscript's jet norm.
-The scale is common to all stages and orders; the prefix/residual loss is
-independent of the finite-stage index. -/
-theorem paper_physical_loss (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) :
-    0 < commonQ B N0 ∧
-    (∀ j m, ∃ C : ℝ, 0 ≤ C ∧ ∃ P : ℕ, ∀ k ≤ m,
-      ∀ w ∈ CutStageEstimates.physicalSublevel h (commonQ B N0),
-      ‖iteratedFDeriv ℝ k (potentialStages B N0 hN (j+1)) w‖ +
-        ‖iteratedFDeriv ℝ k (directStages B N0 hN (j+1)) w‖ +
-        ‖iteratedFDeriv ℝ k (pressureStages B N0 hN (j+1)) w‖ +
-        ‖iteratedFDeriv ℝ k (MixedFiniteBackground.stageVelocity
-          (potentialStages B N0 hN) (directStages B N0 hN) (j+1)) w‖ ≤
-      C * physicalQ h w ^ (ActualIterationLedger.gain h (j+1)-SharpPhysicalCarrier.physicalLoss h m) *
-        (1+|Real.log (physicalQ h w)|)^P) ∧
-    (∀ J m, ∃ C : ℝ, 0 ≤ C ∧ ∃ P : ℕ, ∀ k ≤ m,
-      ∀ w ∈ CutStageEstimates.physicalSublevel h (commonQ B N0),
-      ‖iteratedFDeriv ℝ k (finiteVelocity B N0 hN J) w‖ +
-        ‖iteratedFDeriv ℝ k (finitePressure B N0 hN J) w‖ ≤
-        C * physicalQ h w ^ (-paperJetLoss B N0 m) * (1+|Real.log (physicalQ h w)|)^P) ∧
-    (∀ J m, ∃ C : ℝ, 0 ≤ C ∧ ∀ k ≤ m,
-      ∀ w ∈ CutStageEstimates.physicalSublevel h (commonQ B N0),
-      ‖iteratedFDeriv ℝ k (fun z => navierStokesResidual
-        (finiteVelocity B N0 hN J) (finitePressure B N0 hN J) z.1 z.2) w‖ ≤
-        C * physicalQ h w ^ (h*ActualIterationLedger.sigma J-paperJetLoss B N0 m)) := by
-  obtain ⟨hq,hi,hf,hr⟩ := exact_physical_loss B N0 hN
-  refine ⟨hq,?_,?_,?_⟩
-  · intro j m
-    apply finite_log_bounds
-    intro k hk
-    obtain ⟨C,hC,P,hb⟩ := hi j k
-    refine ⟨C,hC,P,fun w hw => (hb w hw).trans ?_⟩
-    exact mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left
-      (Real.rpow_le_rpow_of_exponent_ge (physicalQ_pos outgoing.data.h_pos outgoing.data.h_lt_half hw.1)
-        (hw.2.le.trans (commonQ_le_one B N0)) (sub_le_sub_left (physicalLoss_mono hk) _)) hC) (by positivity)
-  · intro J m
-    apply finite_log_bounds
-    intro k hk
-    obtain ⟨C,hC,P,hb⟩ := hf J k
-    refine ⟨C,hC,P,fun w hw => (hb w hw).trans ?_⟩
-    exact mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left
-      (Real.rpow_le_rpow_of_exponent_ge (physicalQ_pos outgoing.data.h_pos outgoing.data.h_lt_half hw.1)
-        (hw.2.le.trans (commonQ_le_one B N0)) (neg_le_neg (paperLoss_le_paperJetLoss B N0 m k hk))) hC) (by positivity)
-  · intro J m
-    apply finite_power_bounds
-    intro k hk
-    obtain ⟨C,hC,hb⟩ := hr J k
-    refine ⟨C,hC,fun w hw => (hb w hw).trans ?_⟩
-    exact mul_le_mul_of_nonneg_left
-      (Real.rpow_le_rpow_of_exponent_ge (physicalQ_pos outgoing.data.h_pos outgoing.data.h_lt_half hw.1)
-        (hw.2.le.trans (commonQ_le_one B N0))
-        (sub_le_sub_left (paperLoss_le_paperJetLoss B N0 m k hk) _)) hC
 
 end NavierStokes.WholeDomainStageBounds

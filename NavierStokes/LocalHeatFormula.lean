@@ -114,27 +114,7 @@ theorem heatVelocity_formula (C h : ℝ) {w : ProblemStatement.SpaceTime}
   rw [TerminalStress.radiusPoint_profilePoint hs.le] at he
   rw [he]
 
-theorem heatVelocity_eq_angularField (C h : ℝ) {w : ProblemStatement.SpaceTime}
-    (hs : 0 < AxisymmetricFields.radialEnergy w.2) :
-    BaseExterior.heatVelocity C h w =
-      DirectAngularDiagonal.angularField (fun p => amplitude C h (1 - p.1) p.2.1) w := by
-  rw [heatVelocity_formula C h hs, DirectAngularDiagonal.angularField_eq_rotationField]
-  simp only [DirectAngularDiagonal.rotationField, DirectAngularDiagonal.rate,
-    DirectAngularDiagonal.profileToCyl, AxisymmetricFields.profilePoint,
-    AxisymmetricResidual.pack, BaseResidual.angularVector, smul_add, smul_smul,
-    zero_smul, add_zero]
-  congr 1 <;> congr 1 <;> ring
 
-theorem pressure_radius_integral (C h τ z : ℝ) {r : ℝ} (hr : 0 < r) :
-    BaseExterior.heatPressure C h (TerminalStress.radiusPoint (1 - τ) r z) =
-      -(∫ ρ in Ioi r, amplitude C h τ ρ ^ 2 / ρ) := by
-  simpa only [TerminalStress.heatAmplitude, show 1 - (1 - τ) = τ by ring, amplitude] using
-    LocalHeatPressure.heatPressure_radius_integral C h (1 - τ) z hr
 
-theorem pressure_integrand_integrable (C : ℝ) {h τ r : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) (hτ : 0 < τ) (hr : 0 < r) :
-    MeasureTheory.IntegrableOn (fun ρ => amplitude C h τ ρ ^ 2 / ρ) (Ioi r) := by
-  simpa only [TerminalStress.heatAmplitude, show 1 - (1 - τ) = τ by ring, amplitude] using
-    LocalHeatPressure.heatAmplitude_sq_div_integrable C hh hh1 (show 1 - τ < 1 by linarith) hr
 
 end NavierStokes.LocalHeatFormula

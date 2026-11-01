@@ -312,30 +312,7 @@ theorem energy_hasDerivAt {a b t : ℝ} {u : VelocityField} {K : Set Space}
   · intro x
     exact energy_density_derivative (time_differentiable_at_interior hu ht x)
 
-theorem integrable_dissipation_terms {u : VelocityField} {t : ℝ}
-    (hu : ContDiff ℝ ∞ (fun x : Space => u (t, x)))
-    (hcu : HasCompactSupport (fun x : Space => u (t, x))) (i : Fin 3) :
-    Integrable (fun x : Space => ‖spatialPartial i (fun y => u (t, y)) x‖ ^ 2) :=
-  integrable_norm_sq (spatial_partial_contDiff hu i).continuous (compact_partial hcu i)
 
-/-- The exact energy identity, with the derivative justified and all spatial
-integrals taken against ordinary Lebesgue volume on R³. -/
-theorem hasDerivAt_energy_balance {a b t : ℝ} {u f : VelocityField}
-    {p : PressureField} {K : Set Space}
-    (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hp : ContDiffOn ℝ ∞ p (slab a b))
-    (hf : Continuous (fun x : Space => f (t, x)))
-    (hsupp : ∀ r ∈ Icc a b, tsupport (fun x => u (r, x)) ⊆ K)
-    (ht : t ∈ Ioo a b)
-    (hdiv : ∀ x, spatialDivergence u t x = 0)
-    (hNS : ∀ x, navierStokesResidual u p t x = f (t, x)) :
-    HasDerivAt (l2Sq u)
-      (-2 * dissipation u t + 2 * ∫ x, ⟪u (t, x), f (t, x)⟫_ℝ) t := by
-  have h := energy_hasDerivAt hK hu hsupp ht
-  rw [energy_balance (spatial_smooth hu ⟨ht.1.le, ht.2.le⟩)
-    (spatial_smooth hp ⟨ht.1.le, ht.2.le⟩) hf
-    (slice_compact hK (hsupp t ⟨ht.1.le, ht.2.le⟩)) hdiv hNS] at h
-  exact h
 
 /-- A smooth compact force yields one uniform bound for the kinetic energy
 before time one. The proof includes square integrability at every time, then

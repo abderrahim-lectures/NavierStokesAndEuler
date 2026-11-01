@@ -71,43 +71,5 @@ theorem smooth_extension_on_compact {K U : Set E} (hK : IsCompact K)
     rw [hχK hx]
     exact one_mul _
 
-/-- The parameterized `heat:flat-primitive` identity and all mixed jet
-bounds on a compact rectangle, for locally smooth coefficient data. -/
-theorem exists_factor_on_rectangle {K : Set E} (hK : IsCompact K)
-    {δ₀ c : ℝ} (hδ : 0 < δ₀) (hc : 0 < c) (j : ℕ)
-    {U : Set (E × ℝ)} (hU : IsOpen U) (hKU : K ×ˢ Icc 0 δ₀ ⊆ U)
-    {b : E × ℝ → ℝ} (hb : ContDiffOn ℝ ∞ b U) :
-    ∃ B : E × ℝ → ℝ, ContDiff ℝ ∞ B ∧
-      (∀ p ∈ K, B (p, 0) = b (p, 0) / c) ∧
-      (∀ p ∈ K, ∀ δ ∈ Ioc 0 δ₀,
-        (∫ u in (0 : ℝ)..δ, (Real.exp (-c / u ^ 2) / u ^ j) * b (p, u)) =
-          (1 / 2 : ℝ) * Real.exp (-c / δ ^ 2) * δ ^ (3 - (j : ℝ)) * B (p, δ)) ∧
-      (∀ n : ℕ, ∃ C ≥ 0, ∀ p ∈ K, ∀ δ ∈ Icc 0 δ₀,
-        ‖iteratedFDeriv ℝ n B (p, δ)‖ ≤ C) := by
-  obtain ⟨b', hb', heq⟩ := smooth_extension_on_compact (hK.prod isCompact_Icc) hU hKU hb
-  let B : E × ℝ → ℝ := fun x => 2 * ParametricFlatFactor.factor c j b' x
-  have hB : ContDiff ℝ ∞ B := contDiff_const.mul (ParametricFlatFactor.factor_contDiff hc j hb')
-  refine ⟨B, hB, ?_, ?_, ?_⟩
-  · intro p hp
-    dsimp [B]
-    rw [ParametricFlatFactor.factor_at_zero hc j b', heq ⟨hp, le_rfl, hδ.le⟩]
-    field_simp
-  · intro p hp δ hδ'
-    have hi : (∫ u in (0 : ℝ)..δ, (Real.exp (-c / u ^ 2) / u ^ j) * b (p, u)) =
-        ∫ u in (0 : ℝ)..δ, (Real.exp (-c / u ^ 2) / u ^ j) * b' (p, u) := by
-      apply intervalIntegral.integral_congr
-      intro u hu
-      have hu' : u ∈ Icc 0 δ := by simpa [uIcc_of_le hδ'.1.le] using hu
-      change _ * b (p, u) = _ * b' (p, u)
-      rw [heq (x := (p, u)) ⟨hp, hu'.1, hu'.2.trans hδ'.2⟩]
-    rw [hi, ParametricFlatFactor.integral_original_factorization c j b' p hδ'.1]
-    dsimp [B]
-    ring
-  · intro n
-    have hcB := hB.continuous_iteratedFDeriv
-      (m := n) (le_of_lt (WithTop.coe_lt_coe.mpr (ENat.natCast_lt_top n)))
-    obtain ⟨C, hC⟩ := (hK.prod isCompact_Icc).exists_bound_of_continuousOn hcB.continuousOn
-    exact ⟨max C 0, le_max_right _ _, fun p hp δ hδ' => (hC (p, δ) ⟨hp, hδ'⟩).trans
-      (le_max_left _ _)⟩
 
 end NavierStokes.FlatPrimitivePaper

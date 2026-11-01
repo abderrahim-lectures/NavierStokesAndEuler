@@ -38,8 +38,6 @@ theorem rising_nonneg {b : ℝ} (hb : 0 ≤ b) (n : ℕ) : 0 ≤ rising b n := b
     rw [rising_succ]
     exact mul_nonneg ih (by linarith)
 
-theorem rising_pos {b : ℝ} (hb : 0 < b) (n : ℕ) : 0 < rising b n := by
-  simpa only [rising] using ascPochhammer_pos (S := ℝ) n b hb
 
 theorem rising_mono {b c : ℝ} (hb : 0 ≤ b) (hbc : b ≤ c) (n : ℕ) :
     rising b n ≤ rising c n := by
@@ -96,23 +94,6 @@ theorem derivative_bound_rising {h z : ℝ} (hh : 0 < h) (hz : 0 ≤ z) (n : ℕ
   convert hb using 1
   field_simp
 
-/-- The positive-order jets are uniformly `O(h)` for bounded positive `h`.
-The explicit constant is independent of the argument on the whole half-line. -/
-theorem uniform_positive_derivative_bound {h h₀ z : ℝ}
-    (hh : 0 < h) (hh₀ : h ≤ h₀) (hz : 0 ≤ z) (n : ℕ) :
-    |iteratedDerivWithin (n + 1) (profile (1 + h)) (Ici 0) z| ≤
-      (rising (1 + h₀) n * rising (1 + h₀) (n + 1)) * h := by
-  have hb := derivative_bound_rising hh hz (n + 1)
-  rw [rising_succ_left h n] at hb
-  calc
-    _ ≤ (h * rising (1 + h) n) * rising (1 + h) (n + 1) := hb
-    _ ≤ (h * rising (1 + h₀) n) * rising (1 + h₀) (n + 1) := by
-      apply mul_le_mul
-      · exact mul_le_mul_of_nonneg_left (rising_mono (by linarith) (by linarith) n) hh.le
-      · exact rising_mono (by linarith) (by linarith) (n + 1)
-      · exact rising_nonneg (by linarith) _
-      · exact mul_nonneg hh.le (rising_nonneg (by linarith) _)
-    _ = _ := by ring
 
 theorem first_endpoint_jet {h : ℝ} (hh : 0 < h) :
     profileJet (1 + h) 1 0 = -h * (1 + h) := by
@@ -149,40 +130,6 @@ theorem first_jet_remainder {h z : ℝ} (hh : 0 < h) (hz : 0 ≤ z) :
   simpa only [Real.norm_eq_abs, first_endpoint_jet hh, neg_mul, sub_neg_eq_add, sub_zero]
     using H z ⟨hz, le_rfl⟩
 
-/-- The finite Taylor estimate asserted in `heat:small-argument`, with an
-explicit remainder constant and no analyticity assumption. -/
-theorem small_argument_remainder {h z : ℝ} (hh : 0 < h) (hz : 0 ≤ z) :
-    |profile (1 + h) z - 1 + h * (1 + h) * z| ≤
-      h * (1 + h) ^ 2 * (2 + h) * z ^ 2 := by
-  let B := h * (1 + h) ^ 2 * (2 + h)
-  let g := fun x => profile (1 + h) x - 1 + h * (1 + h) * x
-  have H := norm_image_sub_le_of_norm_deriv_le_segment'
-    (f := g) (f' := fun x => profileJet (1 + h) 1 x + h * (1 + h))
-    (a := 0) (b := z) (C := B * z)
-    (fun x hx => by
-      convert!
-        (((profile_hasDerivWithinAt (by linarith : 1 < 1 + h) hx.1).sub_const 1).add
-        ((hasDerivWithinAt_id x (Ici 0)).const_mul (h * (1 + h)))).mono
-          (Icc_subset_Ici_self : Icc (0 : ℝ) z ⊆ Ici 0) using 1
-      simp)
-    (fun x hx => by
-      rw [Real.norm_eq_abs]
-      exact (first_jet_remainder hh hx.1).trans
-        (mul_le_mul_of_nonneg_left hx.2.le (by positivity)))
-  have hh0 : profile (1 + h) 0 = 1 := profile_zero (by linarith)
-  simpa [g, hh0, sub_zero, B, pow_two, mul_assoc] using H z ⟨hz, le_rfl⟩
 
-/-- The constant in the first-order small-argument estimate is uniform when
-the positive exponent ranges below any fixed upper bound. -/
-theorem uniform_small_argument {h h₀ z : ℝ} (hh : 0 < h) (hh₀ : h ≤ h₀)
-    (hz : 0 ≤ z) :
-    |profile (1 + h) z - 1| + |z * derivWithin (profile (1 + h)) (Ici 0) z| ≤
-      (2 * (1 + h₀)) * h * z := by
-  have H₀ := profile_h_sub_one_bound hh hz
-  have H₁ := profile_first_derivative_bound (a := 1 + h) (by linarith) hz
-  rw [abs_mul, abs_of_nonneg hz]
-  have H₂ := mul_le_mul_of_nonneg_left H₁ hz
-  have H₃ := mul_le_mul_of_nonneg_right hh₀ (mul_nonneg hh.le hz)
-  nlinarith
 
 end NavierStokes.AppendixHeatResults

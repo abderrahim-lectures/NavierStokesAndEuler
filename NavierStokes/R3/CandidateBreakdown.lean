@@ -48,18 +48,6 @@ theorem CandidateProperties.no_global_solution_one
   exact h.not_global_agreement v.velocity_smooth
     (WholeSpaceUniqueness.candidate_global_agrees_before_one h v)
 
-/-- A force in the paper's support class which excludes a global solution
-must be nonzero at some positive time. -/
-theorem force_nonzero_of_no_global_solution {ν : ℝ} {f : VelocityField}
-    (hf : CompactPositiveTimeSupport f)
-    (h : ¬ Nonempty (GlobalFiniteEnergySolution ν f)) :
-    ∃ t : ℝ, 0 < t ∧ ∃ x : Space, f (t, x) ≠ 0 := by
-  have hne : f ≠ fun _ => 0 := by
-    intro he
-    subst f
-    exact h (zero_force_has_global_solution ν)
-  obtain ⟨z, hz⟩ := Function.ne_iff.mp hne
-  exact ⟨z.1, (hf.2 (subset_tsupport _ hz)).1, z.2, hz⟩
 
 /-- One bound for the actual spatial square integrals, with integrability
 proved separately so that the totalized integral cannot hide infinite energy. -/

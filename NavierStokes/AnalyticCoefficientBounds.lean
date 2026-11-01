@@ -286,19 +286,6 @@ theorem re_le_realPartSup {F : ℂ → ℂ} {K : Set ℂ}
   le_csSup (hK.bddAbove_image (Complex.continuous_re.comp_continuousOn hF))
     (mem_image_of_mem (fun z => (F z).re) hz)
 
-/-- A compact wider complex neighborhood is enough: every radius-`ρ`
-closed disc about a real parameter must lie inside it. -/
-theorem normalizedExp_unitHolomorphic_of_compact
-    {I : Window} {ρ Λ C : ℝ} {F : ℂ → ℂ} {K : Set ℂ}
-    (hK : IsCompact K) (hF : AnalyticOnNhd ℂ F K)
-    (hcover : ∀ x ∈ I.interval, closedBall (x : ℂ) ρ ⊆ K)
-    (hΛ : 0 ≤ Λ) (hC : Real.exp (Λ * realPartSup F K) ≤ C) :
-    UnitHolomorphic I ρ (normalizedExp F Λ C) := by
-  have hsub : closedTube I ρ ⊆ K := by
-    rintro z ⟨x, hx, hz⟩
-    exact hcover x hx hz
-  exact normalizedExp_unitHolomorphic (hF.mono hsub)
-    (fun z hz => re_le_realPartSup hK hF.continuousOn (hsub hz)) hΛ hC
 
 theorem normalizedExp_re_of_real {F : ℂ → ℂ} {Λ C x : ℝ}
     (hreal : (F (x : ℂ)).im = 0) :

@@ -717,25 +717,5 @@ end NativePrimary
 
 /-! ## Scalar-cone input adapter -/
 
-/-- The manuscript's two signed model columns satisfy all model-side
-inputs of `compact_native_primary_bounds` directly from the scalar cone.
-The actual pulse directions may be compared to these columns using the
-ratio hypothesis of that theorem. -/
-theorem scalar_cone_model {X : Type*} [TopologicalSpace X] {K : Set X}
-    {c₀ u m t : X → ℝ} (hc₀ : ContinuousOn c₀ K) (hu : ContinuousOn u K)
-    (hm : ContinuousOn m K) (ht : ContinuousOn t K)
-    (hc₀neg : ∀ p ∈ K, c₀ p < 0) (hupos : ∀ p ∈ K, 0 < u p)
-    (hcone : ∀ p ∈ K, |Covariance.normalMagnitude (c₀ p) (u p) * t p| < u p * m p) :
-    (∀ i j, ContinuousOn (fun p => PulseCovariance.signedModel (c₀ p) (u p) i j) K) ∧
-      (∀ i, ContinuousOn (fun p => Covariance.target (m p) (t p) i) K) ∧
-      (∀ p ∈ K, SmoothCovariance.StrictCone (PulseCovariance.signedModel (c₀ p) (u p))
-        (Covariance.target (m p) (t p))) := by
-  refine ⟨PulseCovariance.signedModel_continuousOn hc₀ hu, ?_, ?_⟩
-  · intro i
-    fin_cases i
-    · exact hm.fun_neg
-    · exact ht
-  · intro p hp
-    exact PulseCovariance.signedModel_strictCone (hc₀neg p hp) (hupos p hp) (hcone p hp)
 
 end NavierStokes.PrimaryCovarianceBounds

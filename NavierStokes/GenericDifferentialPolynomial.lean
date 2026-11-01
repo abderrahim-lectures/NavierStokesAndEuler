@@ -240,44 +240,5 @@ def approximation_eval (e : Expression D ι κ)
 
 end Expression
 
-/-- If the approximating residuals have unbounded order, so does the residual
-of the realized field. This is a theorem about arbitrary finite differential
-polynomials, proved from input jet estimates and the ordinary Leibniz rule.
-It applies componentwise to any finite collection of output expressions. -/
-theorem polynomial_jetRate_of_stages {ι κ : Type*}
-    (e : Expression D ι κ) {c : κ → D → ℝ} {u : ι → D → ℝ}
-    {us : ℕ → ι → D → ℝ} {Lbg Ltail : ι → ℕ → ℝ}
-    {Lc : κ → ℕ → ℝ} {Lres : ℕ → ℝ}
-    (hU : IsOpen U) (hlU : ∀ᶠ x in l, x ∈ U)
-    (hq : ∀ᶠ x in l, 0 < q x ∧ q x ≤ 1)
-    (hc : ∀ i, ContDiffOn ℝ ∞ (c i) U)
-    (hu : ∀ i, ContDiffOn ℝ ∞ (u i) U)
-    (hus : ∀ J i, ContDiffOn ℝ ∞ (us J i) U)
-    (hgain : Tendsto gain atTop atTop)
-    (hcg : ∀ i m, JetRate l q (c i) m (-Lc i m))
-    (hbg : ∀ J i m, JetRate l q (us J i) m (-Lbg i m))
-    (htail : ∀ J i m, m ≤ J →
-      JetRate l q (fun x => u i x - us J i x) m (gain J - Ltail i m))
-    (hres : ∀ J m, JetRate l q (e.eval c (us J)) m (gain J - Lres m))
-    (m : ℕ) (n : ℝ) : JetRate l q (e.eval c u) m n := by
-  let a : ApproximationRates l q gain (e.eval c u) (fun J => e.eval c (us J)) :=
-    e.approximation_eval hU hlU hq hc hu hus hgain Lc hcg
-      (fun i => ⟨Lbg i, Ltail i, id, fun J m => hbg J i m,
-        fun m J hJ => htail J i m hJ⟩)
-  obtain ⟨J₀, hJ₀⟩ := eventually_atTop.1
-    (hgain.eventually (eventually_ge_atTop (max (n + a.tailLoss m) (n + Lres m))))
-  let J := max (a.threshold m) J₀
-  have hJgain := hJ₀ J (le_max_right _ _)
-  have htail := (a.tail_rate m J (le_max_left _ _)).weaken hq
-    (show n ≤ gain J - a.tailLoss m by
-      have := le_max_left (n + a.tailLoss m) (n + Lres m)
-      linarith)
-  have hstage := (hres J m).weaken hq
-    (show n ≤ gain J - Lres m by
-      have := le_max_right (n + a.tailLoss m) (n + Lres m)
-      linarith)
-  exact (hstage.add htail hU hlU (e.smooth_eval hU hc (hus J))
-    ((e.smooth_eval hU hc hu).sub (e.smooth_eval hU hc (hus J)))).congr_on hU hlU
-      (fun x _ => by dsimp; ring)
 
 end NavierStokes.GenericDifferentialPolynomial

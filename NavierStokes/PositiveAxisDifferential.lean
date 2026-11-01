@@ -76,12 +76,6 @@ theorem IsDifferentialSolution.of_deriv_equation {R : ℝ} {U : Set ℂ}
   intro r hr z hz i
   exact (hd r hr z hz i).hasDerivAt.congr_deriv (eq_sub_of_add_eq (he r hr z hz i))
 
-theorem regularSolution_toDifferential {R : ℝ} {U : Set ℂ}
-    {A₀ A₁ : Coeff} {f W : Field} (hW : IsRegularSolution R U A₀ A₁ f W) :
-    IsDifferentialSolution R U A₀ A₁ f W :=
-  IsDifferentialSolution.of_deriv_equation hW.jointly_continuous hW.parameter_holomorphic
-    hW.axis_zero (fun r _ z hz i => hW.radial_differentiable z hz i r)
-    (fun r hr z hz i => hW.equation r ⟨hr.1.le, hr.2.le⟩ hr.1.ne' z hz i)
 
 theorem IsDifferentialSolution.path_holomorphic {R : ℝ} {U : Set ℂ} (hU : IsOpen U)
     {A₀ A₁ : Coeff} {f W : Field} (hW : IsDifferentialSolution R U A₀ A₁ f W) :

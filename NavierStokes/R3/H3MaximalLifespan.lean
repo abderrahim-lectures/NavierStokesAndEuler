@@ -81,17 +81,6 @@ theorem candidate_is_maximal_classicalH3 {ν : ℝ} {u : VelocityField}
   rintro ⟨S, v, q, hS, ⟨hv⟩, _⟩
   exact (not_lt_of_ge (candidate_classicalH3_lifespan_le_one hν h hv)) hS
 
-/-- Every maximal classical H³ solution for the same force and datum has
-exactly the stated lifespan; a shorter maximal solution is also excluded by
-actual extension using uniqueness. -/
-theorem maximal_classicalH3_lifespan_eq_one {ν T : ℝ} {u v : VelocityField}
-    {p q : PressureField} {f : VelocityField} {K : Set Space}
-    (hν : 0 < ν) (h : CandidateProperties ν u p f K)
-    (hv : IsMaximalClassicalH3Solution ν f (fun _ => 0) T v q) : T = 1 := by
-  obtain ⟨hvc⟩ := hv.1
-  apply le_antisymm (candidate_classicalH3_lifespan_le_one hν h hvc)
-  by_contra hn
-  exact hv.2 (candidate_extends_shorter_classicalH3 hν h hvc (lt_of_not_ge hn))
 
 theorem candidate_admissibleH3Lifespans {ν : ℝ} {u : VelocityField}
     {p : PressureField} {f : VelocityField} {K : Set Space}
@@ -104,15 +93,5 @@ theorem candidate_admissibleH3Lifespans {ν : ℝ} {u : VelocityField}
   · intro hT
     exact ⟨u, p, ⟨(candidate_classicalH3Solution h).restrict hT.1 hT.2⟩⟩
 
-/-- The full main theorem's actual Euclidean fields have maximal classical
-H³ lifespan exactly one, for every positive viscosity. -/
-theorem theorem_1_1_with_maximalH3 (ν : ℝ) (hν : 0 < ν) :
-    ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
-      CandidateProperties ν u p f K ∧ ¬Nonempty (GlobalFiniteEnergySolution ν f) ∧
-      IsMaximalClassicalH3Solution ν f (fun _ => 0) 1 u p ∧
-      admissibleH3Lifespans ν f (fun _ => 0) = Ioc (0 : ℝ) 1 := by
-  obtain ⟨u, p, f, K, hc, hg⟩ := NavierStokesR3.theorem_1_1 ν hν
-  exact ⟨u, p, f, K, hc, hg, candidate_is_maximal_classicalH3 hν hc,
-    candidate_admissibleH3Lifespans hν hc⟩
 
 end NavierStokesR3.H3Comparison

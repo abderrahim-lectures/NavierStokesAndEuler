@@ -126,11 +126,6 @@ theorem locallyFinite_support_translate {r : ℝ} {f : SpaceTime → V}
   by_contra hnot
   exact hw (hzero n (by simpa using hnot))
 
-/-- The series is genuinely summable at every spacetime point. -/
-theorem summable_translate {r : ℝ} {f : SpaceTime → V}
-    (hf : SupportedInCube r f) (z : SpaceTime) :
-    Summable (fun n : Lattice => translate f n z) :=
-  summable_of_hasFiniteSupport ((locallyFinite_support_translate hf).point_finite z)
 
 /-- Locally, the infinite sum equals a single finite sum of smooth translates. -/
 theorem periodize_locally_eq_sum {r : ℝ} {f : SpaceTime → V}
@@ -257,15 +252,6 @@ theorem periodize_eventuallyEq {r : ℝ} {f : SpaceTime → V}
   filter_upwards [hU] with w hw
   exact periodize_eq_on_innerCube hf hw w.1
 
-/-- A cube strictly inside the fundamental unit cube gives equality near the
-spatial origin at every time. -/
-theorem periodize_eventuallyEq_at_origin {r : ℝ} {f : SpaceTime → V}
-    (hf : SupportedInCube r f) (hr : r < 1 / 2) (t : ℝ) :
-    periodize f =ᶠ[𝓝 (t, (0 : Space))] f := by
-  apply periodize_eventuallyEq hf
-  intro i
-  simp only [PiLp.zero_apply, abs_zero]
-  linarith
 
 /-- For support strictly inside the fundamental cube, equality holds on the
 whole closed fundamental cube, including its boundary. -/

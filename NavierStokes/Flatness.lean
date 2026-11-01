@@ -95,23 +95,6 @@ theorem PowerFlat.mul_of_power_bound (hf : PowerFlat l q f)
       ring
     _ = (C * D) * |q x| ^ n := by rw [div_self hden, mul_one]
 
-/-- Stage bounds with unbounded natural exponents imply flatness even after
-subtracting a fixed natural loss. Each stage has its own constant and eventual
-neighborhood; no uniformity of these quantities in the stage is assumed. -/
-theorem powerFlat_of_stage_bounds {exponent : ℕ → ℕ} (loss : ℕ)
-    (hexponent : ∀ n : ℕ, ∃ j : ℕ, n ≤ exponent j)
-    (hq : ∀ᶠ x in l, |q x| ≤ 1)
-    (hstage : ∀ j : ℕ, ∃ C : ℝ, 0 ≤ C ∧
-      ∀ᶠ x in l, |f x| ≤ C * |q x| ^ (exponent j - loss)) :
-    PowerFlat l q f := by
-  intro n
-  obtain ⟨j, hj⟩ := hexponent (n + loss)
-  obtain ⟨C, hC, hb⟩ := hstage j
-  have hn : n ≤ exponent j - loss := Nat.le_sub_of_add_le hj
-  refine ⟨C, hC, ?_⟩
-  filter_upwards [hq, hb] with x hqx hfx
-  exact hfx.trans (mul_le_mul_of_nonneg_left
-    (pow_le_pow_of_le_one (abs_nonneg _) hqx hn) hC)
 
 /-- Flatness gives an actual zero limit when the scale tends to zero.
 This is a scalar limit theorem, not a theorem about differentiability. -/

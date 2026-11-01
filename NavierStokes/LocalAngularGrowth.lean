@@ -232,20 +232,5 @@ theorem selected_exponent_small : 0 < ActualPrimary.h ∧ ActualPrimary.h < 1 / 
   have hsmall := ActualPrimary.nominal.axis.small.h_le
   linarith
 
-/-- A single unconditional selected whole-space candidate has every
-Theorem 1.1 property and the local theorem's quantitative angular growth.
-Both velocity and pressure also retain their initial rest interval. -/
-theorem selected_candidate_one_with_angular_growth :
-    ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
-      NavierStokesR3.ProblemStatement.CandidateProperties 1 u p f K ∧
-      AngularGrowth u ∧
-      (∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 ∧ p (t, x) = 0) := by
-  obtain ⟨a, hs, ea, eb, ep, forcing, hc, hf, _⟩ := ActualCandidateAssembly.selected_witness
-  have ha : Tendsto (fun j => (a j : ℝ)) atTop atTop := hs.2.2.2.2.1
-  refine ⟨_, _, _, _, NavierStokesR3.ActualCandidate.of_localized_fields hc hf,
-    selectedVelocity_angularGrowth ha, ?_⟩
-  intro t ht x
-  exact ⟨TimeLocalization.activatedVelocity_zero_early _ ht x,
-    TimeLocalization.activatedPressure_zero_early _ ht x⟩
 
 end NavierStokes.LocalAngularGrowth

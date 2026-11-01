@@ -57,11 +57,6 @@ def divergence (v : ℝ^n → ℝ^n) (x : ℝ^n) : ℝ := (fderiv ℝ v x).trace
 @[inherit_doc]
 local notation "∇⬝" => divergence
 
-/-- The divergence of a vector field is $0$ at points where `fderiv` has its junk value. -/
-@[simp]
-theorem divergence_of_not_differentiableAt {v : ℝ^n → ℝ^n} {x : ℝ^n}
-    (hv : ¬ DifferentiableAt ℝ v x) : ∇⬝ v x = 0 := by
-  simp [divergence, fderiv_zero_of_not_differentiableAt hv]
 
 /-- The divergence of the zero vector field is zero. -/
 @[simp]
@@ -74,18 +69,7 @@ theorem divergence_const (c : ℝ^n) (x : ℝ^n) :
     ∇⬝ (fun _ : ℝ^n => c) x = 0 := by
   simp [divergence]
 
-/-- Divergence is additive at points where both vector fields are differentiable. -/
-theorem divergence_add {v w : ℝ^n → ℝ^n} {x : ℝ^n}
-    (hv : DifferentiableAt ℝ v x) (hw : DifferentiableAt ℝ w x) :
-    ∇⬝ (fun y => v y + w y) x = ∇⬝ v x + ∇⬝ w x := by
-  rw [divergence, fderiv_fun_add hv hw]
-  exact map_add _ _ _
 
-/-- Divergence commutes with scalar multiplication at differentiability points. -/
-theorem divergence_smul (c : ℝ) {v : ℝ^n → ℝ^n} {x : ℝ^n}
-    (hv : DifferentiableAt ℝ v x) : ∇⬝ (fun y => c • v y) x = c * ∇⬝ v x := by
-  rw [divergence, fderiv_fun_const_smul hv c]
-  simp [divergence]
 
 /--
 A function $f : \mathbb{R}^n \to \alpha$ is 1-periodic if it is periodic in each

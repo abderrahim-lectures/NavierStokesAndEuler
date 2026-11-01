@@ -41,13 +41,6 @@ theorem slope_neg_iff (c : Parameters) (y : ℝ) :
     simp only [OutgoingSchedule.slope, sigma_one hy1, sub_self, mul_zero, zero_sub]
     exact neg_neg_of_pos (mul_pos c.lam_pos hstep)
 
-/-- The schedule slope equals the logarithmic derivative of the actual
-angular momentum profile, including the transition preceding the hold. -/
-theorem actual_logarithmic_slope_neg_iff {d : TailData} {K : ℝ}
-    (w : ResetWitness d K) {y : ℝ} (hy : y < d.core.endpoint) (eta : ℝ) :
-    OutgoingHistories.dY (OutgoingHistories.H w) (y, eta) /
-      OutgoingHistories.H w (y, eta) < 0 ↔ d.core.dropLength + 1 < y := by
-  rw [OutgoingEntranceCone.canonical_H_radial_ratio w hy eta, slope_neg_iff]
 
 theorem coneA_gt_two_of_negative_slope {d : TailData} {K : ℝ}
     (w : ResetWitness d K) {y : ℝ} (hy : y < d.core.endpoint) (eta : ℝ)
@@ -90,19 +83,6 @@ theorem true_from_transition {d : TailData} {K XR left : ℝ}
     exact true_of_relaxed_negative_slope w _
       (h.relaxed (y, eta) ⟨⟨hleft.trans hy0.le, hp.1.2⟩, hp.2⟩) hyend hneg
 
-/-- A direct formulation using the paper's sign condition on the
-transition, retaining the same reset witness and corrected amplitude. -/
-theorem true_on_negative_slope_transition {d : TailData} {K XR left : ℝ}
-    {w : ResetWitness d K} (h : CleanOutgoingCone w XR left) (hleft : left ≤ 0)
-    {y eta : ℝ} (hy : y ≤ d.core.holdStart) (heta : |eta| ≤ 1)
-    (hneg : slope d.core.dropLength d.core.lam y < 0) :
-    TrueAt w (CorrectedPulseAmplitude.amplitude d w.coefficients) XR (y, eta) := by
-  have hclean : y ≤ cleanEnd d := by
-    dsimp only [cleanEnd]
-    linarith [coreEndpoint_ge_hold d, flattenEnd_gt_core d,
-      releaseStart_gt_flattenEnd d, tailStart_gt_release d]
-  exact true_from_transition h hleft (y, eta)
-    ⟨⟨(slope_neg_iff d.core y).mp hneg, hclean⟩, abs_le.mp heta⟩
 
 structure FullCleanOutgoingCone {d : TailData} {K : ℝ} (w : ResetWitness d K)
     (XR left : ℝ) : Prop extends CleanOutgoingCone w XR left where
@@ -113,44 +93,6 @@ theorem full_of_clean {d : TailData} {K XR left : ℝ} {w : ResetWitness d K}
     (h : CleanOutgoingCone w XR left) (hleft : left ≤ 0) : FullCleanOutgoingCone w XR left :=
   ⟨h, true_from_transition h hleft⟩
 
-/-- The original finite parameter choices and radial threshold also give
-the transition clause; no second schedule or increased threshold is chosen. -/
-theorem exists_ordered_full_clean_cone :
-    ∃ M : ℝ, 0 < M ∧ ∀ m : ℝ, M ≤ m → ∀ P : ℝ,
-      OutgoingEntranceCone.amplitudeThreshold m ≤ P → ∀ K : ℝ, 0 < K →
-      ∃ lam0 : ℝ, 0 < lam0 ∧ ∀ d : TailData,
-        d.core.P = P → d.core.m = m → d.core.wait = 60 * Real.log (1 / d.core.lam) →
-        d.core.lam < lam0 → d.h ≤ OutgoingCone.heightThreshold m d.core.lam →
-        ∀ w : ResetWitness d K, ∀ left : ℝ, left ≤ 0 →
-          ∃ XR0 : ℝ, 0 < XR0 ∧ ∀ XR : ℝ, XR0 < XR → FullCleanOutgoingCone w XR left := by
-  obtain ⟨M, hM, hchoice⟩ := OutgoingCone.exists_ordered_clean_cone
-  refine ⟨M, hM, ?_⟩
-  intro m hm P hP K hK
-  obtain ⟨lam0, hlam0, hdata⟩ := hchoice m hm P hP K hK
-  refine ⟨lam0, hlam0, ?_⟩
-  intro d hdP hdm hwait hlam hh w left hleft
-  obtain ⟨XR0, hXR0, hcone⟩ := hdata d hdP hdm hwait hlam hh w left hleft
-  exact ⟨XR0, hXR0, fun XR hXR => full_of_clean (hcone XR hXR) hleft⟩
 
-/-- The strengthened conclusion applies to the existing complete profile
-object, with its original angular history and corrected pulse amplitude. -/
-theorem exists_ordered_full_profile_cone :
-    ∃ M : ℝ, 0 < M ∧ ∀ m : ℝ, M ≤ m → ∀ P : ℝ,
-      OutgoingEntranceCone.amplitudeThreshold m ≤ P → ∀ K : ℝ, 0 < K →
-      ∃ lam0 : ℝ, 0 < lam0 ∧ ∀ F : OutgoingProfile.Profile,
-        F.data.core.P = P → F.data.core.m = m → F.coefficientBound = K →
-        F.data.core.wait = 60 * Real.log (1 / F.data.core.lam) →
-        F.data.core.lam < lam0 → F.data.h ≤ OutgoingCone.heightThreshold m F.data.core.lam →
-        ∀ left : ℝ, left ≤ 0 →
-          ∃ XR0 : ℝ, 0 < XR0 ∧ ∀ XR : ℝ, XR0 < XR →
-            FullCleanOutgoingCone F.reset XR left := by
-  obtain ⟨M, hM, hchoice⟩ := OutgoingCone.exists_ordered_profile_cone
-  refine ⟨M, hM, ?_⟩
-  intro m hm P hP K hK
-  obtain ⟨lam0, hlam0, hprofile⟩ := hchoice m hm P hP K hK
-  refine ⟨lam0, hlam0, ?_⟩
-  intro F hdP hdm hbound hwait hlam hh left hleft
-  obtain ⟨XR0, hXR0, hcone⟩ := hprofile F hdP hdm hbound hwait hlam hh left hleft
-  exact ⟨XR0, hXR0, fun XR hXR => full_of_clean (hcone XR hXR) hleft⟩
 
 end NavierStokes.OutgoingNegativeSlopeCone

@@ -178,25 +178,6 @@ theorem candidate_l2Norm_le_cumulativeForceNorm {ν : ℝ} (hν : 0 < ν)
   have hνd : 0 ≤ ν * dissipation u t := mul_nonneg hν.le hd
   nlinarith
 
-/-- A single explicit kinetic-energy bound for the entire half-open interval.
-Square integrability is included, and the right-hand side is independent of `T`. -/
-theorem candidate_uniform_kineticEnergy_le {ν : ℝ} (hν : 0 < ν)
-    {u f : VelocityField} {p : PressureField} {K : Set Space}
-    (hc : ProblemStatement.CandidateProperties ν u p f K) :
-    ∀ T ∈ Ico (0 : ℝ) 1,
-      ProblemStatement.SquareIntegrableAtTime u T ∧
-      ProblemStatement.kineticEnergy u T ≤ (1 / 2 : ℝ) * (cumulativeForceNorm f 1) ^ 2 := by
-  intro T hT
-  obtain ⟨E, hE, hb⟩ := hc.energy_bounded
-  refine ⟨(hb T hT).1, ?_⟩
-  have hnorm := (candidate_l2Norm_le_cumulativeForceNorm hν hc hT).trans
-    (cumulativeForceNorm_monotone hc.force_smooth.continuous hc.force_support.1 hT.2.le)
-  have hsq := (sq_le_sq₀ (l2Norm_nonneg u T)
-    (cumulativeForceNorm_nonneg f zero_le_one)).2 hnorm
-  have hnonneg : 0 ≤ l2Sq u T := integral_nonneg (fun _ => sq_nonneg _)
-  rw [l2Norm, Real.sq_sqrt hnonneg] at hsq
-  change (1 / 2 : ℝ) * l2Sq u T ≤ (1 / 2 : ℝ) * (cumulativeForceNorm f 1) ^ 2
-  exact mul_le_mul_of_nonneg_left hsq (by norm_num)
 
 /-- The sharp energy and accumulated dissipation inequality from Lemma 10.4,
 with the viscosity restored. Both norms use ordinary spatial volume. -/

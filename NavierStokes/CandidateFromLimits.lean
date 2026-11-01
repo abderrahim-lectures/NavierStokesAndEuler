@@ -207,15 +207,6 @@ theorem exists_candidate_force
   · intro m K hK
     exact force_mixed_derivative_decay u p hu hp L hlim huper hpper m K hK
 
-/-- Conditional reduction of the primary existential target to the stated
-physical fields and locally uniform limits of all actual residual derivatives. -/
-theorem candidateStatement_of_residual_limits
-    (huper : UnitSpatialPeriodsOn (Ico (0 : ℝ) 1) u)
-    (hpper : UnitSpatialPeriodsOn (Ico (0 : ℝ) 1) p)
-    (hdiv : ∀ t ∈ Ico (0 : ℝ) 1, ∀ x : Space, spatialDivergence u t x = 0)
-    (hunbounded : SpeedUnboundedAtOne u) : candidateStatement :=
-  ⟨activatedVelocity u, activatedPressure p, force u p hu hp L hlim,
-    candidate_properties u p hu hp L hlim huper hpper hdiv hunbounded⟩
 
 end Construction
 

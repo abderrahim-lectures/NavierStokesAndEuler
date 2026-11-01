@@ -30,15 +30,10 @@ def reference (q : Choice d Λ) : StockReference parameterInterval where
     (AppendixJoiningResults.axis_L_lower_bound_window hs.h_pos.le hs.h_le
       ⟨hη.1.le,hη.2.le⟩)).ne'
 
-theorem reference_eq_ofNatural (hs' : NaturalAxisData.SmallParameters h j) (q : Choice d Λ) :
-    reference d hΛ hP0 hs q =
-      ofNatural q.profile.family hΛ hs' q.δ_pos q.δ_lt hP0 := rfl
 
 theorem reference_radius (q : Choice d Λ) :
     (reference d hΛ hP0 hs q).radius0 = 4/Λ := rfl
 
-theorem reference_finalTime (q : Choice d Λ) :
-    (reference d hΛ hP0 hs q).finalTime = Real.log (110/(4/Λ)) := rfl
 
 theorem reference_initialU (q : Choice d Λ) :
     (reference d hΛ hP0 hs q).initialU = fun η => q.profile.family.U (4/Λ,η) := by
@@ -270,41 +265,7 @@ theorem exists_endpointLog_bound (hΛ1 : 1 ≤ Λ) (hσ : 0 < σ)
       exact herr'.trans (le_add_of_nonneg_left (abs_nonneg c))
   · exact hLbound
 
-/-- The two conclusions of the current `join:scale-envelope` hold together for
-one actual stock-driven continuation and one choice of constants in the printed order. -/
-theorem exists_entrance_envelope (hσ : 0 < σ) (N : ℕ) :
-    ∃ Cnat, 0 ≤ Cnat ∧ ∀ Λ, ∀ hΛ : 0 < Λ, 1 ≤ Λ →
-      AxisReference.stabilityScale d.coefficients.epsilon (profileErrorConstant d) ≤ Λ →
-      ∃ B Cjoin, 0 ≤ B ∧ 0 ≤ Cjoin ∧ ∀ q : Choice d Λ,
-      ∀ T, 0 < T → ∀ κ ∈ Icc (0:ℝ) 1, ∀ w₁, 0 ≤ w₁ → ∀ w₂, 0 ≤ w₂ →
-      ∀ n ≤ N, ∀ η ∈ J,
-      |iteratedDeriv n ((reference d hΛ hP0 hs q).endpointLog T κ w₁ w₂ q.C) η| ≤ B ∧
-      |iteratedDeriv n (fun ξ => (reference d hΛ hP0 hs q).endpointU T κ w₁ ξ-
-        NaturalAxisData.U j ξ) η| ≤ Cnat/Λ+Cjoin*(T+κ+w₁+w₂) := by
-  obtain ⟨Cnat,hCnat,hcn⟩ := exists_linear_Ck_constants d hP0 hs hσ N
-  refine ⟨Cnat,hCnat,?_⟩
-  intro Λ hΛ hΛ1 hscale
-  obtain ⟨Cjoin,hCjoin,hcj⟩ := hcn Λ hΛ hΛ1 hscale
-  obtain ⟨B,hB,hb⟩ := exists_endpointLog_bound d hΛ hP0 hs hΛ1 hσ hscale N
-  exact ⟨B,Cjoin,hB,hCjoin,fun q T hT κ hκ w₁ hw₁ w₂ hw₂ n hn η hη =>
-    ⟨hb q T κ w₁ w₂ hκ n hn η hη,hcj q T hT κ hκ w₁ hw₁ w₂ hw₂ n hn η hη⟩⟩
 
-/-- These endpoint functions are exactly the physical fields at `X_i = 110`. -/
-theorem endpointU_eq_physical {J' : Set ℝ} (R : StockReference J')
-    (hR : R.radius0 < 110) (T κ w η : ℝ) :
-    R.endpointU T κ w η = R.physicalU T κ w (110,η) := by
-  rw [StockReference.physicalU,ite_eq_right (not_le.mpr hR)]
-  rfl
 
-theorem endpointLog_eq_physical {J' : Set ℝ} (R : StockReference J')
-    (hR : R.radius0 < 110) (T κ w₁ w₂ : ℝ) {C : ℝ} (hC : 0 < C) (η : ℝ) :
-    R.endpointLog T κ w₁ w₂ C η =
-      Real.log (C*(Real.sqrt 220*R.physicalF T κ w₁ w₂ (110,η))) := by
-  rw [StockReference.physicalF,ite_eq_right (not_le.mpr hR)]
-  rw [Real.log_mul hC.ne' (mul_ne_zero (Real.sqrt_pos.mpr (by norm_num)).ne' (Real.exp_pos _).ne'),
-    Real.log_mul (Real.sqrt_pos.mpr (by norm_num)).ne' (Real.exp_pos _).ne',
-    Real.log_exp,Real.log_sqrt (by norm_num)]
-  simp only [StockReference.endpointLog,StockReference.logPoint,StockReference.logTime,
-    StockReference.finalTime,add_assoc]
 
 end NavierStokes.ReferenceEndpointRate

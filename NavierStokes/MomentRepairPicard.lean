@@ -63,26 +63,6 @@ theorem limits_compatible (i : Eₖ →L[ℝ] E₀)
   exact ((i.continuous.tendsto cₖ).comp hₖ).congr
     (iterates_compatible i B₀ Bₖ A₀ Aₖ d₀ dₖ hB hA hd)
 
-/-- Both printed smallness conditions select the same correction. The
-exact quantitative estimate holds in each norm on that common branch. -/
-theorem exists_compatible_small_solutions [CompleteSpace E₀] [CompleteSpace Eₖ]
-    (i : Eₖ →L[ℝ] E₀) (B₀ : E₀ ≃L[ℝ] E₀) (Bₖ : Eₖ ≃L[ℝ] Eₖ)
-    (A₀ : E₀ →L[ℝ] E₀ →L[ℝ] E₀) (Aₖ : Eₖ →L[ℝ] Eₖ →L[ℝ] Eₖ)
-    (d₀ : E₀) (dₖ : Eₖ)
-    (hB : ∀ x, i (Bₖ x) = B₀ (i x))
-    (hA : ∀ x y, i (Aₖ x y) = A₀ (i x) (i y)) (hd : i dₖ = d₀)
-    (hsmall₀ : 8 * ‖B₀.symm.toContinuousLinearMap‖ ^ 2 * ‖A₀‖ * ‖d₀‖ ≤ 1)
-    (hsmallₖ : 8 * ‖Bₖ.symm.toContinuousLinearMap‖ ^ 2 * ‖Aₖ‖ * ‖dₖ‖ ≤ 1) :
-    ∃ c₀ : E₀, ∃ cₖ : Eₖ, i cₖ = c₀ ∧
-      ‖c₀‖ ≤ 2 * ‖B₀.symm.toContinuousLinearMap‖ * ‖d₀‖ ∧
-      ‖cₖ‖ ≤ 2 * ‖Bₖ.symm.toContinuousLinearMap‖ * ‖dₖ‖ ∧
-      B₀ c₀ + A₀ c₀ c₀ = d₀ ∧ Bₖ cₖ + Aₖ cₖ cₖ = dₖ := by
-  obtain ⟨c₀, hc₀, he₀, ht₀⟩ :=
-    MomentRepairPicardConvergence.exists_small_solution_with_iterates B₀ A₀ d₀ hsmall₀
-  obtain ⟨cₖ, hcₖ, heₖ, htₖ⟩ :=
-    MomentRepairPicardConvergence.exists_small_solution_with_iterates Bₖ Aₖ dₖ hsmallₖ
-  exact ⟨c₀, cₖ, limits_compatible i B₀ Bₖ A₀ Aₖ d₀ dₖ hB hA hd ht₀ htₖ,
-    hc₀, hcₖ, he₀, heₖ⟩
 
 /-- A previously selected zero-started C⁰ branch satisfies the stronger
 norm estimate whenever the corresponding stronger smallness test holds. -/

@@ -40,14 +40,6 @@ def residual (a : ℕ → ℝ) (q : SpaceTime → ℝ)
     (A B : ℕ → VelocityField) (P : ℕ → PressureField) : VelocityField :=
   fun z => navierStokesResidual (velocity a q A B) (pressure a q P) z.1 z.2
 
-/-- The residual is exactly the nonlinear residual used by the mixed
-localization and force construction, including both cross interactions. -/
-theorem residual_eq_originalResidual (a : ℕ → ℝ) (q : SpaceTime → ℝ)
-    (A B : ℕ → VelocityField) (P : ℕ → PressureField) :
-    residual a q A B P = MixedPeriodicAssembly.originalResidual
-      (SolenoidalDiagonal.potentialSum a q A)
-      (SolenoidalDiagonal.potentialSum a q B)
-      (SolenoidalDiagonal.potentialSum a q P) := rfl
 
 theorem velocity_smooth {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
     {q : SpaceTime → ℝ} {A B : ℕ → VelocityField} {U : Set SpaceTime}

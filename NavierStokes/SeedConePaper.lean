@@ -33,15 +33,6 @@ def RelaxedCone (a b p₁ p₂ : ℝ) : Prop :=
 def AdmissibleCone (a b p₁ p₂ : ℝ) : Prop :=
   RelaxedCone a b p₁ p₂ ∧ 2 < shearMagnitude a b
 
-/-- The first assertion of `seed:cone-test`, in its original coordinates. -/
-theorem admissible_iff {a b p₁ p₂ : ℝ} (ha : 0 < a)
-    (hv : 2 < shearMagnitude a b) :
-    AdmissibleCone a b p₁ p₂ ↔
-      shearMagnitude a b < parallelStress a b p₁ p₂ ∧
-        (shearMagnitude a b - 2) * transverseStress a b p₁ p₂ ^ 2 <
-          2 * (parallelStress a b p₁ p₂ - shearMagnitude a b) ^ 2 := by
-  simp only [AdmissibleCone, RelaxedCone, ha, hv, true_and, and_true]
-  exact ConeAlgebra.true_cone_iff hv
 
 /-- The compact large-lag assertion of `seed:cone-test`. The conclusion has
 no lower bound on the shear magnitude. The theorem also covers an empty set. -/
@@ -73,19 +64,5 @@ theorem compact_large_lag {K : Set (ℝ × ℝ × ℝ)} (hK : IsCompact K)
     simp only [shearMagnitude, neg_div, neg_sq]
   exact ⟨ha z hz, by rwa [hparallel], by rwa [hshear, hparallel, htransverse]⟩
 
-/-- The same compact threshold gives admissibility at every point where
-the extra strict shear inequality holds. -/
-theorem compact_large_lag_with_admissibility {K : Set (ℝ × ℝ × ℝ)}
-    (hK : IsCompact K) (ha : ∀ z ∈ K, 0 < z.1)
-    (hfirst : ∀ z ∈ K, 0 < z.1 - z.2.1 * z.2.2)
-    (hsecond : ∀ z ∈ K,
-      2 * z.2.1 * z.2.2 + z.2.1 ^ 2 / z.1 + (z.1 - 2) * z.2.2 ^ 2 < 2) :
-    ∃ P : ℝ, 0 < P ∧ ∀ z ∈ K, ∀ p₁ : ℝ, P ≤ p₁ →
-      RelaxedCone z.1 z.2.1 p₁ (z.2.2 * p₁) ∧
-        (2 < shearMagnitude z.1 z.2.1 →
-          AdmissibleCone z.1 z.2.1 p₁ (z.2.2 * p₁)) := by
-  obtain ⟨P, hP, hcone⟩ := compact_large_lag hK ha hfirst hsecond
-  exact ⟨P, hP, fun z hz p hp => ⟨hcone z hz p hp,
-    fun hv => ⟨hcone z hz p hp, hv⟩⟩⟩
 
 end NavierStokes.SeedConePaper

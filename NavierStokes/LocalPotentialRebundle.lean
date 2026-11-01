@@ -118,17 +118,6 @@ theorem velocity_eq_original_germ {a : ℕ → ℕ}
   filter_upwards [PhysicalWaveSum.preterminal_open.mem_nhds hw] with z hz
   exact velocity_eq_original hs hz
 
-theorem residual_eq_original_germ {a : ℕ → ℕ}
-    (hs : MixedDiagonalSchedule.ThreeSmoothSums a ActualPrimary.h
-      ActualCandidateAssembly.selectedPotentialStages ActualCandidateAssembly.selectedDirectStages
-      ActualCandidateAssembly.selectedPressureStages) {w : SpaceTime}
-    (hw : w ∈ PhysicalWaveSum.preterminal) :
-    (fun z => navierStokesResidual (velocity a) (pressure a) z.1 z.2) =ᶠ[𝓝 w]
-      MixedDiagonalResidual.residual (fun j => (a j : ℝ))
-        (PhysicalWaveSum.physicalQ ActualPrimary.h)
-        ActualCandidateAssembly.selectedPotentialStages ActualCandidateAssembly.selectedDirectStages
-        ActualCandidateAssembly.selectedPressureStages :=
-  ResidualRegularity.residual_eventuallyEq (velocity_eq_original_germ hs hw) Filter.EventuallyEq.rfl
 
 theorem sum_eq_first {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
     {A : ℕ → SpaceTime → V} {f : SpaceTime → V} {a : ℕ → ℝ}

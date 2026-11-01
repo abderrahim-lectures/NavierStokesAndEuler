@@ -67,12 +67,6 @@ theorem mul_zero_germ {c f : D → ℝ} {x : D}
   filter_upwards [hzero] with y hy
   simp only [hy, mul_zero]
 
-theorem iteratedFDeriv_mul_eq_zero_of_zero_germ {c f : D → ℝ} {x : D}
-    (hzero : f =ᶠ[𝓝 x] (fun _ => 0)) (m : ℕ) :
-    iteratedFDeriv ℝ m (fun y => c y * f y) x = 0 := by
-  have heq := (SolenoidalDiagonal.iteratedFDeriv_eventuallyEq
-    (mul_zero_germ (c := c) hzero) m).self_of_nhds
-  simpa only [iteratedFDeriv_fun_zero, Pi.zero_apply] using heq
 
 theorem smooth_mul_of_support_local {c f : D → ℝ}
     (hU : IsOpen U) (hf : ContDiffOn ℝ ∞ f U)
@@ -85,15 +79,6 @@ theorem smooth_mul_of_support_local {c f : D → ℝ}
   · exact (contDiffAt_const.congr_of_eventuallyEq
       (mul_zero_germ (c := c) (hzero x hx hs))).contDiffWithinAt
 
-/-- In particular a reciprocal coefficient may be singular on the axis or
-any zero set outside the common factor region. Its actual product is smooth. -/
-theorem smooth_mul_inv_of_support_local {r f : D → ℝ}
-    (hU : IsOpen U) (hf : ContDiffOn ℝ ∞ f U)
-    (hr : ∀ x ∈ U, x ∈ S → ContDiffAt ℝ ∞ r x)
-    (hpos : ∀ x ∈ U, x ∈ S → r x ≠ 0)
-    (hzero : ∀ x ∈ U, x ∉ S → f =ᶠ[𝓝 x] (fun _ => 0)) :
-    ContDiffOn ℝ ∞ (fun x => (r x)⁻¹ * f x) U :=
-  smooth_mul_of_support_local hU hf (fun x hx hs => (hr x hx hs).inv (hpos x hx hs)) hzero
 
 def ApproximationRates.mul_coefficient_support_local
     {gain : ℕ → ℝ} {f c : D → ℝ} {fs : ℕ → D → ℝ}

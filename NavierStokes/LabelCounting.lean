@@ -31,10 +31,6 @@ def relevantLabels (n : ℕ) (A : ℝ) (B : Set Position) : Set Label :=
 theorem nativeSpacing_eq (n : ℕ) : nativeSpacing n = ((n : ℝ) ^ 6)⁻¹ := by
   simp only [nativeSpacing, ChartScales.S, ← pow_mul]
 
-theorem nativeSpacing_mul_six {n : ℕ} (hn : 1 ≤ n) :
-    nativeSpacing n * (n : ℝ) ^ 6 = 1 := by
-  rw [nativeSpacing_eq, inv_mul_cancel₀]
-  exact pow_ne_zero _ (by exact_mod_cast (by omega : n ≠ 0))
 
 /-- A coordinate bounded in physical chart units gives an explicit integer
 index bound. The center may vary freely; only the radius affects the count. -/
@@ -238,21 +234,6 @@ theorem pointwise_count (A : ℝ) :
   obtain ⟨hfin, hcount⟩ := pointwise_count_of_bound D hK q x
   exact ⟨hfin, by exact_mod_cast hcount⟩
 
-/-- The original mask-support regions are contained in every enlargement
-of factor at least one. Thus the count above applies to the actual labels
-of the constructed partition, including their support boundaries. -/
-theorem labelRegion_subset_pointwiseLabels {D A q : ℝ} {x : Position} {L : Label}
-    (hA : 1 ≤ A) (hn : 1 ≤ L.1)
-    (hL : (q, x) ∈ PhysicalWaveSum.labelRegion D L) :
-    L ∈ pointwiseLabels D A q x := by
-  refine ⟨hn, hL.1, slowMask_tsupport_subset_normalizedBox hn L.2.1 L.2.2 hA ?_⟩
-  have hs : tsupport (physicalSlowMask D L.1 L.2.1) ⊆
-      (slowCoordinates D L.1) ⁻¹' tsupport (slowMask L.1 L.2.1) := by
-    apply closure_minimal
-    · intro y hy
-      exact subset_tsupport (slowMask L.1 L.2.1) hy
-    · exact isClosed_closure.preimage (slowCoordinates_smooth D L.1).continuous
-  exact hs hL.2
 
 /-- All three conclusions of `geom:label-counts` for an arbitrary fixed
 enlargement. Constants are chosen before the band and point variables. -/
@@ -280,55 +261,6 @@ theorem restrict_count (Γ : Set Label) {s : Set Label} {C : ℝ}
     exact_mod_cast Set.ncard_le_ncard inter_subset_right hs.1
   exact hcard.trans hs.2
 
-/-- Literal label-family version of the three counting bounds. The fixed
-set `Γ` may impose every admissibility condition of the construction. -/
-theorem number_of_relevant_labels_restrict (A : ℝ) (Γ : Set Label) :
-    (∃ C > 0, ∀ D q : ℝ, ∀ x : Position,
-      (Γ ∩ pointwiseLabels D A q x).Finite ∧
-        ((Γ ∩ pointwiseLabels D A q x).ncard : ℝ) ≤ C) ∧
-    (∀ B : Set Position, IsCompact B → ∃ C > 0, ∀ n : ℕ, 1 ≤ n →
-      (Γ ∩ relevantLabels n A B).Finite ∧
-        ((Γ ∩ relevantLabels n A B).ncard : ℝ) ≤ C * ChartScales.S n ^ 9) ∧
-    (∀ I : Set ℝ, Bornology.IsBounded I → ∃ C > 0, ∀ n : ℕ, 1 ≤ n → ∀ Z T : ℝ,
-      (Γ ∩ relevantLabels n A (radialSlice I Z T)).Finite ∧
-        ((Γ ∩ relevantLabels n A (radialSlice I Z T)).ncard : ℝ) ≤
-          C * ChartScales.S n ^ 3) := by
-  obtain ⟨⟨C, hC, hpoint⟩, hchart, hradial⟩ := number_of_relevant_labels A
-  refine ⟨⟨C, hC, fun D q x => restrict_count Γ (hpoint D q x)⟩, ?_, ?_⟩
-  · intro B hB
-    obtain ⟨C, hC, hcount⟩ := hchart B hB
-    exact ⟨C, hC, fun n hn => restrict_count Γ (hcount n hn)⟩
-  · intro I hI
-    obtain ⟨C, hC, hcount⟩ := hradial I hI
-    exact ⟨C, hC, fun n hn Z T => restrict_count Γ (hcount n hn Z T)⟩
 
-theorem physicalBox_iff_normalizedBox (D : ℝ) {n : ℕ} (_hn : 1 ≤ n)
-    (k : Grid) (σ : Bool) (x : Position) :
-    x ∈ physicalBox D (n, k, σ) ↔
-      slowCoordinates D n x ∈ normalizedBox 2 (n, k, σ) := by
-  have hw (j : Fin 3) : width D j n =
-      ChartScales.Q n ^ axisExponent D j * nativeSpacing n := by
-    unfold width
-    rw [spacing_eq_scaled_mesh]
-    simp only [ChartScales.Q, nativeSpacing, ChartScales.S, one_div]
-  have he (j : Fin 3) :
-      |slowCoordinates D n x j - nativeSpacing n * (k j : ℝ)| =
-      |x j - width D j n * (k j : ℝ)| / ChartScales.Q n ^ axisExponent D j := by
-    have hq := Real.rpow_pos_of_pos (ChartScales.Q_pos n) (axisExponent D j)
-    have he : slowCoordinates D n x j - nativeSpacing n * (k j : ℝ) =
-        (x j - width D j n * (k j : ℝ)) / ChartScales.Q n ^ axisExponent D j := by
-      dsimp [slowCoordinates]
-      rw [hw]
-      field_simp
-    rw [he, abs_div, abs_of_pos hq]
-  change (∀ j, |x j - width D j n * (k j : ℝ)| ≤ 2 * width D j n) ↔ _
-  change _ ↔ ∀ j, |slowCoordinates D n x j - nativeSpacing n * (k j : ℝ)| ≤
-    2 * nativeSpacing n
-  simp only [he]
-  apply forall_congr'
-  intro j
-  have hq := Real.rpow_pos_of_pos (ChartScales.Q_pos n) (axisExponent D j)
-  rw [div_le_iff₀ hq, hw]
-  constructor <;> intro h <;> nlinarith
 
 end NavierStokes.LabelCounting

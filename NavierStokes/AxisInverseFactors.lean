@@ -55,9 +55,6 @@ theorem ratio_mem_Icc {r : ℕ} (hr : 1 ≤ r) (n i : ℕ) : ratio r n i ∈ Icc
   · exact (div_le_one (degreeMultiplier_pos hr (Nat.pos_of_ne_zero hn))).mpr
       (degreeMultiplier_mono hr (min_le_right _ _))
 
-theorem ratio_of_le (r n i : ℕ) (hi : i ≤ n) :
-    ratio r n i = degreeMultiplier r i / degreeMultiplier r n := by
-  simp only [ratio, min_eq_left hi]
 
 def insertFamily (I : Window) (ε : ℝ) (r : ℕ) (A B : AxisSpace I ε)
     (n m : ℕ) (x : ℝ) : ℝ :=
@@ -128,37 +125,6 @@ theorem coefficient_insert (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr 
     Nat.choose_zero_right, Nat.cast_one, one_mul, coefficient] using
       jet_insert I hε r hr A B n 0 hx
 
-/-- This operator really inserts the factor inside the inverse. -/
-theorem insert_regularInverse (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (F B : AxisSpace I ε) :
-    insert I hε r hr (regularInverse I hε r hr F) B =
-      regularInverse I hε r hr (product I hε F B) := by
-  apply coefficient_ext I (weight ε) (fun n m => (weight_pos hε n m).ne')
-  intro n x hx
-  rw [coefficient_insert I hε r hr _ _ n hx]
-  cases n with
-  | zero =>
-      change _ = inputJet I ε (regularInverse I hε r hr (product I hε F B)) 0 0 x
-      rw [jet_regularInverse_zero I hε r hr _ _ hx]
-      simp [ratio]
-  | succ n =>
-      change _ = inputJet I ε (regularInverse I hε r hr (product I hε F B)) (n+1) 0 x
-      rw [jet_regularInverse_succ I hε r hr _ _ _ hx]
-      change _ = coefficient I (weight ε) (product I hε F B) n x / radialDivisor r n
-      rw [coefficient_product I hε F B n hx, sum_antidiagonal_succ]
-      simp only [ratio, Nat.zero_min, degreeMultiplier_zero, zero_div, zero_mul, zero_add]
-      rw [Finset.sum_div]
-      apply Finset.sum_congr rfl
-      intro ij hij
-      have hi : ij.1+1 ≤ n+1 := Nat.succ_le_succ (Nat.le.intro (mem_antidiagonal.mp hij))
-      rw [min_eq_left hi, degreeMultiplier_succ, degreeMultiplier_succ]
-      change (radialDivisor r ij.1 / radialDivisor r n) *
-        inputJet I ε (regularInverse I hε r hr F) (ij.1+1) 0 x * _ = _
-      rw [jet_regularInverse_succ I hε r hr _ _ _ hx]
-      have hd := radialDivisor_pos hr ij.1
-      field_simp [hd.ne']
-      simp only [coefficient]
-      ring
 
 /-- Repeat insertion for any finite list of factors. -/
 def insertFactors (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
@@ -190,75 +156,9 @@ belong to the bounded axis space. -/
 def recoveredSource (I : Window) (ε : ℝ) (r : ℕ) (A : AxisSpace I ε)
     (n : ℕ) (x : ℝ) : ℝ := radialDivisor r n * coefficient I (weight ε) A (n+1) x
 
-theorem recoveredSource_insert (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (A B : AxisSpace I ε) (n : ℕ) {x : ℝ} (hx : x ∈ I.interval) :
-    recoveredSource I ε r (insert I hε r hr A B) n x =
-      ∑ ij ∈ antidiagonal n, recoveredSource I ε r A ij.1 x *
-        coefficient I (weight ε) B ij.2 x := by
-  unfold recoveredSource
-  rw [coefficient_insert I hε r hr A B _ hx, sum_antidiagonal_succ]
-  simp only [ratio, Nat.zero_min, degreeMultiplier_zero, zero_div, zero_mul, zero_add]
-  rw [Finset.mul_sum]
-  apply Finset.sum_congr rfl
-  intro ij hij
-  have hi : ij.1+1 ≤ n+1 := Nat.succ_le_succ (Nat.le.intro (mem_antidiagonal.mp hij))
-  rw [min_eq_left hi, degreeMultiplier_succ, degreeMultiplier_succ]
-  field_simp [(radialDivisor_pos hr n).ne']
 
-/-- Arbitrarily many undifferentiated factors cost exactly one additional
-algebra constant apiece in the mixed derivative estimate. -/
-theorem norm_mixed_extra_factors (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (F G : AxisSpace I ε) (Bs : List (AxisSpace I ε)) :
-    ‖insertFactors I hε r hr (inverseMixed I hε r hr F G) Bs‖ ≤
-      64 ^ Bs.length * (5120 / ε * ‖F‖ * ‖G‖) * (Bs.map norm).prod := by
-  apply (norm_insertFactors_le I hε r hr _ Bs).trans
-  have hb : ‖inverseMixed I hε r hr F G‖ ≤ 5120 / ε * ‖F‖ * ‖G‖ := by
-    have ht := norm_bilinearValue_le I hε (inverseMixedData I hε r hr) F G
-    change ‖inverseMixed I hε r hr F G‖ ≤ (64 * (80 / ε)) * ‖F‖ * ‖G‖ at ht
-    convert ht using 1
-    ring
-  have hp : 0 ≤ (Bs.map norm).prod := by
-    apply List.prod_nonneg
-    intro a ha
-    obtain ⟨v, _, rfl⟩ := List.mem_map.mp ha
-    exact norm_nonneg v
-  exact mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left hb (by positivity)) hp
 
-theorem coefficient_insert_zero (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (A B : AxisSpace I ε) {x : ℝ} (hx : x ∈ I.interval) :
-    coefficient I (weight ε) (insert I hε r hr A B) 0 x = 0 := by
-  rw [coefficient_insert I hε r hr A B 0 hx]
-  simp [ratio]
 
-/-- The recovered mixed source is the actual coefficient convolution of
-the parameter derivative of F with the logarithmic radial derivative of G. -/
-theorem recoveredSource_mixed (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (F G : AxisSpace I ε) (n : ℕ) {x : ℝ} (hx : x ∈ I.interval) :
-    recoveredSource I ε r (inverseMixed I hε r hr F G) n x =
-      ∑ ij ∈ antidiagonal n, inputJet I ε F ij.1 1 x *
-        ((ij.2 : ℝ) * coefficient I (weight ε) G ij.2 x) := by
-  unfold recoveredSource
-  change radialDivisor r n * inputJet I ε (inverseMixed I hε r hr F G) (n+1) 0 x = _
-  rw [jet_inverseMixed I hε r hr F G (n+1) 0 hx]
-  simp only [differentialFamily, antidiagonal_zero, Finset.sum_singleton,
-    Nat.choose_zero_right, Nat.cast_one, mul_one, Nat.add_zero]
-  rw [Finset.mul_sum]
-  apply Finset.sum_congr rfl
-  intro ij _
-  simp only [coefficient]
-  field_simp [(radialDivisor_pos hr n).ne']
 
-/-- Any established norm estimate, including omission of either derivative
-or radial averaging, acquires the same one-constant-per-factor bound. -/
-theorem norm_extra_factors_of_bound (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (A : AxisSpace I ε) (Bs : List (AxisSpace I ε)) {K : ℝ} (hK : ‖A‖ ≤ K) :
-    ‖insertFactors I hε r hr A Bs‖ ≤ 64 ^ Bs.length * K * (Bs.map norm).prod := by
-  apply (norm_insertFactors_le I hε r hr A Bs).trans
-  have hp : 0 ≤ (Bs.map norm).prod := by
-    apply List.prod_nonneg
-    intro a ha
-    obtain ⟨v, _, rfl⟩ := List.mem_map.mp ha
-    exact norm_nonneg v
-  exact mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left hK (by positivity)) hp
 
 end NavierStokes.AxisInverseFactors

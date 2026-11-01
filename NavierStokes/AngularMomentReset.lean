@@ -251,13 +251,6 @@ theorem relative_square_moment (lam : ℝ) (c : Coeff) :
   dsimp [quadraticMoment]
   ring
 
-theorem pressure_change_integrable (lam : ℝ) (c : Coeff) :
-    Integrable (fun y => Real.exp (pressureSlope lam * y) * ((1 + relative c y) ^ 2 - 1)) := by
-  convert! ((weighted_relative_integrable (pressureSlope lam) c).const_mul 2).add
-    (weighted_relative_sq_integrable (pressureSlope lam) c) using 1
-  ext y
-  simp only [Pi.add_apply]
-  ring
 
 theorem pressure_change_moment (lam : ℝ) (c : Coeff) :
     (∫ y, Real.exp (pressureSlope lam * y) * ((1 + relative c y) ^ 2 - 1)) =
@@ -619,33 +612,7 @@ theorem angularScale_pos (lam e0 X0 y0 : ℝ) (he0 : 0 < e0) (hX : 0 < X0) :
   unfold angularScale
   exact mul_pos (mul_pos (mul_pos hX (Real.sqrt_pos.mpr (by positivity))) he0) (Real.exp_pos _)
 
-/-- The pressure change is an integrable compactly supported difference. We do
-not subtract divergent integrals of the pure exponential background over `ℝ`. -/
-theorem pressure_delta_integrable (lam e0 y0 : ℝ) (c : Coeff) :
-    Integrable (fun y => (modifiedE lam e0 y0 c y) ^ 2 - (baseE lam e0 y) ^ 2) := by
-  have hf : (fun y => (modifiedE lam e0 y0 c y) ^ 2 - (baseE lam e0 y) ^ 2) =
-      (fun y => (modifiedE lam e0 y0 c y + baseE lam e0 y) *
-        (modifiedE lam e0 y0 c y - baseE lam e0 y)) := by funext y; ring
-  rw [hf]
-  exact (((modifiedE_contDiff lam e0 y0 c).continuous.add (baseE_contDiff lam e0).continuous).mul
-    ((modifiedE_contDiff lam e0 y0 c).continuous.sub (baseE_contDiff lam e0).continuous)).integrable_of_hasCompactSupport
-      (modifiedE_sub_hasCompactSupport lam e0 y0 c).mul_left
 
-theorem angular_delta_integrable (lam e0 X0 y0 : ℝ) (c : Coeff) :
-    Integrable (fun y => radiusX X0 y * (modifiedH lam e0 X0 y0 c y - baseH lam e0 X0 y)) := by
-  have hf : (fun y => radiusX X0 y * (modifiedH lam e0 X0 y0 c y - baseH lam e0 X0 y)) =
-      (fun y => (radiusX X0 y * Real.sqrt (2 * radiusX X0 y)) *
-        (modifiedE lam e0 y0 c y - baseE lam e0 y)) := by
-    funext y
-    unfold modifiedH baseH
-    ring
-  rw [hf]
-  have hX : Continuous (radiusX X0) := continuous_const.mul Real.continuous_exp
-  have hw : Continuous (fun y => radiusX X0 y * Real.sqrt (2 * radiusX X0 y)) :=
-    hX.mul (Real.continuous_sqrt.comp (continuous_const.mul hX))
-  exact (hw.mul ((modifiedE_contDiff lam e0 y0 c).continuous.sub
-    (baseE_contDiff lam e0).continuous)).integrable_of_hasCompactSupport
-      (modifiedE_sub_hasCompactSupport lam e0 y0 c).mul_left
 
 theorem modifiedH_unchanged (lam e0 X0 y0 : ℝ) (c : Coeff) {y : ℝ}
     (hy : y ∉ Ioo (y0 - 1) (y0 + 3)) :
@@ -683,18 +650,6 @@ theorem logSlope_le (hlam : 0 < lam) (e0 y0 δ y : ℝ) (he0 : 0 < e0)
   rw [modifiedE_logSlope lam e0 y0 (B.coefficients δ) y he0.ne' hp.1.ne']
   exact hp.2
 
-/-- Any desired angular endpoint moment is reached when its normalized debt
-lies in the constructed common small interval. -/
-theorem exact_target (e0 X0 y0 Iold Itarget : ℝ) (he0 : 0 < e0) (hX : 0 < X0)
-    (hδ : (Itarget - Iold) / angularScale lam e0 X0 y0 ∈ Ioo (-B.radius) B.radius) :
-    Iold + (∫ y, radiusX X0 y *
-      (modifiedH lam e0 X0 y0
-        (B.coefficients ((Itarget - Iold) / angularScale lam e0 X0 y0)) y -
-          baseH lam e0 X0 y)) = Itarget := by
-  rw [B.angular_change e0 X0 y0 _ hX.le hδ]
-  have hs := (angularScale_pos lam e0 X0 y0 he0 hX).ne'
-  field_simp
-  ring
 
 end ResetBranch
 

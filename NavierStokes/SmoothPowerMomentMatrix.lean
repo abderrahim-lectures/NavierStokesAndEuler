@@ -115,17 +115,6 @@ variable {n : ℕ} {U : Set E} (D : Family E n U)
 def matrix (p : E) : Matrix (Fin n) (Fin n) ℝ :=
   PowerMomentMatrix.bumpMomentMatrix (D.exponent p) (D.bump p)
 
-/-- Positive support identifies the full-line integral definition with the
-literal positive-half-line integral from the manuscript. -/
-theorem matrix_eq_positive_integral (p : E) (hp : p ∈ U) (i j : Fin n) :
-    D.matrix p i j = ∫ t in Ioi (0 : ℝ), t ^ D.exponent p i * D.bump p j t := by
-  symm
-  apply setIntegral_eq_integral_of_forall_compl_eq_zero
-  intro t ht
-  have hb : D.bump p j t = 0 := by
-    by_contra hb
-    exact ht (lt_of_lt_of_le (D.lower_pos p hp j) (D.bump_support p hp j hb).1)
-  rw [hb, mul_zero]
 
 theorem integrand_contDiffOn (hU : IsOpen U) (i j : Fin n) :
     ContDiffOn ℝ ∞ (fun z : E × ℝ => z.2 ^ D.exponent z.1 i * D.bump z.1 j z.2)

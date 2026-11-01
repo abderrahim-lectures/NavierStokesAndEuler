@@ -91,30 +91,5 @@ theorem H3Approximation.integral_inner_laplacian {f : Space → E}
   simpa only [real_inner_self_eq_norm_sq] using
     hf.toH1Approximation.integral_inner_derivative (hf.partial_toH1 i) i
 
-/-- A normalized H¹ pressure gradient is orthogonal to every divergence-free
-H¹ velocity on the whole space. Both derivatives are weak derivatives and
-neither field needs compact support or classical differentiability. -/
-theorem pressure_orthogonality {w : Space → Space} {dw : Fin 3 → Space → Space}
-    {p : Space → ℝ} {dp : Fin 3 → Space → ℝ}
-    (hw : H1Approximation w dw) (hp : H1Approximation p dp)
-    (hdiv : ∀ᵐ x ∂volume, (∑ i : Fin 3, dw i x i) = 0) :
-    (∫ x, ∑ i : Fin 3, w x i * dp i x) = 0 := by
-  have hwi (i : Fin 3) := hw.map (EuclideanSpace.proj i : Space →L[ℝ] ℝ)
-  have hparts (i : Fin 3) : (∫ x, w x i * dp i x) = -(∫ x, dw i x i * p x) := by
-    have h := (hwi i).integral_inner_derivative hp i
-    change (∫ x, dp i x * w x i) = -(∫ x, p x * dw i x i) at h
-    simpa only [mul_comm] using h
-  have hil (i : Fin 3) : Integrable (fun x => w x i * dp i x) :=
-    (hwi i).memLp.integrable_mul (hp.derivative_memLp i)
-  have hir (i : Fin 3) : Integrable (fun x => dw i x i * p x) :=
-    ((hwi i).derivative_memLp i).integrable_mul hp.memLp
-  rw [integral_finsetSum _ (fun i _ => hil i)]
-  simp_rw [hparts]
-  rw [Finset.sum_neg_distrib, ← integral_finsetSum _ (fun i _ => hir i)]
-  have hz : (∫ x, ∑ i : Fin 3, dw i x i * p x) = 0 := by
-    apply integral_eq_zero_of_ae
-    filter_upwards [hdiv] with x hx
-    simp only [← Finset.sum_mul, hx, zero_mul, Pi.zero_apply]
-  rw [hz, neg_zero]
 
 end NavierStokesR3.H3Comparison

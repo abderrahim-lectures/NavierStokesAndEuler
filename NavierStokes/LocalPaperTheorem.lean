@@ -83,12 +83,6 @@ structure Properties (h qstar Xa Xext heatNormalization : ℝ)
       navierStokesResidual u p w.1 w.2 = 0
   angular_growth : AngularRayGrowth h Xa u
 
-theorem uniformJetsOnCompacts_of_extensions {V : Type*} [NormedAddCommGroup V]
-    [NormedSpace ℝ V] {f : SpaceTime → V}
-    (hf : ContDiffOn ℝ ∞ f PhysicalWaveSum.preterminal)
-    (he : JointResidualLimits.AwayExtensions f) : UniformJetsOnCompacts f := by
-  intro K hK hKt hK0 n
-  exact LocalJetBounds.uniform_jets_on_compact (hf.mono (fun _ hw => hw.1)) he hK hKt hK0 n
 
 theorem uniformJetsOnScaleStrips_of_extensions {V : Type*} [NormedAddCommGroup V]
     [NormedSpace ℝ V] {f : SpaceTime → V} {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)

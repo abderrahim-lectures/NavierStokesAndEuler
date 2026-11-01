@@ -63,10 +63,6 @@ theorem norm_coverPower_le (d : ℕ) (Y : Plane) :
   rw [coverPower_apply]
   exact SlotGeometry.norm_cover_pow_le d Y
 
-theorem norm_coverPower_le_of_gap_le {d D : ℕ} (hd : d ≤ D) (Y : Plane) :
-    ‖coverPower d Y‖ ≤ (6 : ℝ) ^ D * ‖Y‖ :=
-  (norm_coverPower_le d Y).trans (mul_le_mul_of_nonneg_right
-    (pow_le_pow_right₀ (by norm_num) hd) (norm_nonneg _))
 
 /-- Fixed geometry for a level whose gap above the common coarsest level is
 `gap`. The columns of `basis` are the native radial and transverse vectors. -/
@@ -563,21 +559,7 @@ theorem commonSolve_periodic (κ : Plane → ℝ) (p : P) (hp : PeriodicAt d.sou
       intro k
       exact d.localizedCopy_deck g hab κ k n p hp Y
 
-theorem commonSolve_preserves_slow_support (κ : Plane → ℝ) {U : Set P}
-    (hf : ∀ p ∉ U, ∀ Y, d.source (p, Y) = 0) {p : P} (hp : p ∉ U) (Y : Plane) :
-    d.commonSolve g hab κ (p, Y) = 0 := by
-  have hzero (k : Frequency) : d.localizedCopy g hab κ k (p, Y) = 0 := by
-    unfold localizedCopy
-    rw [d.copySolve_preserves_slow_support g hab hf k hp Y, smul_zero]
-  simp only [commonSolve, hzero, tsum_zero]
 
-theorem localizedCopy_preserves_transverse_support (κ : Plane → ℝ) (k : Frequency)
-    {S : Set ℝ} (p : P)
-    (hf : ∀ xi ∉ S, ∀ eta ∈ Icc a b, d.source (p, g.point k (xi, eta)) = 0)
-    (Y : Plane) (hY : (g.coordinates k Y).1 ∉ S) :
-    d.localizedCopy g hab κ k (p, Y) = 0 := by
-  unfold localizedCopy
-  rw [d.copySolve_preserves_transverse_support g hab k p hf Y hY, smul_zero]
 
 omit [NormedSpace ℝ P] in
 theorem commonSolve_eventually_eq_sum {κ : Plane → ℝ} (hκ : HasCompactSupport κ)
@@ -637,8 +619,6 @@ theorem firstDescent_periodic {W : Type} (f : Plane → W) (hf : LatticePeriodic
 noncomputable def torusDescent {W : Type} (f : Plane → W) (hf : LatticePeriodic f)
     (z : Torus) : W := (firstDescent_periodic f hf z.1).lift z.2
 
-theorem torusDescent_coe {W : Type} (f : Plane → W) (hf : LatticePeriodic f) (Y : Plane) :
-    torusDescent f hf (TorusAverages.quotientPoint Y) = f Y := rfl
 
 theorem torusDescent_continuous {W : Type} [TopologicalSpace W] {f : Plane → W}
     (hf : LatticePeriodic f) (hc : Continuous f) : Continuous (torusDescent f hf) := by
@@ -728,16 +708,6 @@ theorem commonSolve_contDiffOn {U : Set P} (hU : IsOpen U)
   d.commonSolve_contDiffOn_of_copies g hab hU hcκ
     (fun k => d.localizedCopy_contDiffOn g hab hU k hA hB hf hκ hsupp)
 
-theorem commonOnTorus_continuous {U : Set P} (hU : IsOpen U)
-    (hA : ContDiffOn ℝ ∞ d.coefficient (U ×ˢ univ))
-    (hB : ContDiffOn ℝ ∞ d.forcingMap (U ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ d.source (U ×ˢ univ))
-    {κ : Plane → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsupp : tsupport κ ⊆ univ ×ˢ Ioo a b) (p : P) (hp : p ∈ U)
-    (hper : PeriodicAt d.source p) : Continuous (d.commonOnTorus g hab κ p hper) := by
-  apply torusDescent_continuous
-  exact (d.commonSolve_contDiffOn g hab hU hA hB hf hκ hcκ hsupp).continuousOn.comp_continuous
-    (continuous_const.prodMk continuous_id) (fun _ => ⟨hp, mem_univ _⟩)
 
 end LinearData
 
@@ -792,10 +762,6 @@ theorem coordinates_eq_affine (k : Frequency) (Y : Plane) :
   simp only [ContinuousLinearEquiv.coe_coe]
   abel
 
-theorem point_eq_affine (k : Frequency) (Y : Plane) :
-    g.point k Y = g.point k 0 + g.pointLinear Y := by
-  simp only [point, pointLinear, ContinuousLinearMap.comp_apply, map_add, map_zero, add_zero,
-    ContinuousLinearEquiv.coe_coe]
 
 theorem path_eq_affine (k : Frequency) (eta : ℝ) (Y : Plane) :
     g.path k Y eta = g.path k 0 eta + g.pathLinear Y := by
@@ -828,10 +794,6 @@ noncomputable def pathBound (D : ℕ) : ℝ :=
   (coveringBound D * ‖(g.basis : Plane →L[ℝ] Plane)‖) *
     (‖(g.basis.symm : Plane →L[ℝ] Plane)‖ * coveringBound D)
 
-theorem pathBound_nonneg (D : ℕ) : 0 ≤ g.pathBound D := by
-  unfold pathBound
-  exact mul_nonneg (mul_nonneg (coveringBound_pos D).le (norm_nonneg _))
-    (mul_nonneg (norm_nonneg _) (coveringBound_pos D).le)
 
 theorem norm_pathLinear_le {D : ℕ} (hd : g.gap ≤ D) :
     ‖g.pathLinear‖ ≤ g.pathBound D := by
@@ -843,17 +805,6 @@ theorem norm_pathLinear_le {D : ℕ} (hd : g.gap ≤ D) :
       (mul_le_mul (g.norm_pointLinear_le hd) (g.norm_coordinateLinear_le hd)
         (norm_nonneg _) (mul_nonneg (coveringBound_pos D).le (norm_nonneg _))))
 
-/-- The common-variable path shifts have a bound depending only on the finite
-index gap and the fixed native basis, never on the copy index. -/
-theorem path_displacement_le {D : ℕ} (hd : g.gap ≤ D) (k : Frequency) (Y : Plane) (eta : ℝ) :
-    ‖g.path k Y eta - Y‖ ≤ coveringBound D *
-      (|eta - (g.coordinates k Y).2| * ‖g.basis (0, 1)‖) := by
-  rw [g.path_eq_shift, add_sub_cancel_left]
-  have h := ((coverPower g.gap).symm : Plane →L[ℝ] Plane).le_opNorm
-    ((eta - (g.coordinates k Y).2) • g.basis (0, 1))
-  exact h.trans (by
-    rw [norm_smul, Real.norm_eq_abs]
-    exact mul_le_mul_of_nonneg_right (inverseCoveringNorm_le_bound hd) (by positivity))
 
 end Geometry
 

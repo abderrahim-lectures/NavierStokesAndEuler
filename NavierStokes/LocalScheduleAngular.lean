@@ -45,18 +45,6 @@ theorem directSum_divergence {a : ℕ → ℕ} (ha : Schedule a)
       ActualCandidateConstruction.selectedThreshold ActualCandidateConstruction.selectedThreshold_geometry)
     hat ha0 hamin (hgap 0) ht
 
-theorem cut_directSum_divergence {a : ℕ → ℕ} (ha : Schedule a)
-    (t : ℝ) (ht : t < 1) (x : Space) :
-    spatialDivergence (SpatialLocalization.cutPotential (directSum a)) t x = 0 := by
-  obtain ⟨_, hap, _, ham, hat, hgap, _, _⟩ := ha
-  have ha0 : 0 < (a 0 : ℝ) := by exact_mod_cast hap 0
-  have hamin (j : ℕ) : (a 0 : ℝ) ≤ (a j : ℝ) := by
-    exact_mod_cast ham.monotone (Nat.zero_le j)
-  exact LocalAngularDiagonal.spatialCut_angularSum_divergence outgoing.data.h_pos
-    outgoing.data.h_lt_half
-    (directData ActualCandidateConstruction.selectedBudget
-      ActualCandidateConstruction.selectedThreshold ActualCandidateConstruction.selectedThreshold_geometry)
-    hat ha0 hamin (hgap 0) t ht x
 
 theorem mixed_divergence {a : ℕ → ℕ} (ha : Schedule a)
     {w : SpaceTime} (ht : w.1 < 1) :

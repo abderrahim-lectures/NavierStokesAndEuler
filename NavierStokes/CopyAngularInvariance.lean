@@ -61,11 +61,6 @@ theorem fderiv_invariant (hf : Invariant θ f) : Invariant θ (fderiv ℝ f) := 
   have he : (fun y => f (y + t • θ)) = f := funext (fun y => hf y t)
   rw [← fderiv_comp_add_right (t • θ), he]
 
-theorem iteratedFDeriv_invariant (hf : Invariant θ f) (j : ℕ) :
-    Invariant θ (iteratedFDeriv ℝ j f) := by
-  intro x t
-  have he : (fun y => f (y + t • θ)) = f := funext (fun y => hf y t)
-  rw [← iteratedFDeriv_comp_add_right j (t • θ) x, he]
 
 theorem along {V : D → D} (hf : Invariant θ f) (hV : Invariant θ V) :
     Invariant θ (HarmonicCalculus.along V f) := by
@@ -171,22 +166,7 @@ theorem localizedCopy_invariant (d : LinearData P V E) (g : Geometry) (hab : a �
   rw [smul_zero, add_zero]
   simp only [LinearData.localizedCopy, slow_shift_apply (copySolve_invariant d g hab θ hA hB hf j)]
 
-theorem commonSolve_invariant (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
-    (θ : P) (hA : Invariant (θ, (0 : Plane)) d.coefficient)
-    (hB : Invariant (θ, (0 : Plane)) d.forcingMap)
-    (hf : Invariant (θ, (0 : Plane)) d.source) (κ : Plane → ℝ) :
-    Invariant (θ, (0 : Plane)) (d.commonSolve g hab κ) := by
-  intro x t
-  apply tsum_congr
-  intro j
-  exact localizedCopy_invariant d g hab θ hA hB hf κ j x t
 
-theorem copySolve_angular_zero (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
-    (θ : P) (hA : Invariant (θ, (0 : Plane)) d.coefficient)
-    (hB : Invariant (θ, (0 : Plane)) d.forcingMap)
-    (hf : Invariant (θ, (0 : Plane)) d.source) (j : Frequency) (x : P × Plane) :
-    HarmonicCalculus.along (fun _ => (θ, (0 : Plane))) (d.copySolve g hab j) x = 0 :=
-  (copySolve_invariant d g hab θ hA hB hf j).along_zero x
 
 end CopySolve
 
@@ -338,12 +318,6 @@ theorem realizedCoefficient_invariant (hR : Invariant θ R)
   ha.map₂ (curlRemainder_invariant hR hr hθ hz (coefficient_invariant hR hr hθ hz hΦ ha) K)
     (fun u v => u + v)
 
-theorem realizedCoefficient_angular_zero (hR : Invariant θ R)
-    (hr : Invariant θ Vr) (hθ : Invariant θ Vθ) (hz : Invariant θ Vz)
-    (hΦ : AffinePhase θ m Φ) (ha : Invariant θ a) (K : ℝ) (i : Fin 3) (x : D) :
-    HarmonicCalculus.along (fun _ => θ)
-      (fun y => CurlClassBounds.realizedCoefficient K R Vr Vθ Vz Φ a y i) x = 0 :=
-  ((realizedCoefficient_invariant hR hr hθ hz hΦ ha K).component i).along_zero x
 
 end Curl
 
@@ -352,20 +326,6 @@ section ActualCopyCurl
 variable {P : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
   {θ : P} {d : TangentData P CurlClassBounds.RealVector} {a b : ℝ}
 
-/-- The amplitude premise of the curl invariance theorem is discharged by
-the actual tangent copy solve and invariant scalar mask. -/
-theorem actualCopy_realizedCoefficient_invariant (hd : TangentInvariant θ d)
-    (g : Geometry) (hab : a ≤ b) (j : Frequency)
-    {R ψ : P × Plane → ℝ} {Vr Vz : P × Plane → P × Plane}
-    {Φ : P × Plane → ℝ} {m : ℝ}
-    (hR : Invariant (θ, (0 : Plane)) R) (hψ : Invariant (θ, (0 : Plane)) ψ)
-    (hr : Invariant (θ, (0 : Plane)) Vr) (hz : Invariant (θ, (0 : Plane)) Vz)
-    (hΦ : AffinePhase (θ, (0 : Plane)) m Φ) (K : ℝ) :
-    Invariant (θ, (0 : Plane))
-      (CurlClassBounds.realizedCoefficient K R Vr (fun _ => (θ, (0 : Plane))) Vz Φ
-        (fun x => ψ x • CurlClassBounds.complexify (d.linearData.copySolve g hab j x))) := by
-  apply realizedCoefficient_invariant hR hr (Invariant.const _) hz hΦ
-  exact hψ.map₂ ((hd.copySolve_invariant g hab j).map CurlClassBounds.complexify) (fun r v => r • v)
 
 end ActualCopyCurl
 
@@ -412,12 +372,6 @@ theorem mode_eq_field_along {P : Type} {f : D → ℂ}
   congr 2
   ring
 
-theorem vectorMode_eq_field_along_component {P : Type} {a : D → HarmonicCalculus.ComplexVector}
-    (ha : Invariant θ a) (hΦ : AffinePhase θ m Φ) (σ : P → D)
-    (k : ℝ) (j kp : ℤ) (hkp : (kp : ℝ) = k * m) (p : P) (t : ℝ) (i : Fin 3) :
-    HarmonicCalculus.vectorMode ((j : ℝ) * k) Φ a (σ p + t • θ) i =
-      HarmonicFields.field (AddMonoidAlgebra.single j (fun p => a (σ p) i)) k (fun p => Φ (σ p)) kp (p, t) :=
-  mode_eq_field_along (ha.component i) hΦ σ k j kp hkp p t
 
 end HarmonicPhase
 
@@ -434,19 +388,6 @@ theorem affinePhase_eq_zeroSlice {Φ : P × ℝ → ℝ} {m : ℝ}
     Φ (p, t) = Φ (p, 0) + m * t := by
   simpa using hΦ (p, 0) t
 
-/-- The true full coefficient is equal to its zero-angle slice. The carrier
-then agrees exactly with the existing finite-harmonic field constructor. -/
-theorem mode_eq_field_single {f : P × ℝ → ℂ} {Φ : P × ℝ → ℝ} {m : ℝ}
-    (hf : Invariant ((0 : P), (1 : ℝ)) f) (hΦ : AffinePhase ((0 : P), (1 : ℝ)) m Φ)
-    (k : ℝ) (j kp : ℤ) (hkp : (kp : ℝ) = k * m) (p : P) (t : ℝ) :
-    HarmonicCalculus.mode ((j : ℝ) * k) Φ f (p, t) =
-      HarmonicFields.field (AddMonoidAlgebra.single j (fun p => f (p, 0))) k (fun p => Φ (p, 0)) kp (p, t) := by
-  simp only [HarmonicCalculus.mode, HarmonicCalculus.carrier, HarmonicCalculus.phaseFactor,
-    HarmonicFields.field, HarmonicFields.evaluate_single, HarmonicFields.character]
-  rw [invariant_eq_zeroSlice hf p t, affinePhase_eq_zeroSlice hΦ p t]
-  simp only [hkp, Complex.ofReal_add, Complex.ofReal_mul, Complex.ofReal_intCast]
-  congr 2
-  ring
 
 end Slice
 

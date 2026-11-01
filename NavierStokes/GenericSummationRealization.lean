@@ -9,63 +9,7 @@ open Set Filter ProblemStatement GenericDifferentialPolynomial DiagonalResidual
 open GenericRealizationBounds GenericRealization
 open scoped Topology ContDiff BigOperators
 
-/-- The base-growth assumption of the manuscript implies the approximation
-interface used in the simultaneous realization theorem. -/
-theorem base_rate_of_raw_log {W : Type*} [NormedAddCommGroup W] [NormedSpace ℝ W]
-    {U : Set SpaceTime} {q : SpaceTime → ℝ} {f : SpaceTime → W}
-    (hq : ∀ w ∈ U, 0 < q w) (C P K : ℕ → ℝ)
-    (hb : ∀ m w, w ∈ U → ‖iteratedFDeriv ℝ m f w‖ ≤
-      C m * (1 + |Real.log (q w)|) ^ P m * q w ^ (-K m)) :
-    ∀ m, JetRate (scaleApproach U q) q f m (-(K m + 1)) := by
-  intro m
-  have hlU := eventually_domain U q
-  convert jetRate_of_log_bound (hlU.mono fun w hw => hq w hw) (scale_tendsto U q)
-    m (C m) (P m) (-K m) (hlU.mono fun w hw => hb m w hw) using 1
-  ring
 
-/-- The simultaneous realization under the literal smooth Cartesian angular
-representatives and axial scale of the manuscript. Solenoidality and tangency
-are derived; cylindrical rate derivatives are not hypotheses. -/
-theorem exists_angular_realization {κ : Type*} [Fintype κ] {U : Set SpaceTime}
-    (hU : IsOpen U) {q : SpaceTime → ℝ} (hq : ContDiffOn ℝ ∞ q U)
-    (Q : ℝ × ℝ → ℝ) (haxial : q = fun w => Q (w.1, w.2 2))
-    (hpos : ∀ w ∈ U, 0 < q w ∧ q w ≤ 1)
-    (Bq : ℕ → ℝ) (hBq : ∀ k w, w ∈ U → q w ≤ 1 →
-      ‖iteratedFDeriv ℝ k q w‖ ≤ Bq k * q w ^ (1 - (k : ℝ)))
-    {u0 : VelocityField} {s0 : κ → PressureField}
-    (hu0 : ContDiffOn ℝ ∞ u0 U) (hs0 : ∀ k, ContDiffOn ℝ ∞ (s0 k) U)
-    (K0 : ℕ → ℝ) (Ks : κ → ℕ → ℝ)
-    (hbaseU : ∀ m, JetRate (scaleApproach U q) q u0 m (-K0 m))
-    (hbaseS : ∀ k m, JetRate (scaleApproach U q) q (s0 k) m (-Ks k m))
-    {A B : ℕ → VelocityField} {R : κ → ℕ → PressureField}
-    (hA : ∀ j, 1 ≤ j → ContDiffOn ℝ ∞ (A j) U)
-    (hB : ∀ j, 1 ≤ j → ContDiffOn ℝ ∞ (B j) U)
-    (b : ℕ → DirectAngularDiagonal.Coefficient)
-    (hangular : ∀ j, 1 ≤ j → B j = DirectAngularDiagonal.angularField (b j))
-    (hR : ∀ k j, 1 ≤ j → ContDiffOn ℝ ∞ (R k j) U)
-    (g L : ℕ → ℝ) (C P : Entry κ → ℕ → ℕ → ℝ)
-    (hraw : ∀ e, CutStageEstimates.RawStageBounds q (representatives A B R e) g L (C e) (P e) U)
-    (hg : ∀ j, 1 ≤ j → 0 < g j) (hgmono : Monotone g)
-    (hdiv0 : ∀ w ∈ U, spatialDivergence u0 w.1 w.2 = 0)
-    {τ : Type*} (tests : ℕ → Finset τ) (Bt Pt γ : ℕ → τ → ℝ)
-    (hγ : ∀ j k, k ∈ tests j → 0 < γ j k) {q0 : ℝ} (hq0 : 0 < q0) :
-    ∃ a : ℕ → ℕ, (∀ j, 1 / (a j : ℝ) < q0) ∧ Result U q u0 s0 A B R g L a ∧
-      ∀ j k, k ∈ tests j → ∀ r : ℝ, 0 < r → r ≤ 1 / (a j : ℝ) →
-        |DiagonalScale.logPowerWeight (Bt j k) (Pt j k) (γ j k) r| ≤ (1 / 2 : ℝ) ^ j := by
-  have hadmissible : ∀ j, 1 ≤ j → ∀ w ∈ U,
-      spatialDivergence (B j) w.1 w.2 = 0 ∧
-        ∑ i : Fin 3, fderiv ℝ (fun x : Space => q (w.1, x)) w.2 (coordinateVector i) * B j w i = 0 := by
-    intro j hj w hw
-    have hqa : ContDiffAt ℝ ∞ (fun z : SpaceTime => Q (z.1, z.2 2)) w := by
-      simpa only [haxial] using hq.contDiffAt (hU.mem_nhds hw)
-    have hba : ContDiffAt ℝ ∞ (DirectAngularDiagonal.angularField (b j)) w := by
-      rw [← hangular j hj]
-      exact (hB j hj).contDiffAt (hU.mem_nhds hw)
-    simpa only [hangular j hj, haxial] using
-      GenericSolenoidalRealization.angular_admissibility Q (b j) hqa hba
-  exact exists_realization hU hq hpos Bq hBq hu0 hs0 K0 Ks hbaseU hbaseS
-    hA hB hR g L C P hraw hg hgmono hdiv0 (fun j hj w hw => (hadmissible j hj w hw).1)
-    (fun j hj w hw => (hadmissible j hj w hw).2) tests Bt Pt γ hγ hq0
 
 /-- Full residual conclusion of `sum:realization`, including logarithmic
 coefficient growth only on common factor supports and an arbitrary flat

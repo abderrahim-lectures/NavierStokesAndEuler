@@ -389,21 +389,6 @@ theorem exists_normalizedReferenceF_jets (hΛ : 0 < Λ) (hσ : 0 < σ)
     exact (exp_jet_bound_local parameterInterval_open hL.neg hηJ n hB
       (fun i hi => by simpa only [iteratedDeriv_fun_neg, abs_neg] using hLb i hi)).trans (hk n hn)
 
-/-- The unnormalized angular field has its actual `C⁻¹` scale, uniformly
-through the reference cutoff and the arbitrarily long frozen hold. -/
-theorem referenceF_jet_of_normalized {C δ X η K : ℝ}
-    (E : NaturalEntrance.CoefficientProfile d Λ C) (hΛ : 0 < Λ) (hC : 0 < C)
-    (hδ : 0 < δ) (hδT : 2 * δ < rampLimit) (hX : 0 ≤ X)
-    (hη : η ∈ parameterInterval) (n : ℕ)
-    (hb : |iteratedDeriv n (fun ξ => C * (Input.ofNatural hΛ E.family).refF δ (X, ξ)) η| ≤ K) :
-    |iteratedDeriv n (fun ξ => (Input.ofNatural hΛ E.family).refF δ (X, ξ)) η| ≤ K / C := by
-  let A := Input.ofNatural hΛ E.family
-  have hp : (X, η) ∈ A.radialDomain.carrier :=
-    ⟨lt_of_lt_of_le (by norm_num) (mul_nonneg hΛ.le hX), hη⟩
-  have hs := ((A.refF_smooth hδ hδT).contDiffAt (A.radialDomain.isOpen.mem_nhds hp)).comp η
-    (contDiffAt_const.prodMk contDiffAt_id)
-  rw [iteratedDeriv_const_mul_field, abs_mul, abs_of_pos hC] at hb
-  exact (le_div_iff₀ hC).mpr (by simpa only [mul_comm] using hb)
 
 end NaturalReference
 

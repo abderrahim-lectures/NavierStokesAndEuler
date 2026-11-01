@@ -333,12 +333,6 @@ theorem reference_phi_value {h j σ : ℝ} {P0 : ℝ → ℝ} (v : CoefficientFa
   rw [v.value .chi hη]
   rfl
 
-theorem reference_phi_lower {h j σ : ℝ} {P0 : ℝ → ℝ} (v : CoefficientFamily h j σ P0)
-    (hσ : 0 < σ) (p : entranceSet) :
-    1 / 4 < sourceJets v.epsilon_pos (referencePair v) p 0 := by
-  rw [reference_phi_value v p]
-  exact AxisSeries.profile_gt_quarter _ _ (NaturalAxisData.chi_bounds h j hσ _).1
-    (NaturalAxisData.chi_bounds h j hσ _).2.le p.property.1.1 p.property.1.2
 
 theorem reference_phiY_zero {h j σ : ℝ} {P0 : ℝ → ℝ} (v : CoefficientFamily h j σ P0)
     (p : entranceSet) (hchi : NaturalAxisData.chi h j σ p.val.2 = 0) :

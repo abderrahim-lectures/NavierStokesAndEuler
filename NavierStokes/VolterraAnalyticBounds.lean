@@ -570,33 +570,6 @@ theorem summable_norm_wordLayer {A₀ A₁ : Coeff} {F : Field}
     (fun k => norm_wordLayer_le hB hM hT hgap hshape hA₀ hA₁ hF ha k hr hz i)
     (summable_wordLayers (mul_nonneg hM hT) (zero_le_one.trans (le_max_left _ _)))
 
-theorem summable_wordLayer {A₀ A₁ : Coeff} {F : Field}
-    {T ρ σ B M : ℝ} {c : ℂ}
-    (hB : 0 ≤ B) (hM : 0 ≤ M) (hT : 0 ≤ T) (hgap : ρ < σ)
-    (hshape : DerivativeShape A₁)
-    (hA₀ : MatrixBound A₀ T c σ M) (hA₁ : MatrixBound A₁ T c σ M)
-    (hF : RadialBound F T c σ B 0)
-    (ha : ∀ v, AnalyticField (word A₀ A₁ v F) T c σ)
-    {r : ℝ} (hr : r ∈ Icc 0 T)
-    {z : ℂ} (hz : z ∈ closedBall c ρ) (i : Fin 6) :
-    Summable (fun k => wordLayer A₀ A₁ F k r z i) :=
-  (summable_norm_wordLayer hB hM hT hgap hshape hA₀ hA₁ hF ha hr hz i).of_norm
 
-/-- Uniform convergence of the actual partial sums on every smaller closed
-parameter disk and the entire fixed radial interval. -/
-theorem tendstoUniformlyOn_wordLayer {A₀ A₁ : Coeff} {F : Field}
-    {T ρ σ B M : ℝ} {c : ℂ}
-    (hB : 0 ≤ B) (hM : 0 ≤ M) (hT : 0 ≤ T) (hgap : ρ < σ)
-    (hshape : DerivativeShape A₁)
-    (hA₀ : MatrixBound A₀ T c σ M) (hA₁ : MatrixBound A₁ T c σ M)
-    (hF : RadialBound F T c σ B 0)
-    (ha : ∀ v, AnalyticField (word A₀ A₁ v F) T c σ) (i : Fin 6) :
-    TendstoUniformlyOn
-      (fun N (p : ℝ × ℂ) => ∑ k ∈ Finset.range N, wordLayer A₀ A₁ F k p.1 p.2 i)
-      (fun p => ∑' k, wordLayer A₀ A₁ F k p.1 p.2 i)
-      Filter.atTop (Icc 0 T ×ˢ closedBall c ρ) :=
-  tendstoUniformlyOn_tsum_nat
-    (summable_wordLayers (mul_nonneg hM hT) (zero_le_one.trans (le_max_left _ _)))
-    (fun k _p hp => norm_wordLayer_le hB hM hT hgap hshape hA₀ hA₁ hF ha k hp.1 hp.2 i)
 
 end NavierStokes.VolterraAnalyticBounds

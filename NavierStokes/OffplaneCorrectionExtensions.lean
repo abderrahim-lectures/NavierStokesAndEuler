@@ -150,8 +150,6 @@ noncomputable def physicalModel (coord : ℝ) (p : Lift) : Model :=
 
 noncomputable def modelDomain : Set Model := {y | 0 < y.1.1}
 
-theorem modelDomain_open : IsOpen modelDomain :=
-  isOpen_lt continuous_const (continuous_fst.comp continuous_fst)
 
 theorem stableModel_contDiffOn {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1) :
     ContDiffOn ℝ ∞ (stableModel coord)
@@ -437,20 +435,7 @@ noncomputable def finiteSum {ι : Type*} (s : Finset ι) (f : ι → Lift → �
     intro p hp
     exact Finset.sum_congr rfl (fun i _ => (e i).agrees hp)
 
-/-- Actual radial/torus integration produces smooth slow debt coefficients
-on the continued neighborhood. -/
-theorem pressureMass_smooth {f : Lift → ℝ} (e : SupportedContinuation W f) :
-    ContDiffOn ℝ ∞ (PressureStream.pressureMass e.value) W.carrier := by
-  have hm := PhysicalMeanDomain.liftedPressureMass_contDiffOn W.isOpen e.smooth (W.fixed_support e.supported)
-  have hmap : ContDiffOn ℝ ∞ (fun s : Slow => ((0 : ℝ), (s, (0 : Slow)))) W.carrier :=
-    contDiffOn_const.prodMk (contDiffOn_id.prodMk contDiffOn_const)
-  exact hm.comp hmap (fun _ hp => hp)
 
-theorem pressureMass_agreement {f : Lift → ℝ} (e : SupportedContinuation W f) :
-    EqOn (PressureStream.pressureMass e.value) (PressureStream.pressureMass f)
-      (W.carrier ∩ positiveSlow) := by
-  intro s hs
-  exact PhysicalMeanDomain.liftedPressureMass_fiberLocal e.value f s (e.agrees.fiber hs.1 hs.2) 0 0
 
 theorem support_on_past {f : Lift → ℝ} (e : SupportedContinuation W f)
     (hc : 0 < coord) (hc1 : coord < 1) {p : Lift}
@@ -477,34 +462,6 @@ noncomputable def pullLinearData (φ : P → Q) (d : CommonCoverSolve.LinearData
   coefficient := fun p => d.coefficient (φ p.1, p.2)
   forcingMap := fun p => d.forcingMap (φ p.1, p.2)
   source := fun p => d.source (φ p.1, p.2)
-
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] [NormedAddCommGroup Q] [NormedSpace ℝ Q]
-  [CompleteSpace E] in
-theorem coefficientPath_pull (φ : P → Q) (d : CommonCoverSolve.LinearData Q V E)
-    (g : CommonCoverSolve.Geometry) (k : TorusInverse.Frequency) (p : P × Slow) (a b : ℝ) :
-    (pullLinearData φ d).coefficientPath (a := a) (b := b) g k p =
-      d.coefficientPath g k (φ p.1, p.2) := rfl
-
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] [NormedAddCommGroup Q] [NormedSpace ℝ Q]
-  [CompleteSpace E] in
-theorem forcingPath_pull (φ : P → Q) (d : CommonCoverSolve.LinearData Q V E)
-    (g : CommonCoverSolve.Geometry) (k : TorusInverse.Frequency) (p : P × Slow) (a b : ℝ) :
-    (pullLinearData φ d).forcingPath (a := a) (b := b) g k p =
-      d.forcingPath g k (φ p.1, p.2) := rfl
-
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] [NormedAddCommGroup Q] [NormedSpace ℝ Q] in
-/-- This is the actual Volterra solution operator, including its anchored
-path.  Reparameterization is an equality of definitions. -/
-theorem copySolve_pull (φ : P → Q) (d : CommonCoverSolve.LinearData Q V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b)
-    (k : TorusInverse.Frequency) (p : P × Slow) :
-    (pullLinearData φ d).copySolve g hab k p = d.copySolve g hab k (φ p.1, p.2) := rfl
-
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] [NormedAddCommGroup Q] [NormedSpace ℝ Q] in
-theorem commonSolve_pull (φ : P → Q) (d : CommonCoverSolve.LinearData Q V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b)
-    (κ : Slow → ℝ) (p : P × Slow) :
-    (pullLinearData φ d).commonSolve g hab κ p = d.commonSolve g hab κ (φ p.1, p.2) := rfl
 
 end ReferenceODE
 
@@ -539,32 +496,7 @@ theorem physicalReferenceSolve_eq (coord : ℝ)
     (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) :
     physicalReferenceSolve coord d g hab κ = d.commonSolve g hab κ ∘ physicalModel coord := rfl
 
-/-- The actual sum of localized native Volterra solves continues smoothly
-from smooth primitive matrix, conversion map, and source models.  No
-regularity assumption is made on a solved amplitude. -/
-theorem continuedReferenceSolve_smooth {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b)
-    (hA : ContDiffOn ℝ ∞ d.coefficient (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hB : ContDiffOn ℝ ∞ d.forcingMap (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ d.source (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    {κ : Slow → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsκ : tsupport κ ⊆ univ ×ˢ Ioo a b) :
-    ContDiffOn ℝ ∞ (continuedReferenceSolve coord d g hab κ)
-      (PhysicalMeanDomain.slowDomain (PositiveRepresentatives.stableTarget coord)) := by
-  have hsolve := d.commonSolve_contDiffOn g hab PhysicalCoordinateBounds.positiveTime_isOpen
-    hA hB hf hκ hcκ hsκ
-  exact hsolve.comp (stableModel_contDiffOn hc hc1)
-    (fun _ hp => ⟨stableQ_pos hp, mem_univ _⟩)
 
-theorem referenceSolve_agreement {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) (U : Set Slow) :
-    FiberAgreement U (continuedReferenceSolve coord d g hab κ)
-      (physicalReferenceSolve coord d g hab κ) := by
-  intro p hp
-  rw [continuedReferenceSolve_eq, physicalReferenceSolve_eq]
-  simp only [comp_apply, stableModel, physicalModel, stableQ_eq_coordinateQ hc hc1 hp.2]
 
 /-- Radial support of the primitive forcing propagates through the
 zero-entry Volterra solve and the actual sum of its native copies. -/
@@ -613,17 +545,6 @@ end ContinuedReferenceODE
 
 section ContinuedPhase
 
-/-- The actual periodic-clock phase is continued by the same stable
-parameter substitution, keeping every clock and native-copy datum fixed. -/
-theorem continued_periodic_phase_smooth {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (g : CommonCoverSolve.Geometry) (w : PeriodicPhaseAssembly.ClockWindow)
-    {A B : MeanRankUpdate.ModelPoint → ℝ}
-    (hA : ContDiffOn ℝ ∞ A PhysicalCoordinateBounds.positiveTime)
-    (hB : ContDiffOn ℝ ∞ B PhysicalCoordinateBounds.positiveTime) :
-    ContDiffOn ℝ ∞ (continuedSource coord (PeriodicPhaseAssembly.phase g w.cutoff A B))
-      (PhysicalMeanDomain.slowDomain (PositiveRepresentatives.stableTarget coord)) := by
-  apply continuedSource_smooth hc hc1
-  exact (PeriodicPhaseAssembly.phase_contDiffOn g w hA hB).mono (fun y hy => ⟨hy, mem_univ _⟩)
 
 end ContinuedPhase
 
@@ -640,18 +561,6 @@ noncomputable def referenceCarrierModel
   (HarmonicCalculus.mode frequency (PeriodicPhaseAssembly.phase g w.cutoff A B)
     (fun z => L (d.commonSolve g hst κ z)) y).re
 
-/-- The complete carrier keeps the genuine periodic clock and multiplies
-the actual reference solve.  The phase is not replaced by an unwrapped
-single-copy expression. -/
-theorem referenceCarrier_physical_formula (coord : ℝ)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {s t : ℝ} (hst : s ≤ t) (κ : Slow → ℝ)
-    (w : PeriodicPhaseAssembly.ClockWindow) (A B : MeanRankUpdate.ModelPoint → ℝ)
-    (frequency : ℝ) (L : E →L[ℝ] ℂ) (p : Lift) :
-    physicalSource coord (referenceCarrierModel d g hst κ w A B frequency L) p =
-      (L (physicalReferenceSolve coord d g hst κ p) *
-        HarmonicCalculus.carrier frequency
-          (physicalSource coord (PeriodicPhaseAssembly.phase g w.cutoff A B)) p).re := rfl
 
 noncomputable def referenceCarrierContinuation {coord a b : ℝ} {W : Window coord a b}
     (hc : 0 < coord) (hc1 : coord < 1)
@@ -896,24 +805,6 @@ theorem mean_model_extensions {h a b d : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
   let eA := (e.stream hc hc1 ha hab hd M v).azimuthalExtension h n hw
   exact ⟨⟨ep⟩, ⟨eA⟩, ⟨AnnularEndpoint.curlExtension eA⟩⟩
 
-/-- The actual temporal inverse is taken before reconstructing its mean
-stream potential.  Its full-fiber continuation comes from the input torus
-periodicity and the proved inverse construction. -/
-theorem temporal_mean_model_extension {h a b d : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (ha : 0 < a) (hab : a < b) (hd : 0 < d) (M : ℝ) (v : Slow) (n i : ℕ)
-    (F : Model → ℝ) (hF : ContDiffOn ℝ ∞ F modelDomain) (hs : ModelSupported a b F)
-    (hp : ModelPeriodic F) {x : Space} (hx : x 2 ≠ 0) :
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (azimuthalPotential h n (VariableGaugeMean.streamPotential d a b M
-        (VariableGaugeMean.qLength (2 * h)) v
-        (MeanChartCompatibility.temporalAtIndex h n i (physicalSource (2 * h) F)))) x) := by
-  have hc : 0 < 2 * h := by linarith
-  have hc1 : 2 * h < 1 := by linarith
-  obtain ⟨W, hw⟩ := exists_endpoint_window hc hc1 ha hab hx
-  let e : SupportedContinuation W (physicalSource (2 * h) F) :=
-    SupportedContinuation.ofModel hc hc1 F hF hs
-  have heper : PhysicalMeanDomain.PeriodicOn W.carrier e.value := continuedSource_periodic hp W.stable
-  exact ⟨((e.temporal h n i heper).stream hc hc1 ha hab hd M v).azimuthalExtension h n hw⟩
 
 theorem mean_models_supported {coord a b d : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
     (ha : 0 < a) (hab : a < b) (hd : 0 < d) (M : ℝ) (v : Slow)
@@ -1043,41 +934,5 @@ theorem mean_diagonal_extensions {h a b d : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
   exact ⟨diagonal_extension hh hh1 hscale hx (fun j => (he j).1), ⟨eA⟩,
     ⟨AnnularEndpoint.curlExtension eA⟩⟩
 
-/-- Combining the new positive-q continuation with the shrinking-support
-argument gives full away-extensions for these actually reconstructed mean
-families.  The common outer support bound is a conclusion of the primitive
-model support, rather than an additional output assumption. -/
-theorem mean_diagonal_awayExtensions {h a b d : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (ha : 0 < a) (hab : a < b) (hd : 0 < d)
-    (M : ℕ → ℝ) (v : ℕ → Slow) (n : ℕ → ℕ)
-    (F : ℕ → Model → ℝ) (hF : ∀ j, ContDiffOn ℝ ∞ (F j) modelDomain)
-    (hs : ∀ j, ModelSupported a b (F j)) {scale : ℕ → ℝ} (hscale : Tendsto scale atTop atTop) :
-    let p := fun j => physicalScalar h (n j) (VariableGaugeMean.meanPressure d a b (M j) hab
-      (VariableGaugeMean.qLength (2 * h)) (v j) (physicalSource (2 * h) (F j)))
-    let A := fun j => azimuthalPotential h (n j) (VariableGaugeMean.streamPotential d a b (M j)
-      (VariableGaugeMean.qLength (2 * h)) (v j) (physicalSource (2 * h) (F j)))
-    JointResidualLimits.AwayExtensions (SolenoidalDiagonal.potentialSum scale (PhysicalWaveSum.physicalQ h) p) ∧
-    JointResidualLimits.AwayExtensions (SolenoidalDiagonal.potentialSum scale (PhysicalWaveSum.physicalQ h) A) ∧
-    JointResidualLimits.AwayExtensions (SolenoidalDiagonal.velocitySum scale (PhysicalWaveSum.physicalQ h) A) := by
-  have hsup j := mean_models_supported (by linarith : 0 < 2 * h) (by linarith : 2 * h < 1)
-    ha hab hd (M j) (v j) (F j) (hF j) (hs j)
-  have hps := AnnularEndpoint.ShrinkingSupport.potentialSum
-    (fun j => physicalScalar_shrinkingSupport h (n j) (hsup j).1) scale (PhysicalWaveSum.physicalQ h)
-  have hAs := AnnularEndpoint.ShrinkingSupport.potentialSum
-    (fun j => azimuthalPotential_shrinkingSupport h (n j) (hsup j).2) scale (PhysicalWaveSum.physicalQ h)
-  have hvs := hAs.spatialCurl hh hh1
-  refine ⟨?_, ?_, ?_⟩
-  · intro x hx
-    by_cases hz : x 2 = 0
-    · exact hps.oneSidedExtension hh hh1 hx hz
-    · exact (mean_diagonal_extensions hh hh1 ha hab hd M v n F hF hs hscale hz).1
-  · intro x hx
-    by_cases hz : x 2 = 0
-    · exact hAs.oneSidedExtension hh hh1 hx hz
-    · exact (mean_diagonal_extensions hh hh1 ha hab hd M v n F hF hs hscale hz).2.1
-  · intro x hx
-    by_cases hz : x 2 = 0
-    · exact hvs.oneSidedExtension hh hh1 hx hz
-    · exact (mean_diagonal_extensions hh hh1 ha hab hd M v n F hF hs hscale hz).2.2
 
 end NavierStokes.OffplaneCorrectionExtensions

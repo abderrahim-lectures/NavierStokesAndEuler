@@ -23,21 +23,6 @@ section InputTraces
 variable {Y E : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
   [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
-/-- Uniform bounds on every actual interior derivative and the continuous
-zeroth trace imply genuine joint within smoothness on the closure. Thus
-one-sided input jets can be supplied as limits, without an open extension.
--/
-theorem contDiffOn_closure_of_uniform_jets {O : Set Y} (hO : IsOpen O)
-    (hc : Convex ℝ O) {f : Y → E} (hf : ContDiffOn ℝ ∞ f O)
-    (htrace : ContinuousOn f (closure O))
-    (hb : ∀ n : ℕ, ∃ C : ℝ, ∀ x ∈ O, ‖iteratedFDeriv ℝ n f x‖ ≤ C) :
-    ContDiffOn ℝ ∞ f (closure O) := by
-  have he := GenericEndpointExtension.closedField_contDiffOn hO hc hf hb
-  have hi : EqOn (GenericEndpointExtension.closedField O f) f O :=
-    fun _ hx => GenericEndpointExtension.closedField_eq hO hf hx
-  have heq : EqOn (GenericEndpointExtension.closedField O f) f (closure O) :=
-    hi.of_subset_closure he.continuousOn htrace subset_closure Subset.rfl
-  exact he.congr (fun _ hx => (heq hx).symm)
 
 end InputTraces
 
@@ -46,15 +31,6 @@ section UniformJets
 variable {Y E : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
   [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-/-- Compact-set uniformity for all mixed boundary jets follows from the
-proved joint within smoothness, at each fixed derivative order. -/
-theorem uniformContinuousOn_jets {S : Set Y} (hS : UniqueDiffOn ℝ S)
-    {f : Y → E} (hf : ContDiffOn ℝ ∞ f S)
-    {K : Set Y} (hK : IsCompact K) (hKS : K ⊆ S) (n : ℕ) :
-    UniformContinuousOn (iteratedFDerivWithin ℝ n f S) K :=
-  hK.uniformContinuousOn_of_continuous
-    ((hf.continuousOn_iteratedFDerivWithin
-      (ENat.natCast_le_of_coe_top_le_withTop le_rfl n) hS).mono hKS)
 
 omit [NormedSpace ℝ Y] [NormedSpace ℝ E] in
 theorem tendstoUniformlyOn_of_joint_continuous {s : Set ℝ} {K : Set Y}
@@ -135,33 +111,6 @@ theorem uniform_endpoint_jets {E : Type*} [NormedAddCommGroup E] [NormedSpace �
     (((hF.mono hsub).contDiffAt (((isOpen_Ioo.prod hW).prod isOpen_univ).mem_nhds hpoint)).of_le
       (ENat.natCast_le_of_coe_top_le_withTop le_rfl n)) (hsub hpoint)
 
-/-- The uniform one-sided endpoint clause for the actual common-torus
-particular inverse, including pressure and every fixed mixed derivative. -/
-theorem commonCoefficients_uniform_endpoint_jets
-    (t : TangentData (ℝ × X) ProblemStatement.Space)
-    (f : (ℝ × X) × Plane → HarmonicCalculus.ComplexVector) (g : Geometry)
-    {a b T : ℝ} (hab : a ≤ b) (hT : 0 < T)
-    {W : Set X} (hW : IsOpen W) (hcW : Convex ℝ W)
-    (hN : ContDiffOn ℝ ∞ t.normal ((Ico 0 T ×ˢ W) ×ˢ univ))
-    (hNd : ContDiffOn ℝ ∞ t.normalDot ((Ico 0 T ×ˢ W) ×ˢ univ))
-    (hK : ContDiffOn ℝ ∞ t.action ((Ico 0 T ×ˢ W) ×ˢ univ))
-    (hδ : ContDiffOn ℝ ∞ t.damping ((Ico 0 T ×ˢ W) ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ f ((Ico 0 T ×ˢ W) ×ˢ univ))
-    (hn : ∀ x ∈ (Ico 0 T ×ˢ W) ×ˢ univ, t.normal x ≠ 0)
-    {κ : Plane → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsupp : tsupport κ ⊆ univ ×ˢ Ioo a b) (frequency : ℝ)
-    {C : Set (X × Plane)} (hC : IsCompact C) (hCW : C ⊆ W ×ˢ univ) (n : ℕ) :
-    TendstoUniformlyOn
-        (fun τ z => iteratedFDeriv ℝ n (commonVelocity t f g hab κ) ((τ, z.1), z.2))
-        (fun z => iteratedFDerivWithin ℝ n (commonVelocity t f g hab κ)
-          ((Ico 0 T ×ˢ W) ×ˢ univ) ((0, z.1), z.2)) (𝓝[>] (0 : ℝ)) C ∧
-      TendstoUniformlyOn
-        (fun τ z => iteratedFDeriv ℝ n (commonPressure t f g hab κ frequency) ((τ, z.1), z.2))
-        (fun z => iteratedFDerivWithin ℝ n (commonPressure t f g hab κ frequency)
-          ((Ico 0 T ×ˢ W) ×ˢ univ) ((0, z.1), z.2)) (𝓝[>] (0 : ℝ)) C := by
-  obtain ⟨hv, hp⟩ := commonCoefficients_local_oneSided t f g hab hW hcW hN hNd hK hδ hf hn
-    hκ hcκ hsupp frequency
-  exact ⟨uniform_endpoint_jets hT hW hv hC hCW n, uniform_endpoint_jets hT hW hp hC hCW n⟩
 
 /-- The paper's actual complex common-torus inverse, for arbitrary source
 coefficients with one-sided slow regularity at τ=0. Primitive geometry and
@@ -182,43 +131,6 @@ theorem commonCoefficients_oneSided (t : TangentData (ℝ × X) ProblemStatement
   commonCoefficients_contDiffOn_within t f g hab (slowDomain_convex hcW)
     (slowDomain_uniqueDiff hW) hN hNd hK hδ hf hn hκ hcκ hsupp frequency
 
-/-- Each actual interior joint derivative tends to its one-sided endpoint
-jet, for velocity and pressure simultaneously. -/
-theorem commonCoefficients_endpoint_jets (t : TangentData (ℝ × X) ProblemStatement.Space)
-    (f : (ℝ × X) × Plane → HarmonicCalculus.ComplexVector) (g : Geometry)
-    {a b : ℝ} (hab : a ≤ b) {W : Set X} (hW : IsOpen W) (hcW : Convex ℝ W)
-    (hN : ContDiffOn ℝ ∞ t.normal (slowDomain W ×ˢ univ))
-    (hNd : ContDiffOn ℝ ∞ t.normalDot (slowDomain W ×ˢ univ))
-    (hK : ContDiffOn ℝ ∞ t.action (slowDomain W ×ˢ univ))
-    (hδ : ContDiffOn ℝ ∞ t.damping (slowDomain W ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ f (slowDomain W ×ˢ univ))
-    (hn : ∀ x ∈ slowDomain W ×ˢ univ, t.normal x ≠ 0)
-    {κ : Plane → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsupp : tsupport κ ⊆ univ ×ˢ Ioo a b) (frequency : ℝ)
-    {x : X} (hx : x ∈ W) (Y : Plane) (n : ℕ) :
-    Tendsto (iteratedFDeriv ℝ n (commonVelocity t f g hab κ))
-        (𝓝[positiveDomain W ×ˢ univ] ((0, x), Y))
-        (𝓝 (iteratedFDerivWithin ℝ n (commonVelocity t f g hab κ)
-          (slowDomain W ×ˢ univ) ((0, x), Y))) ∧
-      Tendsto (iteratedFDeriv ℝ n (commonPressure t f g hab κ frequency))
-        (𝓝[positiveDomain W ×ˢ univ] ((0, x), Y))
-        (𝓝 (iteratedFDerivWithin ℝ n (commonPressure t f g hab κ frequency)
-          (slowDomain W ×ˢ univ) ((0, x), Y))) := by
-  obtain ⟨hv, hp⟩ := commonCoefficients_oneSided t f g hab hW hcW hN hNd hK hδ hf hn
-    hκ hcκ hsupp frequency
-  have hOS : positiveDomain W ×ˢ (univ : Set Plane) ⊆ slowDomain W ×ˢ univ := by
-    intro z hz
-    have ht : 0 < z.1.1 := hz.1.1
-    exact ⟨⟨ht.le, hz.1.2⟩, hz.2⟩
-  have he : (((0 : ℝ), x), Y) ∈ slowDomain W ×ˢ (univ : Set Plane) := by
-    change (0 ≤ (0 : ℝ) ∧ x ∈ W) ∧ Y ∈ (univ : Set Plane)
-    exact ⟨⟨le_rfl, hx⟩, mem_univ _⟩
-  exact ⟨WithinJetClosure.tendsto_iteratedFDeriv
-      ((slowDomain_uniqueDiff hW).prod uniqueDiffOn_univ)
-      ((isOpen_Ioi.prod hW).prod isOpen_univ) hOS hv n he,
-    WithinJetClosure.tendsto_iteratedFDeriv
-      ((slowDomain_uniqueDiff hW).prod uniqueDiffOn_univ)
-      ((isOpen_Ioi.prod hW).prod isOpen_univ) hOS hp n he⟩
 
 end CommonTorus
 

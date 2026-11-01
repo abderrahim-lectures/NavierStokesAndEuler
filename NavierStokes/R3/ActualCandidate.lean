@@ -134,9 +134,6 @@ theorem selected_candidate_one_with_early_zero :
   intro t ht x
   exact TimeLocalization.activatedVelocity_zero_early _ ht x
 
-theorem selected_candidate_one : ProblemStatement.candidateStatement 1 := by
-  obtain ⟨u, p, f, K, hc, _⟩ := selected_candidate_one_with_early_zero
-  exact ⟨u, p, f, K, hc⟩
 
 /-- Both fields are identically zero on an initial time interval, so a
 delayed parabolic rescaling can be smoothly extended by zero. -/

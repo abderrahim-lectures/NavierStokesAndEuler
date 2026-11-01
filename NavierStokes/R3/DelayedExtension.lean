@@ -33,11 +33,6 @@ theorem zeroBefore_eventuallyEq_of_pos {V : Type*} [Zero V] (g : SpaceTime → V
   filter_upwards [continuous_fst.continuousAt.eventually_const_lt hz] with y hy
   exact zeroBefore_eq_of_nonneg g hy.le
 
-theorem zeroBefore_eventuallyEq_zero_of_neg {V : Type*} [Zero V]
-    (g : SpaceTime → V) {z : SpaceTime} (hz : z.1 < 0) :
-    zeroBefore g =ᶠ[𝓝 z] (fun _ => 0) := by
-  filter_upwards [continuous_fst.continuousAt.eventually_lt_const hz] with y hy
-  exact zeroBefore_eq_zero_of_neg g hy
 
 theorem zeroBefore_eq_zero_of_le {V : Type*} [Zero V] {g : SpaceTime → V}
     (hzero : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, g (t, x) = 0)

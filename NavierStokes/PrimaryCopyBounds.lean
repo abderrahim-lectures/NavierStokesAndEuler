@@ -373,25 +373,7 @@ noncomputable def primaryVelocity (F : Fin 2 → PhaseConstruction U)
   PartitionedCovariance.amplitude (ε i) (mask i x) (pulseMatrix F pref χ i x) (T i x) j •
     pulseVector F χ j i x
 
-omit [NormedAddCommGroup D] [NormedSpace ℝ D] in
-theorem primaryVelocity_mask_mul (F : Fin 2 → PhaseConstruction U)
-    (pref : Fin 2 → ι → ℝ) (χ : ι → D → PhaseCalculus.Slow × ℝ) (ε : ι → ℝ)
-    (T : ι → D → SmoothCovariance.Vec2) (mask κ : ι → D → ℝ) (j : Fin 2) (i : ι) (x : D) :
-    primaryVelocity F pref χ ε T (fun i x => κ i x * mask i x) j i x =
-      κ i x • primaryVelocity F pref χ ε T mask j i x := by
-  simp only [primaryVelocity, PartitionedCovariance.amplitude, smul_smul]
-  congr 1
-  ring
 
-theorem primaryVelocity_complexify {U : Domain ℕ PhaseCalculus.Slow}
-    (s : StripData D) (F : Fin 2 → PhaseConstruction U) (pref : Fin 2 → ℕ → ℝ)
-    (χ : ℕ → D → PhaseCalculus.Slow × ℝ) (T : ℕ → D → SmoothCovariance.Vec2)
-    (mask : ℕ → D → ℝ) (j : Fin 2) (n : ℕ) (x : D) :
-    CurlClassBounds.complexify (primaryVelocity F pref χ s.epsilon T mask j n x) =
-      PrimaryPulseBounds.uncutPrimaryWave s pref (fun j => (F j).frame)
-        (fun j => (F j).lam) (fun j => (F j).u) (fun j => (F j).L) χ T mask j n x := by
-  simp only [primaryVelocity, map_smul, PrimaryPulseBounds.uncutPrimaryWave,
-    primaryCoefficient, chartCovariance, pulseMatrix, pulseVector]
 
 theorem pulseMatrix_jets (F : Fin 2 → PhaseConstruction U)
     (pref : Fin 2 → ι → ℝ) (χ : ι → D → PhaseCalculus.Slow × ℝ)
@@ -732,13 +714,6 @@ theorem gaussianCutoff_affine_jets (U : Domain ι D) (L : ι → D →L[ℝ] ℝ
   affine_profile_jets U GaussianTailFlat.profile GaussianTailFlat.profile_contDiff
     GaussianTailFlat.profile_jet_bounded L c hK q hL
 
-omit [NormedAddCommGroup D] [NormedSpace ℝ D] in
-/-- The outer extension never inserts a second Gaussian cutoff. -/
-theorem gaussian_outer_primary (u : D → E) (τ : D → ℝ) :
-    (fun x => GaussianTailFlat.profile (τ x) • (outerCutoff (τ x) • u x)) =
-      (fun x => GaussianTailFlat.profile (τ x) • u x) := by
-  funext x
-  rw [smul_smul, profile_mul_outerCutoff]
 
 theorem outerCutoff_affine_support (L : D →L[ℝ] ℝ) (c : ℝ) :
     tsupport (fun x => outerCutoff (L x + c)) ⊆ {x | L x + c ∈ Ioo (0 : ℝ) 1} := by
@@ -751,20 +726,6 @@ theorem outerCutoff_affine_support (L : D →L[ℝ] ℝ) (c : ℝ) :
   have h := hs hx
   constructor <;> linarith [h.1, h.2]
 
-/-- The actual outer cutoff permits a larger native domain while retaining
-the uncut fundamental's Gaussian envelope and flat weight. -/
-theorem outer_localized_jets {V V' : JetDomain ι D} {w : ι → D → ℝ} {f : ι → D → E}
-    (hf : NativeJets V w f) (L : ι → D →L[ℝ] ℝ) (c : ι → ℝ)
-    {K : ℝ} (hK : 1 ≤ K) (q : ℕ) (hL : ∀ i, ‖L i‖ ≤ K * V'.scale i ^ q)
-    (hscale : ∀ i, V'.scale i = V.scale i)
-    (hsub : ∀ i, V.carrier i ⊆ V'.carrier i)
-    (hgrowth : ∀ i x, x ∈ V.carrier i → V.growth i x = V'.growth i x)
-    (hinside : ∀ i x, x ∈ V'.carrier i → L i x + c i ∈ Ioo (0 : ℝ) 1 → x ∈ V.carrier i)
-    (hw : ∀ i x, x ∈ V'.carrier i → 0 ≤ w i x) :
-    NativeJets V' w (fun i x => outerCutoff (L i x + c i) • f i x) := by
-  apply hf.localize (outerCutoff_affine_jets V'.toDomain L c hK q hL) hscale hsub hgrowth hw
-  intro i x hx
-  exact hinside i x hx.2 (outerCutoff_affine_support (L i) (c i) hx.1)
 
 /-! ### Transfer to the actual copy coordinates -/
 
@@ -1165,83 +1126,6 @@ theorem exists_prepared_primary_jets
   simp only [hsc, pulseMatrix] at h ⊢
   exact h
 
-/-- The final native primary estimate has no target-jet premise: the
-actual leading target is pulled back from its proved profile estimates.
-The remaining chart hypotheses are pointwise geometry and polynomial
-jets of the primitive coordinate map and scalar mask. -/
-theorem exists_prepared_pair_jets
-    (hcone : LeadingStressWeights.FullTrueCone v₀) (upper : ℝ) (B : ℕ)
-    (r0 : ℝ) (hr0 : 0 < r0)
-    (hbox : 2 * NominalConeAssembly.activeRight W₀ ≤ FinalSlowBase.boxRadius W₀ upper)
-    (N0 : ℕ) (vr vt : TorusInverse.Plane) (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) :
-    ∃ a : PrimaryGeometryAssembly.Prepared H₀ v₀ upper B r0 N0,
-      ∀ (V : JetDomain (PrimaryGeometryAssembly.Index W₀ a.N) D)
-        (S : JetDomain (PrimaryGeometryAssembly.Index W₀ a.N) PhaseCalculus.Slow)
-        (χ : PrimaryGeometryAssembly.Index W₀ a.N → D → PhaseCalculus.Slow × ℝ)
-        (mask : PrimaryGeometryAssembly.Index W₀ a.N → D → ℝ)
-        (r M qlo qhi : ℝ),
-      (∀ L, (PrimaryGeometryAssembly.domain W₀ a.N).scale L = V.scale L) →
-      PolynomialJets V.toDomain χ →
-      (∀ L x, x ∈ V.carrier L →
-        χ L x ∈ (PrimaryGeometryAssembly.domain W₀ a.N).carrier L ×ˢ Ioo (0 : ℝ) 1) →
-      (∀ L x, x ∈ V.carrier L → (χ L x).1 ∈
-        PositiveRepresentatives.positivePart (PrimaryGeometryAssembly.referenceSet W₀)) →
-      (∀ L x, x ∈ V.carrier L → (χ L x).1 ∈ S.carrier L) →
-      (∀ L x, x ∈ V.carrier L → S.growth L (χ L x).1 ≤ V.growth L x) →
-      0 < r → 0 < qlo →
-      BaseChartJets.GeometryBounds S.toDomain F₀.data.h r M qlo qhi
-        (NominalConeAssembly.activeLeft W₀) (NominalConeAssembly.activeRight W₀) →
-      (∀ L p, p ∈ S.carrier L →
-        (FinalSlowBase.edgeDistance W₀ (BaseChartJets.normalizedCoordinates F₀.data.h p).2)⁻¹ ≤
-          S.growth L p) →
-      PolynomialJets V.toDomain mask →
-      ∀ j : Fin 2,
-      let ε := fun L : PrimaryGeometryAssembly.Index W₀ a.N =>
-        ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L)
-      let F := PrimaryGeometryAssembly.construction H₀ v₀ a hr0
-      let u := primaryVelocity F (preparedPrefactor r0 vr vt) χ ε
-        (fun L x k => PrimaryTargetBounds.actualTarget v₀ (χ L x).1 k) mask j
-      let w := fun L x => Real.sqrt (PrimaryTargetBounds.movingWeight W₀ (χ L x).1) *
-        pulseEnvelope F χ j L x
-      NativeJets V (fun L x => Real.sqrt (ε L) * w L x) u ∧
-      NativeJets V (fun L x => ε L * w L x)
-        (phasePressure (F j) χ
-          (fun L => (ChartScales.carrier F₀.data.h (BaseChartJets.cellBand L) : ℝ)) u) := by
-  obtain ⟨a, ha⟩ := exists_prepared_primary_jets (D := D) H₀ v₀ hcone upper B r0 hr0 hbox N0 vr vt hdet
-  refine ⟨a, ?_⟩
-  intro V S χ mask r M qlo qhi hscale hχ hmap hpositive hS hgrowth hr hqlo hgeom hedge hmask j
-  dsimp only
-  have ht := (actualTarget_jets v₀ hcone S hr hqlo hgeom hedge).comp
-    (hχ.clm (ContinuousLinearMap.fst ℝ PhaseCalculus.Slow ℝ)) hS hgrowth
-  have htarget (k : Fin 2) :
-      NativeJets V (fun L x => PrimaryTargetBounds.movingWeight W₀ (χ L x).1)
-        (fun L x => PrimaryTargetBounds.actualTarget v₀ (χ L x).1 k) :=
-    ht.map (PiLp.proj 2 (fun _ : Fin 2 => ℝ) k)
-  have hw (L : PrimaryGeometryAssembly.Index W₀ a.N) (x : D) (hx : x ∈ V.carrier L) :
-      0 < PrimaryTargetBounds.movingWeight W₀ (χ L x).1 := by
-    have hs := hS L x hx
-    rw [PrimaryTargetBounds.movingWeight_eq W₀ (hgeom.time L _ hs)
-      (hr.trans_le (hgeom.radius L _ hs))]
-    apply ActiveAnnulusWeight.radialWeight_pos
-    simp only [FinalSlowBase.logLeft, FinalSlowBase.logRight,
-      Real.exp_log (NominalConeAssembly.activeLeft_pos W₀),
-      Real.exp_log (FinalSlowBase.terminal_pos W₀)]
-    exact hgeom.x_range L _ hs
-  have hu := ha V χ mask hscale hχ hmap hpositive htarget hmask hw j
-  refine ⟨hu, ?_⟩
-  have hp := phasePressure_carrier_jets (PrimaryGeometryAssembly.construction H₀ v₀ a hr0 j)
-    χ hscale hχ hmap hu F₀.data.h F₀.data.h_pos.le BaseChartJets.cellBand
-  have he : (fun L x => Real.sqrt (ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L)) *
-      (Real.sqrt (ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L)) *
-        (Real.sqrt (PrimaryTargetBounds.movingWeight W₀ (χ L x).1) *
-          pulseEnvelope (PrimaryGeometryAssembly.construction H₀ v₀ a hr0) χ j L x))) =
-      (fun L x => ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L) *
-        (Real.sqrt (PrimaryTargetBounds.movingWeight W₀ (χ L x).1) *
-          pulseEnvelope (PrimaryGeometryAssembly.construction H₀ v₀ a hr0) χ j L x)) := by
-    funext L x
-    rw [← mul_assoc, Real.mul_self_sqrt (ChartScales.epsilon_pos F₀.data.h _).le]
-  rw [he] at hp
-  exact hp
 
 end Prepared
 
@@ -1430,14 +1314,6 @@ theorem norm_nativePointLinear_le (g : Geometry) :
   · exact (g.coordinateLinear.le_opNorm x.2).trans
       (mul_le_mul hc (norm_snd_le x) (norm_nonneg _) (zero_le_one.trans hcost))
 
-/-- For the actual band basis, the affine derivative cost is uniform in
-the center and lattice translation. -/
-theorem nativePointLinear_band_bound (B : TorusInverse.Plane ≃L[ℝ] TorusInverse.Plane) {h : ℝ} (hh : 0 ≤ h)
-    {n gap Δ : ℕ} (hn : 4 ≤ n) (hgap : gap ≤ Δ) (center : TorusInverse.Plane) :
-    ‖nativePointLinear (P := P) (CommonCoverClass.bandGeometry B h n gap center)‖ ≤
-      CommonCoverClass.bandArgumentCost B Δ * ChartScales.S n :=
-  (norm_nativePointLinear_le _).trans
-    (CommonCoverClass.bandGeometry_argumentCost_le B hh hn hgap center)
 
 theorem NativeJets.native_copy_localJets
     {V : JetDomain ι (P × TorusInverse.Plane)} {w : ι → P × TorusInverse.Plane → ℝ} {f : ι → P × TorusInverse.Plane → H}

@@ -28,15 +28,6 @@ variable {P V E : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
 
 include hU hu hA hB hf
 
-/-- The original anchored Volterra solve is smooth within the closed slow
-domain and the entire closed pulse interval, including their corners. -/
-theorem anchoredSolve_contDiffOn_within (k : Frequency) :
-    ContDiffOn ℝ ∞ (fun z : (P × Plane) × ℝ => d.anchoredSolve g hab k z.1 z.2)
-      ((U ×ˢ univ) ×ˢ Icc a b) :=
-  WithinJointODE.contDiffOn_actualSolution hab (hU.prod convex_univ)
-    (hu.prod uniqueDiffOn_univ) (d.coefficientAlong g k) (fun _ => 0)
-    (d.forcingAlong g k) (d.coefficientAlong_contDiffOn g k hA) contDiffOn_const
-    (d.forcingAlong_contDiffOn g k hB hf)
 
 /-- The current copy argument with the unclamped endpoint-rescaled solve. -/
 noncomputable def copySolveRepresentative (k : Frequency) (p : P × Plane) : E :=
@@ -77,12 +68,6 @@ theorem copySolve_contDiffOn_closed_within (k : Frequency) :
   exact (d.copySolveRepresentative_eq g hab k hA.continuousOn hB.continuousOn hf.continuousOn
     hp.1 hp.2).symm
 
-theorem copySolve_contDiffOn_current_within (k : Frequency)
-    {D : Set (P × Plane)} (hDU : ∀ p ∈ D, p.1 ∈ U)
-    (hslot : ∀ p ∈ D, (g.coordinates k p.2).2 ∈ Icc a b) :
-    ContDiffOn ℝ ∞ (d.copySolve g hab k) D :=
-  (d.copySolve_contDiffOn_closed_within g hab hU hu hA hB hf k).mono
-    (fun p hp => ⟨hDU p hp, hslot p hp⟩)
 
 /-- Multiplication by the original pulse cutoff identifies the smooth
 representative with the actual localized inverse everywhere in the slow
@@ -116,15 +101,5 @@ theorem commonSolve_contDiffOn_within
     d.localizedCopy_contDiffOn_within g hab hU hu hA hB hf k hκ hsupp p hp)
   exact hsum.congr_of_eventuallyEq (hs.filter_mono nhdsWithin_le_nhds) hs.self_of_nhds
 
-theorem commonSolve_boundary_jet_limit
-    {κ : Plane → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsupp : tsupport κ ⊆ univ ×ˢ Ioo a b)
-    {O : Set P} (hO : IsOpen O) (hOU : O ⊆ U)
-    (n : ℕ) {p : P × Plane} (hp : p.1 ∈ U) :
-    Tendsto (iteratedFDeriv ℝ n (d.commonSolve g hab κ)) (𝓝[O ×ˢ univ] p)
-      (𝓝 (iteratedFDerivWithin ℝ n (d.commonSolve g hab κ) (U ×ˢ univ) p)) :=
-  WithinJetClosure.tendsto_iteratedFDeriv (hu.prod uniqueDiffOn_univ)
-    (hO.prod isOpen_univ) (Set.prod_mono hOU Subset.rfl)
-    (d.commonSolve_contDiffOn_within g hab hU hu hA hB hf hκ hcκ hsupp) n ⟨hp, mem_univ _⟩
 
 end NavierStokes.CommonCoverSolve.LinearData

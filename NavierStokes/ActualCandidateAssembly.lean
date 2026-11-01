@@ -132,14 +132,6 @@ theorem initialPressure_support (B N0 : ℕ) :
   rw [initialPressure, ActualCandidateConstruction.pressureMeanStages_zero]
   exact PhysicalStageSupport.support_add hw hm
 
-theorem initialDirect_support (B N0 : ℕ) :
-    MixedDiagonalExtensions.SublevelShrinkingSupport h PhysicalStageSupport.actualOuterConstant
-      (ActualCandidateConstruction.qbig B N0) (initialDirect B N0) := by
-  have hm := (ActualMeanStageData.initial_shrinkingSupport B N0
-    (ActualCandidateConstruction.firstBand B N0) (ActualCandidateConstruction.qbig B N0) le_rfl).1
-  erw [ActualMeanStageData.initialAngularSupport_field] at hm
-  simp only [initialDirect, ActualCandidateConstruction.angularMeanStages_zero]
-  exact hm
 
 theorem initialPotential_axisZeroOn (B N0 : ℕ) :
     GermCandidateAssembly.AxisZeroOn
@@ -217,16 +209,7 @@ theorem zerothPotential_eq_initialPotential (B N0 : ℕ) :
   rw [zerothPotential, initialPotential_eq_increment]
   rfl
 
-theorem zerothPotential_smooth (B N0 : ℕ) :
-    ContDiffOn ℝ ∞ (zerothPotential B N0) (ActualCandidateConstruction.physicalDomain B N0) := by
-  rw [zerothPotential_eq_initialPotential]
-  exact ActualPhysicalStageBounds.initialPotential_smooth certificate modulation upper B _ _ _ le_rfl le_rfl
 
-theorem zerothPressure_smooth (B N0 : ℕ) :
-    ContDiffOn ℝ ∞ (zerothPressure B N0) (ActualCandidateConstruction.physicalDomain B N0) :=
-  ((FinalSlowBase.pressure_smooth certificate modulation upper B).mono
-    (t := ActualCandidateConstruction.physicalDomain B N0)
-    (fun _ hw => ⟨hw.1, mem_univ _⟩)).add (initialPressure_smooth B N0)
 
 /-! ## The particular fields come from the same current state
 
@@ -860,12 +843,6 @@ theorem signedPotential_smooth (B N0 : ℕ)
     outgoing.data.h_pos outgoing.data.h_lt_half).congr
       (fun _ hw => (signedPotential_eq_native B N0 hN j hw).symm)
 
-theorem signedPressure_smooth (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (j : ℕ) :
-    ContDiffOn ℝ ∞ (signedPressure B N0 hN j) PhysicalWaveSum.preterminal :=
-  (((ActualSignedWaveData.signedInputs B N0 hN).pressure j).pressure_smooth
-    outgoing.data.h_pos outgoing.data.h_lt_half).congr
-      (fun _ hw => (signedPressure_eq_native B N0 hN j hw).symm)
 
 theorem representations (B N0 : ℕ)
     (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) :
@@ -1181,8 +1158,5 @@ theorem selected_witness :
   witness ActualCandidateConstruction.selectedBudget ActualCandidateConstruction.selectedThreshold
     ActualCandidateConstruction.selectedThreshold_geometry
 
-theorem selected_candidate : ProblemStatement.candidateStatement := by
-  obtain ⟨a, _, ea, eb, ep, forcing, hc, _⟩ := selected_witness
-  exact ⟨_, _, forcing, hc⟩
 
 end NavierStokes.ActualCandidateAssembly

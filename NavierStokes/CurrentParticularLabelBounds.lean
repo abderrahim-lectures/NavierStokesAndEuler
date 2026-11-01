@@ -273,31 +273,7 @@ theorem localPressure_jet_bound (C : ℤ → ℝ)
     (fun l j => ActualCurrentParticularPhysical.localPressureMode x l j n) m hf
     (fun l _ j _ _y hy => (current_modes_window hN x l (hs l) j n hy).2) C hC hb
 
-theorem localPotential_jet_bound_uniform {C : ℝ} (hC : 0 ≤ C)
-    (hf : ∀ l ∈ x.coefficients.labels n,
-      ∀ j ∈ ParticularWaveAssembly.modes x.coefficients.residualBand,
-      ContDiffAt ℝ m (ActualCurrentParticularPhysical.localPotentialMode x l j n) w)
-    (hb : ∀ l ∈ x.coefficients.labels n,
-      ∀ j ∈ ParticularWaveAssembly.modes x.coefficients.residualBand,
-      window w ∈ LabelSumBounds.closedWindow (CoordinateAlgebra.D h) (signedLabel l) →
-      ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPotentialMode x l j n) w‖ ≤ C) :
-    ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPotential x n) w‖ ≤
-      2250 * (2 * x.coefficients.residualBand : ℕ) * C := by
-  have hh := localPotential_jet_bound hN x hs n m hw (fun _ => C) (fun _ _ => hC) hf hb
-  simpa only [Finset.sum_const, nsmul_eq_mul, modes_card, mul_assoc] using hh
 
-theorem localPressure_jet_bound_uniform {C : ℝ} (hC : 0 ≤ C)
-    (hf : ∀ l ∈ x.coefficients.labels n,
-      ∀ j ∈ ParticularWaveAssembly.modes x.coefficients.residualBand,
-      ContDiffAt ℝ m (ActualCurrentParticularPhysical.localPressureMode x l j n) w)
-    (hb : ∀ l ∈ x.coefficients.labels n,
-      ∀ j ∈ ParticularWaveAssembly.modes x.coefficients.residualBand,
-      window w ∈ LabelSumBounds.closedWindow (CoordinateAlgebra.D h) (signedLabel l) →
-      ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPressureMode x l j n) w‖ ≤ C) :
-    ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPressure x n) w‖ ≤
-      2250 * (2 * x.coefficients.residualBand : ℕ) * C := by
-  have hh := localPressure_jet_bound hN x hs n m hw (fun _ => C) (fun _ _ => hC) hf hb
-  simpa only [Finset.sum_const, nsmul_eq_mul, modes_card, mul_assoc] using hh
 
 end ActualSums
 
@@ -392,31 +368,7 @@ theorem localPressure_jet_bound_of_invariant (n m : ℕ) {w : SpaceTime}
     (fun l _ j hj => (current_modes_contDiffAt H hN l j
       ((ParticularWaveAssembly.mem_modes _ _).mp hj).1 n hw).2.of_le (nat_le_infty m)) hb
 
-theorem localPotential_jet_bound_uniform_of_invariant (n m : ℕ) {w : SpaceTime}
-    (hw : w ∈ ValidDyadicBandCover.band h n) {C : ℝ} (hC : 0 ≤ C)
-    (hb : ∀ l ∈ (ActualCycleParameters.particularState x).coefficients.labels n,
-      ∀ j ∈ ParticularWaveAssembly.modes x.coefficients.residualBand,
-      window w ∈ LabelSumBounds.closedWindow (CoordinateAlgebra.D h) (signedLabel l) →
-      ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPotentialMode
-        (ActualCycleParameters.particularState x) l j n) w‖ ≤ C) :
-    ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPotential
-      (ActualCycleParameters.particularState x) n) w‖ ≤
-      2250 * (2 * x.coefficients.residualBand : ℕ) * C := by
-  have hh := localPotential_jet_bound_of_invariant H hN n m hw (fun _ => C) (fun _ _ => hC) hb
-  simpa only [Finset.sum_const, nsmul_eq_mul, modes_card, mul_assoc] using hh
 
-theorem localPressure_jet_bound_uniform_of_invariant (n m : ℕ) {w : SpaceTime}
-    (hw : w ∈ ValidDyadicBandCover.band h n) {C : ℝ} (hC : 0 ≤ C)
-    (hb : ∀ l ∈ (ActualCycleParameters.particularState x).coefficients.labels n,
-      ∀ j ∈ ParticularWaveAssembly.modes x.coefficients.residualBand,
-      window w ∈ LabelSumBounds.closedWindow (CoordinateAlgebra.D h) (signedLabel l) →
-      ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPressureMode
-        (ActualCycleParameters.particularState x) l j n) w‖ ≤ C) :
-    ‖iteratedFDeriv ℝ m (ActualCurrentParticularPhysical.localPressure
-      (ActualCycleParameters.particularState x) n) w‖ ≤
-      2250 * (2 * x.coefficients.residualBand : ℕ) * C := by
-  have hh := localPressure_jet_bound_of_invariant H hN n m hw (fun _ => C) (fun _ _ => hC) hb
-  simpa only [Finset.sum_const, nsmul_eq_mul, modes_card, mul_assoc] using hh
 
 end Invariant
 

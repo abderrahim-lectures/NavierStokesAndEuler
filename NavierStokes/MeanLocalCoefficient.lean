@@ -23,11 +23,6 @@ namespace LocalCoefficientBounds
 variable {s : StripData D} {A B : ℕ → Set D} {α β : ℝ}
   {f g : ℕ → D → ℝ}
 
-theorem of_unweighted (hf : UnweightedClass s α f) :
-    LocalCoefficientBounds s A α f :=
-  ⟨hf.smooth, fun m => by
-    obtain ⟨C, hC, p, hb⟩ := hf.bounds m
-    exact ⟨C, hC, p, fun n x hx _ j hj => hb n x hx j hj⟩⟩
 
 theorem mono_set (hf : LocalCoefficientBounds s A α f)
     (hBA : ∀ n, B n ⊆ A n) : LocalCoefficientBounds s B α f :=

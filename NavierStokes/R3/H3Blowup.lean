@@ -35,18 +35,6 @@ theorem candidate_spatial_norm_bound {ν : ℝ} {u : VelocityField} {p : Pressur
   exact norm_le_three_derivativeH3Norm (spatial_smooth hu htT)
     (finiteH3_of_compact_slab hT0 h.support_compact hu hs htT) x
 
-/-- The actual Euclidean H³ norm is unbounded in every left neighborhood of
-the singular time. The norm uses genuine integrable derivatives. -/
-theorem candidate_h3Norm_unbounded {ν : ℝ} {u : VelocityField} {p : PressureField}
-    {f : VelocityField} {K : Set Space} (h : CandidateProperties ν u p f K) :
-    ∀ M : ℝ, 0 < M → ∀ δ : ℝ, 0 < δ →
-      ∃ t : ℝ, t ∈ Ioo (0 : ℝ) 1 ∧ 1 - δ < t ∧
-        M < derivativeH3Norm (fun x => u (t, x)) := by
-  intro M hM δ hδ
-  obtain ⟨t, x, ht, hnear, hlarge⟩ := h.speed_unbounded (3 * M) (by positivity) δ hδ
-  refine ⟨t, ht, hnear, ?_⟩
-  have hb := candidate_spatial_norm_bound h ⟨ht.1.le, ht.2⟩ x
-  linarith
 
 /-- Any H³-continuous extension through time one would uniformly bound the
 pre-singular velocity, contradicting the proved speed blowup. -/

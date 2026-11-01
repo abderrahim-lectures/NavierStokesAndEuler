@@ -94,15 +94,5 @@ theorem h3ContinuousOn_of_compact_slab {a b : ℝ} (hab : a < b)
   have hc := (continuousOn_derivativeH3Norm_of_compact_slab hab hK hw hs) t ht
   simpa only [ContinuousWithinAt, w, sub_self, derivativeH3Norm_zero] using hc
 
-/-- The paper's compact candidate belongs to C([0,T];H³(ℝ³)) for every
-positive T strictly below one. -/
-theorem candidate_h3ContinuousOn {ν : ℝ} {u : VelocityField} {p : PressureField}
-    {f : VelocityField} {K : Set Space} (h : CandidateProperties ν u p f K)
-    {T : ℝ} (hT0 : 0 < T) (hT : T < 1) : H3ContinuousOn u (Icc 0 T) := by
-  have hsub : slab 0 T ⊆ preSingularDomain := by
-    intro z hz
-    exact ⟨⟨hz.1.1, hz.1.2.trans_lt hT⟩, hz.2⟩
-  exact h3ContinuousOn_of_compact_slab hT0 h.support_compact (h.velocity_smooth.mono hsub)
-    (fun t ht => h.velocity_support t ⟨ht.1, ht.2.trans_lt hT⟩)
 
 end NavierStokesR3.H3Embedding

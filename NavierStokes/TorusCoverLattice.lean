@@ -75,10 +75,6 @@ def coverHom : ℕ → Frequency →+ Frequency
       rw [ih]
       simp only [coverIndex, Function.iterate_succ_apply']
 
-theorem coverHom_injective (d : ℕ) : Function.Injective (coverHom d) := by
-  induction d with
-  | zero => exact Function.injective_id
-  | succ d ih => exact indexHom_injective.comp ih
 
 /-- Deck-equivalent integer labels differ by an element of this lattice. -/
 def coverRange (d : ℕ) : AddSubgroup Frequency := (coverHom d).range

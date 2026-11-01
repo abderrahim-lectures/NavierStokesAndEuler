@@ -319,13 +319,6 @@ def lower {k l : ℕ} (h : l ≤ k) : CK (E := E) k →L[ℝ] CK (E := E) l :=
 
 @[simp] theorem lower_apply {k l : ℕ} (h : l ≤ k) (f : CK (E := E) k) : lower h f = lowerValue h f := rfl
 
-theorem lower_injective {k l : ℕ} (h : l ≤ k) : Function.Injective (lower (E := E) h) := by
-  intro f g hfg
-  apply value_injective k
-  apply ContinuousMap.ext
-  intro x
-  have he := congrArg (fun u : CK (E := E) l => value l u x) hfg
-  simpa only [lower_apply, lowerValue_value] using he
 
 @[simp] theorem lower_ofContDiffOn {k l : ℕ} (h : l ≤ k) (f : ℝ → E) (hf : ContDiffOn ℝ k f I) :
     lower h (ofContDiffOn f hf) = ofContDiffOn f (hf.of_le (by exact_mod_cast h)) := by

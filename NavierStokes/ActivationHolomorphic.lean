@@ -1037,17 +1037,6 @@ theorem regular {T δ : ℝ} (hT : 0 < T) (hδ : 0 < δ)
     (fun _ hx _ ht => scale_half_interval E.natural.radius_pos hx ht),
       regular_pressure E.natural.radius_pos E.isOpen hf E.pressure0_analytic⟩
 
-/-- The width of the holomorphic domain is unchanged at every fixed radial
-derivative order. These are actual iterated derivatives of the functions. -/
-theorem all_radial_jets {T δ : ℝ} (hT : 0 < T) (hδ : 0 < δ)
-    (hδT : 2*δ < ReferencePath.rampLimit) (κ : ℝ) (k : ℕ) :
-    Regular (Ioi (-R)) Ω (radialJet (E.f T κ δ) k) ∧
-    Regular (Ioi (-R)) Ω (radialJet (E.U T κ δ) k) ∧
-    Regular (Ioi (-R)) Ω (radialJet (E.Ubar T κ δ) k) ∧
-    Regular (Ioi (-R)) Ω (radialJet (E.Pi T κ δ) k) := by
-  obtain ⟨hf,hu,hv,hp⟩ := E.regular hT hδ hδT κ
-  exact ⟨hf.radialJet isOpen_Ioi E.isOpen k,hu.radialJet isOpen_Ioi E.isOpen k,
-    hv.radialJet isOpen_Ioi E.isOpen k,hp.radialJet isOpen_Ioi E.isOpen k⟩
 
 /-- The signed-square pullbacks are smooth and holomorphic through the axis,
 and are even in the signed radius. -/
@@ -1061,8 +1050,6 @@ theorem signed_regular {T δ : ℝ} (hT : 0 < T) (hδ : 0 < δ)
   exact ⟨hf.signedSquare E.natural.radius_pos,hu.signedSquare E.natural.radius_pos,
     hv.signedSquare E.natural.radius_pos,hp.signedSquare E.natural.radius_pos⟩
 
-theorem f_ne_zero (T κ δ : ℝ) {x : ℝ} (hx : 0 ≤ x) {z : ℂ} (hz : z ∈ Ω) :
-    E.f T κ δ (x,z) ≠ 0 := E.natural.actF_ne_zero T κ δ hx hz
 
 /-- Agreement includes the literal axis-to-radius average and pressure,
 with no independently prescribed moment data. -/
@@ -1090,16 +1077,6 @@ theorem reference_regular {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath
     (fun _ hx _ ht => scale_half_interval E.natural.radius_pos hx ht),
       regular_pressure E.natural.radius_pos E.isOpen hf E.pressure0_analytic⟩
 
-theorem reference_real_profiles {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath.rampLimit)
-    (hP0 : ContDiff ℝ ∞ P0) (x : ℝ) {η : ℝ} (hη : η ∈ ReferencePath.parameterInterval) :
-    let P := N.histories hδ hδT P0 hP0
-    E.natural.refF δ (x,(η : ℂ)) = (P.f (x,η) : ℂ) ∧
-    E.natural.refU δ (x,(η : ℂ)) = (P.U (x,η) : ℂ) ∧
-    average (E.natural.refU δ) (x,(η : ℂ)) = (P.Ubar (x,η) : ℂ) ∧
-    pressure E.pressure0 (E.natural.refF δ) (x,(η : ℂ)) = (P.pressure (x,η) : ℂ) := by
-  refine ⟨E.natural.refF_real hδ hδT x hη,E.natural.refU_real hδ hδT x hη,?_,?_⟩
-  · exact average_ofReal (fun y => E.natural.refU_real hδ hδT y hη) x
-  · exact pressure_ofReal (fun y => E.natural.refF_real hδ hδT y hη) (E.pressure0_real η) x
 
 end InitialTube
 
@@ -1133,23 +1110,7 @@ theorem natural_average_identity {h j Λ : ℝ} {P0 a : ℝ → ℝ}
     change (∫ X in (0 : ℝ)..p.1, U (X,p.2)) / p.1 = V p
     rw [← hs.average_integral p hp,mul_div_cancel_left₀ _ hx]
 
-/-- The natural average recovered by complex integration is the original
-natural profile's actual average, including the regular value at the axis. -/
-theorem natural_Ubar_real {h j σ Λ C : ℝ} {P0 : ℝ → ℝ} {d : AnalyticInputs h j σ P0}
-    (F : CoefficientProfile d Λ C) {p : ProfileHistories.Point} (hp : p ∈ NaturalProfile.domain Λ) :
-    average (naturalU F) (p.1,(p.2 : ℂ)) = (F.family.Ubar p : ℂ) := by
-  rw [average_ofReal (fun x => naturalU_real F x p.2) p.1]
-  exact congrArg Complex.ofReal (natural_average_identity F.family.natural hp)
 
-theorem natural_Pi_real {h j σ Λ C : ℝ} {P0 : ℝ → ℝ} {d : AnalyticInputs h j σ P0}
-    (F : CoefficientProfile d Λ C) {P : ℂ → ℂ} (hP : ∀ η : ℝ, P (η : ℂ) = (P0 η : ℂ))
-    {p : ProfileHistories.Point} (hp : p ∈ NaturalProfile.domain Λ) :
-    pressure P (naturalF F) (p.1,(p.2 : ℂ)) = (F.family.Pi p : ℂ) := by
-  rw [pressure_ofReal (fun x => naturalF_real F x p.2) (hP p.2) p.1]
-  congr 1
-  have he := F.family.natural.pressure_integral p hp
-  change F.family.Pi p - P0 p.2 = ProfileHistories.primitive (fun q => F.family.f q ^ 2) p at he
-  linarith
 
 theorem iteratedDeriv_smooth {S : Set ℝ} (hS : IsOpen S) {g : ℝ → ℝ}
     (hg : ContDiffOn ℝ ∞ g S) (k : ℕ) : ContDiffOn ℝ ∞ (iteratedDeriv k g) S := by

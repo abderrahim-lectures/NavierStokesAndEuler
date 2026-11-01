@@ -119,45 +119,5 @@ theorem printed_rectangle_subset_strip :
   intro p hp
   exact ⟨by constructor <;> linarith [hp.1.1, hp.1.2], original_interval_interior hp.2⟩
 
-/-- The literal common-neighborhood assertion for the printed natural-axis
-construction. All input data, the cutoff and the nonlinear coefficient
-solution are constructed. The same open scaled rectangle works for every
-sufficiently large scale and every allowed amplitude normalization. -/
-theorem exists_common_joint_analytic_profiles {h j : ℝ}
-    (hsmall : NaturalAxisRange.Parameters h j)
-    {g a : ℝ → ℝ} {cap B : ℝ}
-    (hp : PressureDatum.Admissible g a cap) (hB : 2 ≤ B)
-    (hg : ∀ y ≤ 0, g y = B ^ 2 * Real.exp ((1 / 5 : ℝ) * y))
-    (ha : ∀ y ≤ 0, a y = 1) :
-    ∃ δ σ : ℝ, 0 < δ ∧ 0 < σ ∧
-      (∀ η ∈ Icc (-1 : ℝ) 1,
-        |NaturalAxisData.Z h j (PressureDatum.pressure g a) η| ≤ δ →
-          99 / 100 < NaturalAxisData.chi h j σ η) ∧
-      ∃ d : AnalyticInputs h j σ (PressureDatum.pressure g a),
-        ∃ Λ₀ : ℝ, 0 < Λ₀ ∧ ∃ Ω : Set (ℝ × ℝ), IsOpen Ω ∧
-          Icc (0 : ℝ) (41 / 10) ×ˢ Icc (-1 : ℝ) 1 ⊆ Ω ∧
-          ∀ Λ : ℝ, Λ₀ ≤ Λ → ∀ C : ℝ, d.normalizationThreshold Λ ≤ C →
-            ∃ F : CoefficientProfile d Λ C,
-              AnalyticOnNhd ℝ F.family.phi Ω ∧
-              AnalyticOnNhd ℝ F.family.u Ω ∧
-              AnalyticOnNhd ℝ F.family.average Ω ∧
-              AnalyticOnNhd ℝ F.family.pressure Ω ∧
-              AnalyticOnNhd ℝ F.family.f (domain Λ) ∧
-              AnalyticOnNhd ℝ F.family.U (domain Λ) ∧
-              AnalyticOnNhd ℝ F.family.Ubar (domain Λ) ∧
-              AnalyticOnNhd ℝ F.family.Pi (domain Λ) := by
-  obtain ⟨δ, σ, hδ, hσ, hcut, ⟨d⟩⟩ :=
-    ideal_prefix_analytic_inputs hsmall hp hB hg ha
-  obtain ⟨Λ₀, hΛ₀, hexists⟩ :=
-    exists_coefficientProfile d hsmall hσ (PressureDatum.pressure_contDiff hp)
-  refine ⟨δ, σ, hδ, hσ, hcut, d, Λ₀, hΛ₀, AxisEvaluation.strip window 20,
-    AxisEvaluation.strip_isOpen window 20, printed_rectangle_subset_strip, ?_⟩
-  intro Λ hΛ C hC
-  obtain ⟨F⟩ := hexists Λ hΛ C hC
-  have hΛpos : 0 < Λ := hΛ₀.trans_le hΛ
-  obtain ⟨hφ, hu, hB, hP⟩ := F.scaled_analytic hΛpos.le hC
-  obtain ⟨hf, hU, hV, hPr⟩ := F.natural_analytic hΛpos.le hC
-    ((pressureDatum_analytic hp).mono (subset_univ _))
-  exact ⟨F, hφ, hu, hB, hP, hf, hU, hV, hPr⟩
 
 end NavierStokes.NaturalEntrance

@@ -52,11 +52,6 @@ theorem profileExtension_smoothAt {a : ℕ → ℕ} (ha : StrictMono a) {h : ℝ
   exact (hc.fst.rpow_const_of_ne hq.ne').smul
     ((slowSum_smoothAt ha hf h hq).comp p hc)
 
-theorem profileExtension_smoothOn {a : ℕ → ℕ} (ha : StrictMono a) {h : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) {f : ℕ → Inner → V}
-    (hf : ∀ j, ContDiff ℝ ∞ (f j)) (b : ℝ) :
-    ContDiffOn ℝ ∞ (profileExtension a h b f) (EndpointCoordinates.domain h) :=
-  fun _ hp => (profileExtension_smoothAt ha hh hh1 hf b hp).contDiffWithinAt
 
 theorem profileExtension_eq_physical (a : ℕ → ℕ) {h : ℝ}
     (hh : 0 < h) (hh1 : h < 1 / 2) (b : ℝ) (f : ℕ → Inner → V)
@@ -86,33 +81,6 @@ theorem cartesianProfileExtension_smoothOn {a : ℕ → ℕ} (ha : StrictMono a)
     ContDiffOn ℝ ∞ (cartesianProfileExtension a h b f) (EndpointCoordinates.cartesianDomain h) :=
   fun _ hz => (cartesianProfileExtension_smoothAt ha hh hh1 hf b hz).contDiffWithinAt
 
-/-- One neighborhood and one finite index work for every coefficient
-family.  In particular the seven bundled fields keep the same schedule. -/
-theorem endpoint_common_finite_index {a : ℕ → ℕ} (ha : StrictMono a) {h : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) {x : Space} (hx : x 2 ≠ 0) :
-    ∃ U : Set SpaceTime, IsOpen U ∧ (1, x) ∈ U ∧
-      U ⊆ EndpointCoordinates.cartesianDomain h ∧ ∃ N : ℕ,
-      ∀ z ∈ U, ∀ f : ℕ → Inner → V,
-        (∀ j : ℕ, N ≤ j → slowStage a h f j (EndpointCoordinates.cartesianExtension h z) = 0) ∧
-        slowSum a h f (EndpointCoordinates.cartesianExtension h z) =
-          f 0 (EndpointCoordinates.cartesianExtension h z).2 +
-            ∑ j ∈ Finset.range N, slowStage a h f j (EndpointCoordinates.cartesianExtension h z) := by
-  obtain ⟨U, hU, hxU, hsub, _, hroot, hq⟩ :=
-    EndpointCoordinates.cartesian_endpoint_neighborhood hh hh1 hx
-  obtain ⟨N, hN⟩ := SmoothCutoffs.scaledCutoffs_zero_on_common_neighborhood
-    (fun j => (a j : ℝ)) (SolenoidalDiagonal.realScales_tendsto ha)
-    (EndpointCoordinates.endpointRoot_pos (2 * h) hx)
-  refine ⟨U, hU, hxU, hsub, N, ?_⟩
-  intro z hz f
-  have hzero : ∀ j : ℕ, N ≤ j →
-      slowStage a h f j (EndpointCoordinates.cartesianExtension h z) = 0 := by
-    intro j hj
-    simp only [slowStage, SolenoidalDiagonal.cutStage,
-      hN j hj _ (hq z hz).1, zero_smul]
-  refine ⟨hzero, ?_⟩
-  change f 0 _ + (∑' j, slowStage a h f j _) = _
-  rw [tsum_eq_sum (s := Finset.range N) (fun j hj =>
-    hzero j (Nat.le_of_not_gt (by simpa only [Finset.mem_range] using hj)))]
 
 end LocallyFiniteProfiles
 
@@ -426,24 +394,7 @@ theorem final_fields_awayExtensions (upper : ℝ) (B : ℕ) :
     (EntranceAlignedBase.modulated_outer H v) (FinalSlowBase.coefficients_smooth H v)
     (ModulatedExterior.actual_squared_swirl_restored v) (FinalSlowBase.scales_strictMono H v upper B)
 
-theorem final_potential_jets_tendsto (upper : ℝ) (B : ℕ) {x : Space}
-    (hx : x 2 ≠ 0) (n : ℕ) :
-    Tendsto (iteratedFDeriv ℝ n (FinalSlowBase.vectorPotential H v upper B))
-      (𝓝[SpacetimeEndpoint.openPast 1] (1, x))
-      (𝓝 (iteratedFDeriv ℝ n (finalPotentialNonzeroAxial H v upper B hx).value (1, x))) :=
-  (finalPotentialNonzeroAxial H v upper B hx).jet_tendsto n
 
-/-- The already constructed finite profile gives actual endpoint
-extensions for the selected slow base without another profile input. -/
-theorem constructed_fields_awayExtensions (upper : ℝ) (B : ℕ) :
-    JointResidualLimits.AwayExtensions
-        (FinalSlowBase.velocity FinalSlowBase.actualProfile.certificate
-          FinalSlowBase.actualProfile.modulation upper B) ∧
-      JointResidualLimits.AwayExtensions
-        (FinalSlowBase.pressure FinalSlowBase.actualProfile.certificate
-          FinalSlowBase.actualProfile.modulation upper B) :=
-  final_fields_awayExtensions FinalSlowBase.actualProfile.certificate
-    FinalSlowBase.actualProfile.modulation upper B
 
 end FinalBase
 

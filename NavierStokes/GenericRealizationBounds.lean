@@ -194,11 +194,6 @@ theorem correction_eventually_zero {a : ℕ → ℝ} (ha : Monotone a)
     exact ((one_div_le_one_div_of_le (hapos 0) (ha (Nat.zero_le j))).trans hy.le)
   simp only [hzero, tsum_zero]
 
-theorem correction_contDiffAt_outer {a : ℕ → ℝ} (ha : Monotone a)
-    (hapos : ∀ j, 0 < a j) {q : E → ℝ} {x : E} (hq : ContinuousAt q x)
-    (houter : 1 / a 0 < q x) (A : ℕ → E → V) :
-    ContDiffAt ℝ ∞ (SolenoidalDiagonal.potentialSum a q A) x :=
-  contDiffAt_const.congr_of_eventuallyEq (correction_eventually_zero ha hapos hq houter A)
 
 /-- The flat error in the finite residual hypothesis may be an arbitrary
 nonnegative majorant; it need not itself be a derivative or a smooth field. -/
@@ -256,33 +251,6 @@ theorem potentialSum_zero_germ {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
   filter_upwards [(Filter.eventually_all_finset (Finset.range N)).2 (fun j _ => hz j)] with y hy
   exact Finset.sum_eq_zero hy
 
-omit [NormedSpace ℝ E] in
-theorem realized_zero_germ {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
-    {q : E → ℝ} {x : E} (hq : ContinuousAt q x) (hpos : 0 < q x)
-    {base : E → V} {A : ℕ → E → V}
-    (hbase : base =ᶠ[𝓝 x] fun _ => 0)
-    (hA : ∀ j, 1 ≤ j → A j =ᶠ[𝓝 x] fun _ => 0) :
-    realized a q base A =ᶠ[𝓝 x] fun _ => 0 := by
-  have hAp : ∀ j, CutStageEstimates.positiveStages A j =ᶠ[𝓝 x] fun _ => 0 := by
-    intro j
-    cases j with
-    | zero => rw [CutStageEstimates.positiveStages_zero]; exact Eventually.of_forall (fun _ => rfl)
-    | succ j => simpa only [CutStageEstimates.positiveStages_of_pos (Nat.succ_pos j)] using hA (j + 1) (Nat.succ_pos j)
-  filter_upwards [hbase, potentialSum_zero_germ ha hq hpos _ hAp] with y hy hsy
-  simp only [realized, hy, hsy, add_zero]
 
-omit [NormedSpace ℝ E] [NormedSpace ℝ V] in
-theorem stage_zero_germ {x : E} {base : E → V} {A : ℕ → E → V}
-    (hbase : base =ᶠ[𝓝 x] fun _ => 0)
-    (hA : ∀ j, 1 ≤ j → A j =ᶠ[𝓝 x] fun _ => 0) (J : ℕ) :
-    stage base A J =ᶠ[𝓝 x] fun _ => 0 := by
-  have hAp : ∀ j, CutStageEstimates.positiveStages A j =ᶠ[𝓝 x] fun _ => 0 := by
-    intro j
-    cases j with
-    | zero => rw [CutStageEstimates.positiveStages_zero]; exact Eventually.of_forall (fun _ => rfl)
-    | succ j => simpa only [CutStageEstimates.positiveStages_of_pos (Nat.succ_pos j)] using hA (j + 1) (Nat.succ_pos j)
-  filter_upwards [hbase, (eventually_all_finset (Finset.range (J + 1))).mpr (fun j _ => hAp j)] with y hy hsum
-  simp only [stage, DiagonalJetBounds.uncutPrefix, hy, zero_add]
-  exact Finset.sum_eq_zero hsum
 
 end NavierStokes.GenericRealizationBounds

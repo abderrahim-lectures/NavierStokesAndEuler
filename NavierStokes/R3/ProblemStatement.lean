@@ -152,15 +152,6 @@ def breakdownStatement : Prop :=
     ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
       CandidateProperties ν u p f K ∧ ¬ Nonempty (GlobalFiniteEnergySolution ν f)
 
-/-- Bundling the witnesses in `Candidate` does not change any hypothesis of
-the explicit primary existence assertion. -/
-theorem candidateStatement_iff_nonempty (ν : ℝ) :
-    candidateStatement ν ↔ Nonempty (Candidate ν) := by
-  constructor
-  · rintro ⟨u, p, f, K, h⟩
-    exact ⟨⟨u, p, f, K, h⟩⟩
-  · rintro ⟨c⟩
-    exact ⟨c.velocity, c.pressure, c.force, c.support, c.properties⟩
 
 /-- The unit-viscosity residual is exactly the existing differential expression. -/
 @[simp] theorem residual_at_viscosity_one (u : VelocityField) (p : PressureField)
@@ -213,10 +204,5 @@ theorem zero_force_has_global_solution (ν : ℝ) :
     · simp [SquareIntegrableAtTime]
     · simp [kineticEnergy]
 
-/-- The full target contains the primary candidate-existence target. -/
-theorem breakdown_implies_core (h : breakdownStatement) : coreBreakdownStatement := by
-  intro ν hν
-  obtain ⟨u, p, f, K, hc, _⟩ := h ν hν
-  exact ⟨u, p, f, K, hc⟩
 
 end NavierStokesR3.ProblemStatement

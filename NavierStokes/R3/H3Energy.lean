@@ -24,16 +24,6 @@ theorem integral_norm_sq_eq_toLp {E : Type*} [NormedAddCommGroup E] [InnerProduc
   rw [← real_inner_self_eq_norm_sq, inner_toLp]
   simp only [real_inner_self_eq_norm_sq]
 
-/-- Differentiability in L² suffices to differentiate the whole-space energy;
-no pointwise or joint time smoothness is needed. -/
-theorem hasDerivAt_integral_norm_sq {u : ℝ → Space → Space} {du : Space → Space}
-    (hu : ∀ t, MemLp (u t) 2 volume) (hdu : MemLp du 2 volume) {t : ℝ}
-    (hd : HasDerivAt (fun s => (hu s).toLp (u s)) (hdu.toLp du) t) :
-    HasDerivAt (fun s => ∫ x, ‖u s x‖ ^ 2) (2 * ∫ x, ⟪u t x, du x⟫_ℝ) t := by
-  have he : (fun s => ∫ x, ‖u s x‖ ^ 2) = fun s => ‖(hu s).toLp (u s)‖ ^ 2 :=
-    funext (fun s => integral_norm_sq_eq_toLp (hu s))
-  rw [he]
-  simpa only [inner_toLp] using hd.norm_sq
 
 /-- The exact weak difference equation yields the usual Gronwall energy
 bound. Pressure orthogonality is a separate analytic input, allowing any

@@ -43,13 +43,6 @@ structure H1Approximation (f : Space → E) (df : Fin 3 → Space → E) where
 
 variable {F : Type*} [NormedAddCommGroup F] [InnerProductSpace ℝ F]
 
-/-- A bounded linear map acts continuously on representatives in L². -/
-theorem toLp_comp (L : E →L[ℝ] F) {f : Space → E} (hf : MemLp f 2 volume) :
-    (L.comp_memLp' hf).toLp (L ∘ f) = L.compLpL 2 volume (hf.toLp f) := by
-  apply Lp.ext
-  filter_upwards [(L.comp_memLp' hf).coeFn_toLp,
-    L.coeFn_compLpL (hf.toLp f), hf.coeFn_toLp] with x hx hy hz
-  simp only [hx, hy, Function.comp_apply, hz]
 
 private theorem partial_comp (L : E →L[ℝ] F) {f : Space → E}
     (hf : ContDiff ℝ ∞ f) (i : Fin 3) :

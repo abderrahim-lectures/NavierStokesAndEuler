@@ -52,17 +52,5 @@ theorem sqrt_energy_le_integral {T : ℝ} {E E' q : ℝ → ℝ}
     Real.sqrt_le_sqrt (le_add_of_nonneg_right (sq_nonneg ε))
   linarith
 
-/-- The corresponding sharp squared-energy bound. -/
-theorem energy_le_integral_sq {T : ℝ} {E E' q : ℝ → ℝ}
-    (hT : 0 ≤ T) (hcont : ContinuousOn E (Icc 0 T))
-    (hnonneg : ∀ t ∈ Icc 0 T, 0 ≤ E t) (hinitial : E 0 = 0)
-    (hq : ContinuousOn q (Icc 0 T)) (hqnonneg : ∀ t ∈ Ioo 0 T, 0 ≤ q t)
-    (hderiv : ∀ t ∈ Ioo 0 T, HasDerivAt E (E' t) t)
-    (hbound : ∀ t ∈ Ioo 0 T, E' t ≤ 2 * Real.sqrt (E t) * q t) :
-    E T ≤ (∫ t in 0..T, q t) ^ 2 := by
-  have h := sqrt_energy_le_integral hT hcont hnonneg hinitial hq hqnonneg hderiv hbound
-  have hi : 0 ≤ ∫ t in 0..T, q t := (Real.sqrt_nonneg _).trans h
-  have hs := (sq_le_sq₀ (Real.sqrt_nonneg _) hi).2 h
-  simpa only [Real.sq_sqrt (hnonneg T ⟨hT, le_rfl⟩)] using hs
 
 end NavierStokesR3.SharpEnergyBound

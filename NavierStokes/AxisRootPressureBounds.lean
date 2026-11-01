@@ -45,31 +45,5 @@ theorem Z_at_root_pressure_lower {h j η B : ℝ} {P : ℝ → ℝ}
       rw [hz]
       nlinarith
 
-/-- The actual integral pressure supplies the pressure-scaled root margin,
-with the root and its uniqueness both constructed rather than assumed. -/
-theorem ideal_prefix_root_pressure_lower {h j : ℝ}
-    (p : NaturalAxisRange.Parameters h j) {g a : ℝ → ℝ} {cap B : ℝ}
-    (hp : PressureDatum.Admissible g a cap) (hB : 2 ≤ B)
-    (hg : ∀ y ≤ 0, g y = B ^ 2 * Real.exp ((1 / 5 : ℝ) * y))
-    (ha : ∀ y ≤ 0, a y = 1) :
-    ∃ η₀ : ℝ, η₀ ∈ Ioo (-j / 4) (-j / 5) ∧ H h j η₀ = 0 ∧
-      j * B ^ 2 / 20 < Z h j (PressureDatum.pressure g a) η₀ ∧
-      ∀ η ∈ Icc (-1 : ℝ) 1, H h j η = 0 → η = η₀ := by
-  obtain ⟨η₀, hη₀, hz, huniq⟩ := NaturalAxisRange.exists_unique_root p
-  have hI : η₀ ∈ Icc (-1 : ℝ) 1 := by
-    constructor <;> linarith [hη₀.1, hη₀.2, p.j_pos, p.j_le]
-  have hn : η₀ < 0 := by linarith [hη₀.2, p.j_pos]
-  have hs : η₀ ^ 2 ≤ 1 := by nlinarith [hI.1, hI.2]
-  have hi : 1 / 2 ≤ (1 + η₀ ^ 2)⁻¹ := by
-    rw [← one_div]
-    apply (le_div_iff₀ (show (0 : ℝ) < 1 + η₀ ^ 2 by positivity)).mpr
-    linarith
-  have hi2 : (1 / 4 : ℝ) ≤ ((1 + η₀ ^ 2)⁻¹) ^ 2 := by nlinarith
-  have hm := mul_le_mul_of_nonneg_left hi2 (sq_nonneg B)
-  have hp0 : PressureDatum.pressure g a η₀ ≤ -(B ^ 2 / 4) := by
-    have hb := PressureDatum.pressure_le_of_ideal_prefix hp hg ha η₀
-    nlinarith
-  exact ⟨η₀, hη₀, hz, Z_at_root_pressure_lower p hB hη₀ hz hp0
-    ((pressureData_of_ideal_prefix hp hB hg ha).deriv_nonpos hI hn), huniq⟩
 
 end NavierStokes.AxisRootPressureBounds

@@ -74,20 +74,5 @@ theorem approximation_uniform_error {f : Space → Space} {df : Fin 3 → Space 
     exact mul_nonneg (by norm_num) (Real.sqrt_nonneg _)
   · simpa only [mul_zero] using tendsto_const_nhds.mul (approximationErrorNorm_tendsto h)
 
-/-- Approximation in the genuine H³ topology is uniformly convergent to the
-continuous representative on all of ℝ³. -/
-theorem approximation_tendstoUniformly {f : Space → Space} {df : Fin 3 → Space → Space}
-    {ddf : Fin 3 → Fin 3 → Space → Space}
-    {dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space}
-    (h : H3Approximation f df ddf dddf) (hf : Continuous f) :
-    TendstoUniformly h.approx f atTop := by
-  rw [Metric.tendstoUniformly_iff]
-  intro ε hε
-  have he : Tendsto (fun n => 3 * approximationErrorNorm h n) atTop (𝓝 0) := by
-    simpa only [mul_zero] using tendsto_const_nhds.mul (approximationErrorNorm_tendsto h)
-  filter_upwards [he.eventually (gt_mem_nhds hε)] with n hn
-  intro x
-  rw [dist_comm, dist_eq_norm]
-  exact (approximation_norm_sub_le h hf n x).trans_lt hn
 
 end NavierStokesR3.H3Embedding

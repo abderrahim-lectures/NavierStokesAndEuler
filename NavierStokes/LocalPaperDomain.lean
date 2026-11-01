@@ -25,8 +25,6 @@ def outerEdge : ℝ :=
 def radius (w : SpaceTime) : ℝ :=
   AxisymmetricFields.radialEnergy w.2 / PhysicalWaveSum.physicalQ ActualPrimary.h w
 
-theorem radius_eq_chart (w : SpaceTime) :
-    radius w = (SlowBorelBase.cartesianChart ActualPrimary.h w).2.1 := rfl
 
 theorem qstar_pos (a : ℕ → ℕ) : 0 < qstar a :=
   lt_min (ChartScales.Q_pos _) (div_pos (by norm_num) (by positivity))

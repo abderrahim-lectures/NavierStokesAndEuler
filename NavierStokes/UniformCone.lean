@@ -31,32 +31,6 @@ theorem positive_uniform_margin {K : Set X} (hK : IsCompact K)
     ∃ ε : ℝ, 0 < ε ∧ ∀ x ∈ K, ε ≤ g x :=
   hK.exists_forall_le' hg hpos
 
-/-- All three strict source inequalities in (11) have a common positive
-margin on a continuous compact parameter family. -/
-theorem compact_source_margins {K : Set X} (hK : IsCompact K)
-    {a b w : X → ℝ} (ha : ContinuousOn a K) (hb : ContinuousOn b K)
-    (hw : ContinuousOn w K) (hapos : ∀ x ∈ K, 0 < a x)
-    (hfirst : ∀ x ∈ K, 0 < a x - b x * w x)
-    (hsecond : ∀ x ∈ K,
-      2 * b x * w x + b x ^ 2 / a x + (a x - 2) * w x ^ 2 < 2) :
-    ∃ ε : ℝ, 0 < ε ∧ ∀ x ∈ K,
-      ε ≤ a x ∧ ε ≤ a x - b x * w x ∧
-        ε ≤ 2 - (2 * b x * w x + b x ^ 2 / a x + (a x - 2) * w x ^ 2) := by
-  have hane : ∀ x ∈ K, a x ≠ 0 := fun x hx => ne_of_gt (hapos x hx)
-  have hsecond_cont : ContinuousOn
-      (fun x => 2 - (2 * b x * w x + b x ^ 2 / a x + (a x - 2) * w x ^ 2)) K :=
-    continuousOn_const.sub
-      ((((continuousOn_const.mul hb).mul hw).add ((hb.pow 2).div ha hane)).add
-        ((ha.sub continuousOn_const).mul (hw.pow 2)))
-  obtain ⟨εa, hεa, hbounda⟩ := positive_uniform_margin hK ha hapos
-  obtain ⟨εf, hεf, hboundf⟩ :=
-    positive_uniform_margin hK (ha.sub (hb.mul hw)) hfirst
-  obtain ⟨εs, hεs, hbounds⟩ :=
-    positive_uniform_margin hK hsecond_cont (fun x hx => sub_pos.mpr (hsecond x hx))
-  refine ⟨min εa (min εf εs), lt_min hεa (lt_min hεf hεs), fun x hx => ?_⟩
-  exact ⟨(min_le_left _ _).trans (hbounda x hx),
-    ((min_le_right _ _).trans (min_le_left _ _)).trans (hboundf x hx),
-    ((min_le_right _ _).trans (min_le_right _ _)).trans (hbounds x hx)⟩
 
 /-- Compact normalized data give one amplitude threshold for the entire family. -/
 theorem compact_normalized_cone {K : Set X} (hK : IsCompact K)

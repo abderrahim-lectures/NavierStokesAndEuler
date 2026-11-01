@@ -290,43 +290,6 @@ theorem rankStage_defect_class {κ H : ℝ}
   exact congrArg (fun v : Fin 3 → ℝ => v i)
     (hg.debt_eq_remainders ha₀ hab₀ U.isOpen hl hr axial hop hbc hml hwl hV hG n hx).symm
 
-include hell hg in
-/-- The manuscript's moment remainder gain for its fixed shaped patch
-amplitude. The input is the actual three target classes. The rank inverse
-supplies the increment estimates, and coefficient growth is required only
-on the topological support of its azimuthal potential. -/
-theorem rankStage_gain_of_targets {κ H A B : ℝ}
-    (hop : LocalRankDefect.LocalOperators U.carrier c.operators)
-    (hbc : SmoothTriple (LocalRankDefect.positiveDomain U.carrier) c.base)
-    (hmc : SmoothTriple (PhysicalMeanDomain.slowDomain U.carrier) u.mean)
-    (hms : SupportedTriple g.radial.inner g.radial.outer (qLength coord) U.carrier u.mean)
-    (hWc : ∀ i j, SmoothOn (PhysicalMeanDomain.slowDomain U.carrier) (u.covariance i j))
-    (hWs : ∀ i j, Support g.radial.inner g.radial.outer (qLength coord) U.carrier (u.covariance i j))
-    (hV : LocalRankDefect.IsSlowOn U.carrier c.base.angular)
-    (hG : LocalRankDefect.IsSlowOn U.carrier c.base.axial)
-    (ho : OperatorBounds (movingStripData U g.radial.inner g.radial.outer cL cR ha hcL hcR ε L hε hεone hL)
-      c.operators κ)
-    (hb : LocalBaseBounds (movingStripData U g.radial.inner g.radial.outer cL cR ha hcL hcR ε L hε hεone hL)
-      (fun n => tsupport (rankPotential g r c u n)) c.base)
-    (hm : MeanIncrementBounds.CumulativeBounds
-      (movingStripData U g.radial.inner g.radial.outer cL cR ha hcL hcR ε L hε hεone hL) u.mean)
-    (hparam : RankStateBounds.NormalizedParameters coord A B r U.carrier)
-    (hB : B ≠ 0) (hleft : g.radial.inner < r.inner) (hright : r.outer < g.radial.outer)
-    (htarget : ∀ i : Fin 3,
-      UnweightedClass (PhysicalMeanDomain.localSlowStripData U.carrier U.isOpen ε L hε hεone hL)
-        H (fun n x => debt c u n x i)) (hH : 9 / 10 ≤ H) :
-    MeanClass (movingStripData U g.radial.inner g.radial.outer cL cR ha hcL hcR ε L hε hεone hL)
-      (H + 9 / 10 - 2 * κ)
-      (actualRadialError c.operators c.base u.mean (rankIncrementState g r axial c u) u.covariance) ∧
-    ∀ i : Fin 3, UnweightedClass (PhysicalMeanDomain.localSlowStripData U.carrier U.isOpen ε L hε hεone hL)
-      (H + 9 / 10 - 2 * κ) (fun n x => debt c (rankStageState g r axial c u) n x i) := by
-  have hi := RankStateBounds.rankIncrementState_bounds_of_components U g r ha hcL hcR
-    ε L hε hεone hL c u hg hparam hB hleft hright axial ho.epsilon htarget
-  refine ⟨?_, fun i => rankStage_defect_class U g r ha hcL hcR ε L hε hεone hL hell
-    axial c u hg hop hbc hmc hms hWc hWs hV hG ho hb hm hi hH i⟩
-  exact gr_change_sub_leading_mem ho hb (rankIncrement_streamSupport g r axial c u _) hm hi hH
-    u.covariance (fun i j n => (hWc i j n).mono (fun x hx =>
-      ((movingStrip_domain U g.radial.inner g.radial.outer cL cR ha hcL hcR ε L hε hεone hL x).mp hx).1))
 
 end RankDefect
 

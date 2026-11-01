@@ -426,20 +426,6 @@ theorem CoefficientFamily.compatible {h j σ : ℝ} {P : ℝ → ℝ}
   change deriv (fun y : ℝ => 4 * y + j) x = 4
   simp
 
-theorem ideal_prefix_fixed_coefficients {h j : ℝ}
-    (hsmall : NaturalAxisRange.Parameters h j)
-    {g a : ℝ → ℝ} {cap B : ℝ}
-    (hp : PressureDatum.Admissible g a cap) (hB : 2 ≤ B)
-    (hg : ∀ y ≤ 0, g y = B ^ 2 * Real.exp ((1 / 5 : ℝ) * y))
-    (ha : ∀ y ≤ 0, a y = 1) :
-    ∃ δ σ : ℝ, 0 < δ ∧ 0 < σ ∧
-      (∀ x ∈ Icc (-1 : ℝ) 1,
-        |NaturalAxisData.Z h j (PressureDatum.pressure g a) x| ≤ δ →
-          99 / 100 < NaturalAxisData.chi h j σ x) ∧
-      Nonempty (CoefficientFamily h j σ (PressureDatum.pressure g a)) := by
-  obtain ⟨δ, σ, hδ, hσ, hcut, _⟩ :=
-    NaturalAxisRange.ideal_prefix_cutoff_parameters hsmall hp hB hg ha
-  exact ⟨δ, σ, hδ, hσ, hcut, exists_coefficientFamily hsmall hσ hp⟩
 
 /-- The actual normalized logarithmic phase, as a complex segment integral. -/
 def axisPhase (h j σ : ℝ) : ℂ → ℂ :=

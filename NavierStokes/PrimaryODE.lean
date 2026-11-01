@@ -771,60 +771,6 @@ section GaussianPrimary
 
 variable {Q : Type} [NormedAddCommGroup Q]
 
-/-- The actual primary is bounded above and below by the manuscript's Gaussian
-envelopes.  The reference scalar equation and spectral gap are derived here
-from the displayed reference rate; they are not assumptions about a solution. -/
-theorem primary_gaussian_bounds {ell : ℝ} (hell : 0 < ell) (d : FrameData Q)
-    (lam u c₀ : Q → ℝ) {U : Set Q}
-    (hA : ContinuousOn (d.coefficient 1) (U ×ˢ Icc 0 ell))
-    {p : Q} (hp : p ∈ U) (hlam : 0 < lam p) (hu : 0 < u p)
-    {S C D L : ℝ} (hC : 0 ≤ C) (hD : 0 ≤ D) (hS : 0 < S)
-    (hlarge : 2 * GrowingMode.coneConstant
-      (lam p / Real.sqrt (1 + (3 * u p / 2) ^ 2)) C ≤ S)
-    (hslot : ell ≤ L * S)
-    (heigen : ∀ v ∈ Icc 0 ell,
-      d.eigenvalue (p, v) = ViscousPropagator.referenceEigenvalue (lam p) (u p) ell v)
-    (hprofile : ∀ v ∈ Icc 0 ell, d.eigenvector (p, v) = referenceProfile (c₀ p) (u p) ell v)
-    (herr : ∀ v ∈ Icc 0 ell,
-      |d.error11 (p, v)| ≤ C / S ∧ |d.error12 (p, v)| ≤ C / S ∧
-      |d.error21 (p, v)| ≤ C / S ∧ |d.error22 (p, v)| ≤ C / S)
-    (hν : ∀ v ∈ Icc 0 ell,
-      |d.viscosity (p, v) - ViscousPropagator.referenceViscosity (lam p) (u p) ell v| ≤ D / S) :
-    ∃ b B : ℝ, 0 < b ∧ 0 < B ∧ ∀ v ∈ Icc 0 ell,
-      0 < radialPrimary hell.le d (referenceEnvelope lam u ell) p v ∧
-      (Real.exp (-(D + 2 * C) * L) / 2) * Real.exp (-B * (v - ell / 2) ^ 2 / ell) ≤
-        radialPrimary hell.le d (referenceEnvelope lam u ell) p v ∧
-      radialPrimary hell.le d (referenceEnvelope lam u ell) p v ≤
-        (3 * Real.exp ((D + 2 * C) * L) / 2) * Real.exp (-b * (v - ell / 2) ^ 2 / ell) ∧
-      |transversePrimary hell.le d (referenceEnvelope lam u ell) p v /
-        radialPrimary hell.le d (referenceEnvelope lam u ell) p v - referenceProfile (c₀ p) (u p) ell v| ≤
-        4 * |referenceProfile (c₀ p) (u p) ell v| *
-          (GrowingMode.coneConstant (lam p / Real.sqrt (1 + (3 * u p / 2) ^ 2)) C / S) := by
-  have hgap : 0 < lam p / Real.sqrt (1 + (3 * u p / 2) ^ 2) :=
-    div_pos hlam (PulseGrowth.radius_pos _)
-  have hPpos (v : ℝ) (_ : v ∈ Icc 0 ell) : 0 < referenceEnvelope lam u ell (p, v) :=
-    GaussianEnvelope.envelope_pos _ _ _
-  have hdP (v : ℝ) (hv : v ∈ Icc 0 ell) :
-      HasDerivAt (fun t => referenceEnvelope lam u ell (p, t))
-        ((d.eigenvalue (p, v) - ViscousPropagator.referenceViscosity (lam p) (u p) ell v) *
-          referenceEnvelope lam u ell (p, v)) v := by
-    rw [heigen v hv]
-    exact ViscousPropagator.hasDerivAt_envelope
-      (ViscousPropagator.continuous_referenceRate (lam p) (u p) ell) (ell / 2) v
-  have hbnd := primary_bounds hell.le d (referenceEnvelope lam u ell) hA hp
-    hgap hC hD hS hlarge (by simpa only [sub_zero] using hslot)
-    (ViscousPropagator.referenceViscosity (lam p) (u p) ell)
-    (fun v hv => (heigen v hv).symm ▸ referenceEigenvalue_lower hlam hu.le hell hv)
-    herr hν hPpos hdP
-  obtain ⟨b, B, hb, hB, hg⟩ := GaussianEnvelope.reference_uniform_gaussian_bounds hlam hu
-  refine ⟨b, B, hb, hB, ?_⟩
-  intro v hv
-  obtain ⟨hpos, hlo, hhi, hrat⟩ := hbnd v hv
-  have hgauss := hg ell hell v hv
-  refine ⟨hpos, ?_, ?_, ?_⟩
-  · exact (mul_le_mul_of_nonneg_left hgauss.1 (by positivity)).trans hlo
-  · exact hhi.trans (mul_le_mul_of_nonneg_left hgauss.2 (by positivity))
-  · simpa only [hprofile v hv] using hrat
 
 end GaussianPrimary
 
@@ -891,15 +837,6 @@ theorem primarySeed_reference_contDiffOn {ell : ℝ} (hell : 0 ≤ ell)
   exact (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞) MovingFrameODE.pairCLM).comp_contDiffOn
     (hE.prodMk contDiffOn_const)
 
-theorem primary_reference_path_contDiffOn {ell : ℝ} (hell : 0 ≤ ell) (d : FrameData Q)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc 0 ell ⊆ V)
-    (hd : d.SmoothOn (U ×ˢ V)) (lam u : Q → ℝ)
-    (hlam : ContDiffOn ℝ ∞ lam U) (hu : ContDiffOn ℝ ∞ u U) :
-    ContDiffOn ℝ ∞ (SmoothPathFamily.odeFamily hell (d.coefficient 1)
-      (primarySeed 0 (referenceEnvelope lam u ell)) (d.forcing (fun _ => 0))) U :=
-  solutionPath_contDiffOn hell d U V hU hV hI hd 1
-    (primarySeed 0 (referenceEnvelope lam u ell)) (fun _ => 0)
-    (primarySeed_reference_contDiffOn hell U V hU hV hI lam u hlam hu) contDiffOn_const
 
 /-- Parameter smoothness of the constructed extension at every time in the
 closed slot, including its endpoints. -/
@@ -915,29 +852,6 @@ theorem solution_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
   intro q _
   exact extendedFamily_eq_path _ _ _ _ _ _
 
-/-- Reconstructed ambient tangent vectors inherit parameter smoothness from
-the same constructed modal path and the explicit smooth frame data. -/
-theorem ambientSolution_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc a b ⊆ V)
-    (hd : d.SmoothOn (U ×ˢ V)) (j : ℤ) (x₀ : Q → State) (f : Q × ℝ → Space)
-    (hx₀ : ContDiffOn ℝ ∞ x₀ U) (hf : ContDiffOn ℝ ∞ f (U ×ˢ V)) (v : Icc a b) :
-    ContDiffOn ℝ ∞ (fun q => ambientSolution hab d j x₀ f q v) U := by
-  have hz := solution_contDiffOn hab d U V hU hV hI hd j x₀ f hx₀ hf v
-  have hz0 := (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞)
-    (PiLp.proj 2 (fun _ : Fin 2 => ℝ) 0)).comp_contDiffOn hz
-  have hz1 := (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞)
-    (PiLp.proj 2 (fun _ : Fin 2 => ℝ) 1)).comp_contDiffOn hz
-  have hs : MapsTo (fun q : Q => (q, (v : ℝ))) U (U ×ˢ V) := fun _ hq => ⟨hq, hI v.2⟩
-  have hc : ContDiffOn ℝ ∞ (fun q : Q => (q, (v : ℝ))) U :=
-    contDiffOn_id.prodMk contDiffOn_const
-  have hr := hd.rho.comp hc hs
-  have hh := hd.eigenvector.comp hc hs
-  have hK := (hd.frame 0).comp hc hs
-  have hN := (hd.frame 1).comp hc hs
-  have hx := hz0.add hz1
-  have hy := hh.mul (hz0.sub hz1)
-  exact (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞) MovingFrameODE.packCLM).comp_contDiffOn
-    (hx.prodMk (((hr.neg.mul hx).smul hK).add (hy.smul hN)))
 
 end SmoothPrimary
 
@@ -956,44 +870,9 @@ theorem solution_joint_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
   JointODE.contDiffOn_solutionExtension_joint hab U V hU hV hI
     (d.coefficient j) x₀ (d.forcing f) (hd.coefficient j) hx₀ (hd.forcing hf)
 
-theorem ambientSolution_joint_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc a b ⊆ V)
-    (hd : d.SmoothOn (U ×ˢ V)) (j : ℤ) (x₀ : Q → State) (f : Q × ℝ → Space)
-    (hx₀ : ContDiffOn ℝ ∞ x₀ U) (hf : ContDiffOn ℝ ∞ f (U ×ˢ V)) :
-    ContDiffOn ℝ ∞ (fun z : Q × ℝ => ambientSolution hab d j x₀ f z.1 z.2) (U ×ˢ Icc a b) := by
-  have hz := solution_joint_contDiffOn hab d U V hU hV hI hd j x₀ f hx₀ hf
-  have hz0 := (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞)
-    (PiLp.proj 2 (fun _ : Fin 2 => ℝ) 0)).comp_contDiffOn hz
-  have hz1 := (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞)
-    (PiLp.proj 2 (fun _ : Fin 2 => ℝ) 1)).comp_contDiffOn hz
-  have hs : U ×ˢ Icc a b ⊆ U ×ˢ V := Set.prod_mono Subset.rfl hI
-  have hr := hd.rho.mono hs
-  have hh := hd.eigenvector.mono hs
-  have hK := (hd.frame 0).mono hs
-  have hN := (hd.frame 1).mono hs
-  have hx := hz0.add hz1
-  have hy := hh.mul (hz0.sub hz1)
-  exact (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞) MovingFrameODE.packCLM).comp_contDiffOn
-    (hx.prodMk (((hr.neg.mul hx).smul hK).add (hy.smul hN)))
 
 end Joint
 
-/-- The physical viscosity perturbation follows from closeness of the actual
-phase normal.  This gives the damping input without assuming an ODE bound. -/
-theorem viscosity_error_of_normal_comparison {n n₀ : Space} {κ η M : ℝ}
-    (hκ : 0 ≤ κ) (hclose : ‖n - n₀‖ ≤ η) (hn₀ : ‖n₀‖ ≤ M) :
-    |κ * ‖n‖ ^ 2 - κ * ‖n₀‖ ^ 2| ≤ κ * η * (2 * M + η) := by
-  have hη : 0 ≤ η := (norm_nonneg _).trans hclose
-  have hd : |‖n‖ - ‖n₀‖| ≤ η := (abs_norm_sub_norm_le n n₀).trans hclose
-  have hs : ‖n‖ + ‖n₀‖ ≤ 2 * M + η := by linarith [(abs_le.mp hd).2]
-  have he : κ * ‖n‖ ^ 2 - κ * ‖n₀‖ ^ 2 = κ * ((‖n‖ - ‖n₀‖) * (‖n‖ + ‖n₀‖)) := by ring
-  rw [he, abs_mul, abs_of_nonneg hκ, abs_mul,
-    abs_of_nonneg (add_nonneg (norm_nonneg n) (norm_nonneg n₀))]
-  calc
-    κ * (|‖n‖ - ‖n₀‖| * (‖n‖ + ‖n₀‖)) ≤ κ * (η * (2 * M + η)) :=
-      mul_le_mul_of_nonneg_left
-        (mul_le_mul hd hs (add_nonneg (norm_nonneg n) (norm_nonneg n₀)) hη) hκ
-    _ = _ := by ring
 
 /-- The source transformation has a uniform norm bound from elementary frame
 and eigenvector bounds, independently of the harmonic index. -/
@@ -1103,50 +982,6 @@ section AmbientForward
 
 variable {Q : Type} [NormedAddCommGroup Q]
 
-/-- The forward estimate in actual ambient tangent norm, with constants
-independent of the nonzero integer harmonic. -/
-theorem ambient_homogeneous_forward_bound {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
-    {j : ℤ} (hj : j ≠ 0) (x₀ : Q → State) {U : Set Q}
-    (hA : ContinuousOn (d.coefficient j) (U ×ˢ Icc a b))
-    {p : Q} (hp : p ∈ U) (referenceDamping rate P : ℝ → ℝ)
-    {S C D L R H : ℝ} (hS : 0 < S) (hC : 0 ≤ C) (hD : 0 ≤ D)
-    (hslot : b - a ≤ L * S)
-    (hPpos : ∀ v, 0 < P v) (hP : ∀ v, HasDerivAt P (rate v * P v) v)
-    (hreference : ∀ v ∈ Icc a b, rate v = d.eigenvalue (p, v) - referenceDamping v)
-    (hlam : ∀ v ∈ Icc a b, 0 ≤ d.eigenvalue (p, v))
-    (hν : ∀ v ∈ Icc a b, 0 ≤ d.viscosity (p, v))
-    (hνerr : ∀ v ∈ Icc a b, referenceDamping v - D / S ≤ d.viscosity (p, v))
-    (herr : ∀ v ∈ Icc a b,
-      |d.error11 (p, v)| ≤ C / S ∧ |d.error12 (p, v)| ≤ C / S ∧
-      |d.error21 (p, v)| ≤ C / S ∧ |d.error22 (p, v)| ≤ C / S)
-    (hrho : ∀ v ∈ Icc a b, |d.rho (p, v)| ≤ R)
-    (hh : ∀ v ∈ Icc a b, |d.eigenvector (p, v)| ≤ H)
-    (hne : d.eigenvector (p, a) ≠ 0) (hhi : |1 / d.eigenvector (p, a)| ≤ H) :
-    ∀ v ∈ Icc a b, ‖ambientSolution hab d j x₀ (fun _ => 0) p v‖ ≤
-      (2 * (1 + R + H) * (1 + H) * Real.exp ((D + 4 * C) * L)) *
-        (P v / P a) * ‖ambientSolution hab d j x₀ (fun _ => 0) p a‖ := by
-  have hbnd := homogeneous_forward_bound hab d hj x₀ hA hp referenceDamping rate P
-    hS hC hD hslot hPpos hP hreference hlam hν hνerr herr
-  have hstart : ‖x₀ p‖ ≤ (1 + H) * ‖ambientSolution hab d j x₀ (fun _ => 0) p a‖ := by
-    simpa only [ambientSolution, solution_initial] using
-      d.norm_le_ambient (p, a) (x₀ p) hne hhi
-  have hR : 0 ≤ R := (abs_nonneg _).trans (hrho a ⟨le_rfl, hab⟩)
-  have hH : 0 ≤ H := (abs_nonneg _).trans (hh a ⟨le_rfl, hab⟩)
-  have hfac : 0 ≤ 2 * (1 + R + H) := by positivity
-  intro v hv
-  calc
-    _ ≤ (2 * (1 + R + H)) * ‖solution hab d j x₀ (fun _ => 0) p v‖ :=
-      d.ambient_norm_le (p, v) _ (hrho v hv) (hh v hv)
-    _ ≤ (2 * (1 + R + H)) *
-        (Real.exp ((D + 4 * C) * L) * (P v / P a) * ‖x₀ p‖) :=
-      mul_le_mul_of_nonneg_left (hbnd v hv) hfac
-    _ ≤ (2 * (1 + R + H)) *
-        (Real.exp ((D + 4 * C) * L) * (P v / P a) *
-          ((1 + H) * ‖ambientSolution hab d j x₀ (fun _ => 0) p a‖)) := by
-      apply mul_le_mul_of_nonneg_left _ hfac
-      exact mul_le_mul_of_nonneg_left hstart
-        (mul_nonneg (Real.exp_pos _).le (div_pos (hPpos v) (hPpos a)).le)
-    _ = _ := by ring
 
 end AmbientForward
 

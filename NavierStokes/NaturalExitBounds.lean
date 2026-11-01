@@ -225,20 +225,5 @@ theorem Estimates.regular_lag_bounds {Λ C : ℝ} {E : EntranceProfile d Λ C} {
   exact ⟨H.p1_lower X η hX hYX hη, (H.p1_positive_upper X η hX hYX hη).1,
     (H.p1_positive_upper X η hX hYX hη).2, H.ns_error (X, η) hp⟩
 
-/-- The analytic inputs and cutoff are constructed from the ideal-prefix
-pressure datum; no separate analytic-family or exit estimate is assumed. -/
-theorem ideal_prefix_exit {h j : ℝ} (hsmall : NaturalAxisRange.Parameters h j)
-    {g a : ℝ → ℝ} {cap amplitude : ℝ}
-    (hp : PressureDatum.Admissible g a cap) (hA : 2 ≤ amplitude)
-    (hg : ∀ y ≤ 0, g y = amplitude ^ 2 * Real.exp ((1 / 5 : ℝ) * y))
-    (ha : ∀ y ≤ 0, a y = 1) :
-    ∃ δ σ : ℝ, 0 < δ ∧ 0 < σ ∧
-      ∃ d : AnalyticInputs h j σ (PressureDatum.pressure g a),
-        0 < lowerConstant d ∧ ∃ B : ℕ → ℝ, (∀ m, 1 ≤ B m) ∧
-          ∃ M > 0, ∀ Λ ≥ M, ∀ C, entranceNormalization d Λ δ ≤ C →
-            ∃ E : EntranceProfile d Λ C, Estimates d E B := by
-  obtain ⟨δ, σ, hδ, hσ, hcut, ⟨d⟩⟩ := ideal_prefix_analytic_inputs hsmall hp hA hg ha
-  exact ⟨δ, σ, hδ, hσ, d,
-    exists_exit d hsmall hσ (PressureDatum.pressure_contDiff hp) hδ hcut⟩
 
 end NavierStokes.NaturalExitBounds

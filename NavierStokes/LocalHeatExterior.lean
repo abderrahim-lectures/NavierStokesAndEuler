@@ -76,13 +76,6 @@ noncomputable def axialCurlCoefficient (upper : ℝ) (B : ℕ) : AxisymmetricFie
     (TailGaugePotential.gaugedSwirl (FinalSlowBase.scales H v upper B) F.data.h
       W.axis.normalization (FinalSlowBase.coefficients H v)) p
 
-theorem axialCurlCoefficient_smoothAt (upper : ℝ) (B : ℕ)
-    {p : AxisymmetricFields.ProfilePoint} (ht : p.1 < 1) :
-    ContDiffAt ℝ ∞ (axialCurlCoefficient H v upper B) p := by
-  have hK := TailGaugePotential.gaugedSwirl_smoothAt
-    (C := W.axis.normalization) (FinalSlowBase.scales_strictMono H v upper B)
-    F.data.h_pos F.data.h_lt_half (FinalSlowBase.coefficients_smooth H v) ht
-  exact ((hK.fderiv_right (show ∞ + 1 ≤ ∞ by simp)).clm_apply contDiffAt_const).neg
 
 theorem axialPart_finalPotential_curl_angular (upper : ℝ) (B : ℕ) {w : SpaceTime}
     (ht : w.1 < 1) :
@@ -117,12 +110,6 @@ theorem finalPotential_eq_axialPart (upper : ℝ) (B : ℕ) {w : SpaceTime}
   rw [he]
   simp [coordinateVector]
 
-theorem finalPotential_components_zero (upper : ℝ) (B : ℕ) {w : SpaceTime}
-    (hw : w ∈ BaseExterior.cartesianExterior F.data.h (BaseExterior.nominalExteriorRadius W)) :
-    TailGaugePotential.finalPotential H v upper B w 0 = 0 ∧
-      TailGaugePotential.finalPotential H v upper B w 1 = 0 := by
-  rw [finalPotential_eq_axialPart H v upper B hw]
-  simp [axialPart, coordinateVector]
 
 theorem axialPart_finalPotential_germ (upper : ℝ) (B : ℕ) {w : SpaceTime}
     (hw : w ∈ BaseExterior.cartesianExterior F.data.h (BaseExterior.nominalExteriorRadius W)) :
@@ -140,13 +127,7 @@ theorem axialPart_finalPotential_curl (upper : ℝ) (B : ℕ) {w : SpaceTime}
     (axialPart_finalPotential_germ H v upper B hw)).self_of_nhds]
   exact TailGaugePotential.finalPotential_sameCurl H v upper B hw.1
 
-theorem axialPart_finalPotential_smooth (upper : ℝ) (B : ℕ) :
-    ContDiffOn ℝ ∞ (axialPart (TailGaugePotential.finalPotential H v upper B)) BaseResidual.past :=
-  axialPart_smooth (TailGaugePotential.finalPotential_smooth H v upper B)
 
-theorem axialPart_finalPotential_awayExtensions (upper : ℝ) (B : ℕ) :
-    JointResidualLimits.AwayExtensions (axialPart (TailGaugePotential.finalPotential H v upper B)) :=
-  axialPart_awayExtensions (TailGaugePotential.finalPotential_awayExtensions H v upper B)
 
 end ActualBase
 
