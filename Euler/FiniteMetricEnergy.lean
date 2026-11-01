@@ -61,18 +61,6 @@ theorem familyEnergy_coercive (K : H →L[ℝ] H) (v : ι → H) (c : ℝ)
   simpa only [familySquaredNorm, familyEnergy, Finset.mul_sum] using
     Finset.sum_le_sum (fun i (_ : i ∈ (Finset.univ : Finset ι)) => hK (v i))
 
-/-- The metric energy has the exact operator-norm upper bound. -/
-theorem familyEnergy_upper (K : H →L[ℝ] H) (v : ι → H) :
-    familyEnergy K v ≤ ‖K‖ * familySquaredNorm v := by
-  unfold familyEnergy familySquaredNorm
-  rw [Finset.mul_sum]
-  apply Finset.sum_le_sum
-  intro i _
-  calc
-    _ ≤ ‖K (v i)‖ * ‖v i‖ := real_inner_le_norm _ _
-    _ ≤ (‖K‖ * ‖v i‖) * ‖v i‖ :=
-      mul_le_mul_of_nonneg_right (K.le_opNorm _) (norm_nonneg _)
-    _ = _ := by ring
 
 /-- Coercivity makes the root-of-sum metric norm uniformly equivalent to the finite Hilbert norm. -/
 theorem familyMetricNorm_lower (K : H →L[ℝ] H) (v : ι → H) (c : ℝ) (hc : 0 ≤ c)
@@ -88,11 +76,6 @@ theorem familyMetricNorm_lower (K : H →L[ℝ] H) (v : ι → H) (c : ℝ) (hc 
   change c * familyNorm v ≤ √(familyEnergy K v)
   nlinarith
 
-/-- The upper metric comparison is independent of the number of external derivatives. -/
-theorem familyMetricNorm_upper (K : H →L[ℝ] H) (v : ι → H) :
-    familyMetricNorm K v ≤ √‖K‖ * familyNorm v := by
-  exact (sqrt_le_sqrt (familyEnergy_upper K v)).trans_eq
-    (sqrt_mul (norm_nonneg K) (familySquaredNorm v))
 
 /-- The exact derivative of the finite quadratic energy for a transport-pressure-heat system. -/
 theorem family_energy_hasDerivAt (K : ℝ → H →L[ℝ] H) (e : ι → ℝ → H)

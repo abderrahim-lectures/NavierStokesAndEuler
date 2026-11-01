@@ -32,38 +32,5 @@ variable (M : EulerMeanPacketProvider.Data)
   (hFb : ∀ n t x,
     ‖iteratedFDeriv ℝ n (D.F.field t : Space → (Space →L[ℝ] Space)) x‖ ≤ CF*majorant R 0 n)
 
-include hδ1 hα L NB LM hΞ hF hΞY hY hdet hR hCF hFb in
-theorem initialized_correction_gradient_hessian_eventually (p : ℝ) :
-    ∃ ρ0 G : ℝ, 0 < ρ0 ∧ 0 < G ∧ ∀ᶠ k : ℝ in atTop,
-      ∃ (hk : 4 ≤ k) (hn : 1 ≤ truncation k)
-        (Q : EulerAllOrderDriftCorrection.Budget period D.T_pos
-          (initializedCorrectionData M D hTime τ hτ hτT B δ hδ ξ hs α Cagree
-            (truncation k) hn k hk)),
-        Q.delta=delta (expansion k) ∧ Q.initialRadius=ρ0 ∧ Q.growthCoefficient=G ∧
-        ∀ (t : Icc (0 : ℝ) D.T) (x : Space),
-          ‖fderiv ℝ (fun y => k⁻¹ • D.F.field t (Y t y)
-            (Q.pointField period t (cylinderGraph period k D.m₀ (Y t y)))) x‖ < k^(-p) ∧
-          ‖fderiv ℝ (gradient (Q.physicalPotential D period k Y t)) x‖ < k^(-p) := by
-  obtain ⟨ρ0,G,hρ,hG,hQ⟩ := initialized_correction_physical_fields_eventually
-    M D hTime τ hτ hτT B δ hδ hδ1 ξ hs α hα L NB LM Cagree
-    Ξ Y hΞ hF hΞY hY hdet R CF hR hCF hFb 1 p
-  have hX : ∀ t x, HasFDerivAt (Ξ t) (D.F.field t x) x := by
-    intro t x
-    rw [← hF t x]
-    exact ((hΞ t).differentiable (by simp) x).hasFDerivAt
-  refine ⟨ρ0,G,hρ,hG,?_⟩
-  filter_upwards [hQ] with k hQ
-  obtain ⟨hk,hn,Q,hδQ,hρQ,hGQ,hbounds⟩ := hQ
-  refine ⟨hk,hn,Q,hδQ,hρQ,hGQ,?_⟩
-  intro t x
-  have h := hbounds 1 le_rfl t x
-  constructor
-  · simpa only [norm_iteratedFDeriv_one] using h.1
-  · have hkκ : k*(initializedCorrectionData M D hTime τ hτ hτT B δ hδ ξ hs α Cagree
-        (truncation k) hn k hk).κ=1 := by
-      change k*k⁻¹=1
-      exact mul_inv_cancel₀ (by linarith)
-    rw [Q.physicalPotential_hessian_norm D period Ξ Y hX hΞY hY k hkκ t x]
-    exact h.2
 
 end EulerPacketTerminalDatum

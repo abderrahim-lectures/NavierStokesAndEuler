@@ -79,71 +79,9 @@ theorem liftedCurl_eq_tests (κ : ℝ) (m : Vector3) (Q : LiftDomain period → 
         fieldDerivative period (coordinateDirection κ m 0) (fun y => Q y 1) x
     ring
 
-theorem liftedCurl_smooth (κ : ℝ) (m : Vector3) (Q : LiftDomain period → Vector3)
-    (hQ : ∀ x, ContDiff ℝ ∞ (localFieldLift period Q x)) (x : LiftDomain period) :
-    ContDiff ℝ ∞ (localFieldLift period (liftedCurl period κ m Q) x) := by
-  rw [liftedCurl_eq_tests period κ m Q hQ]
-  exact ((curlTest_smooth period κ m 0 1 _ (component_smooth period Q hQ 2) x).add
-    (curlTest_smooth period κ m 1 2 _ (component_smooth period Q hQ 0) x)).add
-    (curlTest_smooth period κ m 2 0 _ (component_smooth period Q hQ 1) x)
 
-theorem scalar_fieldDerivative_sub (a : LiftTangent) (f g : LiftDomain period → ℝ)
-    (hf : ∀ x, ContDiff ℝ ∞ (localFieldLift period f x))
-    (hg : ∀ x, ContDiff ℝ ∞ (localFieldLift period g x)) (x : LiftDomain period) :
-    fieldDerivative period a (fun y => f y - g y) x =
-      fieldDerivative period a f x - fieldDerivative period a g x := by
-  change (fderiv ℝ (fun z => localFieldLift period f x z - localFieldLift period g x z) 0) a = _
-  rw [fderiv_fun_sub (((hf x).differentiable (by simp)) 0)
-    (((hg x).differentiable (by simp)) 0)]
-  rfl
 
-theorem fieldDerivative_liftedCurl_component (κ : ℝ) (m : Vector3)
-    (Q : LiftDomain period → Vector3) (hQ : ∀ x, ContDiff ℝ ∞ (localFieldLift period Q x))
-    (a : LiftTangent) (x : LiftDomain period) (i : Fin 3) :
-    (fieldDerivative period a (liftedCurl period κ m Q) x) i =
-      fieldDerivative period a
-        (fieldDerivative period (coordinateDirection κ m (i + 1)) (fun y => Q y (i + 2))) x -
-      fieldDerivative period a
-        (fieldDerivative period (coordinateDirection κ m (i + 2)) (fun y => Q y (i + 1))) x := by
-  change (EuclideanSpace.proj i) (fieldDerivative period a (liftedCurl period κ m Q) x) = _
-  rw [← fieldDerivative_linear period (EuclideanSpace.proj i) (liftedCurl period κ m Q)
-    (liftedCurl_smooth period κ m Q hQ) a x]
-  have he : (fun y => (EuclideanSpace.proj i) (liftedCurl period κ m Q y)) =
-      fun y => fieldDerivative period (coordinateDirection κ m (i + 1)) (fun z => Q z (i + 2)) y -
-        fieldDerivative period (coordinateDirection κ m (i + 2)) (fun z => Q z (i + 1)) y :=
-    funext fun y => liftedCurl_component_scalar period κ m Q hQ y i
-  rw [he]
-  exact scalar_fieldDerivative_sub period a _ _
-    (fieldDerivative_smooth period _ _ (component_smooth period Q hQ (i + 2)))
-    (fieldDerivative_smooth period _ _ (component_smooth period Q hQ (i + 1))) x
 
-/-- The constant lifted divergence of an actual lifted curl vanishes pointwise. -/
-theorem lifted_divergence_curl (κ : ℝ) (m : Vector3) (Q : LiftDomain period → Vector3)
-    (hQ : ∀ x, ContDiff ℝ ∞ (localFieldLift period Q x)) (x : LiftDomain period) :
-    (∑ i : Fin 3, (fieldDerivative period (coordinateDirection κ m i)
-      (liftedCurl period κ m Q) x) i) = 0 := by
-  simp only [fieldDerivative_liftedCurl_component period κ m Q hQ, Fin.sum_univ_three]
-  have h01 := fieldDerivatives_commute period (coordinateDirection κ m 0)
-    (coordinateDirection κ m 1) (fun y => Q y 2) (component_smooth period Q hQ 2) x
-  have h02 := fieldDerivatives_commute period (coordinateDirection κ m 0)
-    (coordinateDirection κ m 2) (fun y => Q y 1) (component_smooth period Q hQ 1) x
-  have h12 := fieldDerivatives_commute period (coordinateDirection κ m 1)
-    (coordinateDirection κ m 2) (fun y => Q y 0) (component_smooth period Q hQ 0) x
-  change
-    (fieldDerivative period (coordinateDirection κ m 0)
-      (fieldDerivative period (coordinateDirection κ m 1) (fun y => Q y 2)) x -
-     fieldDerivative period (coordinateDirection κ m 0)
-      (fieldDerivative period (coordinateDirection κ m 2) (fun y => Q y 1)) x) +
-    (fieldDerivative period (coordinateDirection κ m 1)
-      (fieldDerivative period (coordinateDirection κ m 2) (fun y => Q y 0)) x -
-     fieldDerivative period (coordinateDirection κ m 1)
-      (fieldDerivative period (coordinateDirection κ m 0) (fun y => Q y 2)) x) +
-    (fieldDerivative period (coordinateDirection κ m 2)
-      (fieldDerivative period (coordinateDirection κ m 0) (fun y => Q y 1)) x -
-     fieldDerivative period (coordinateDirection κ m 2)
-      (fieldDerivative period (coordinateDirection κ m 1) (fun y => Q y 0)) x) = 0
-  rw [h01, h02, h12]
-  ring
 
 theorem component_compact (Q : LiftDomain period → Vector3) (hQ : HasCompactSupport Q)
     (i : Fin 3) : HasCompactSupport (fun x => Q x i) :=

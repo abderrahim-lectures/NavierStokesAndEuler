@@ -134,65 +134,17 @@ def mixedBoundaryOperator (χ ψ : Cutoff) : L2 →L[ℝ] L2 :=
 theorem mixedBoundaryOperator_diagonal (χ : Cutoff) :
     mixedBoundaryOperator χ χ = boundaryOperator χ := rfl
 
-theorem mixedBoundaryOperator_norm_le (χ ψ : Cutoff) :
-    ‖mixedBoundaryOperator χ ψ‖ ≤ cutoffBound χ * cutoffBound ψ := by
-  refine (ContinuousLinearMap.opNorm_comp_le _ _).trans ?_
-  change ‖cutoffCurl χ‖ * ‖(cutoffCurl ψ).adjoint‖ ≤ _
-  rw [LinearIsometryEquiv.norm_map]
-  exact mul_le_mul (cutoffCurl_norm_le χ) (cutoffCurl_norm_le ψ)
-    (norm_nonneg (cutoffCurl ψ)) (cutoffBound_nonneg χ)
 
-theorem mixedBoundaryOperator_pairing (χ ψ : Cutoff) (u v : L2) :
-    ⟪mixedBoundaryOperator χ ψ u, v⟫_ℝ = ⟪weakPotential ψ u, weakPotential χ v⟫_ℝ :=
-  (ContinuousLinearMap.adjoint_inner_right (cutoffCurl χ) (weakPotential ψ u) v).symm
 
-theorem mixedBoundaryOperator_adjoint (χ ψ : Cutoff) :
-    (mixedBoundaryOperator χ ψ).adjoint = mixedBoundaryOperator ψ χ := by
-  simp only [mixedBoundaryOperator, weakPotential, ContinuousLinearMap.adjoint_comp,
-    ContinuousLinearMap.adjoint_adjoint]
 
-theorem mixedBoundaryOperator_solenoidal (χ ψ : Cutoff) (u : L2) :
-    mixedBoundaryOperator χ ψ u ∈ solenoidalSpace := cutoffCurl_solenoidal χ (weakPotential ψ u)
 
-theorem mixedBoundaryOperator_supported (χ ψ : Cutoff) (u : L2) :
-    mixedBoundaryOperator χ ψ u ∈ supportedSpace χ := cutoffCurl_supported χ (weakPotential ψ u)
 
-theorem mixedBoundaryOperator_add_left (χ ψ ρ : Cutoff) :
-    mixedBoundaryOperator (χ.add ψ) ρ = mixedBoundaryOperator χ ρ + mixedBoundaryOperator ψ ρ := by
-  simp only [mixedBoundaryOperator, cutoffCurl_add, ContinuousLinearMap.add_comp]
 
-theorem mixedBoundaryOperator_add_right (χ ψ ρ : Cutoff) :
-    mixedBoundaryOperator χ (ψ.add ρ) = mixedBoundaryOperator χ ψ + mixedBoundaryOperator χ ρ := by
-  simp only [mixedBoundaryOperator, weakPotential_add, ContinuousLinearMap.comp_add]
 
-theorem mixedBoundaryOperator_scale_left (χ ψ : Cutoff) (c : ℝ) :
-    mixedBoundaryOperator (χ.scale c) ψ = c • mixedBoundaryOperator χ ψ := by
-  simp only [mixedBoundaryOperator, cutoffCurl_scale, ContinuousLinearMap.smul_comp]
 
-theorem mixedBoundaryOperator_scale_right (χ ψ : Cutoff) (c : ℝ) :
-    mixedBoundaryOperator χ (ψ.scale c) = c • mixedBoundaryOperator χ ψ := by
-  simp only [mixedBoundaryOperator, weakPotential_scale, ContinuousLinearMap.comp_smul]
 
-theorem mixedBoundaryOperator_sub_left (χ ψ ρ : Cutoff) :
-    mixedBoundaryOperator (χ.sub ψ) ρ = mixedBoundaryOperator χ ρ - mixedBoundaryOperator ψ ρ := by
-  simp only [mixedBoundaryOperator, cutoffCurl_sub, ContinuousLinearMap.sub_comp]
 
-theorem mixedBoundaryOperator_sub_right (χ ψ ρ : Cutoff) :
-    mixedBoundaryOperator χ (ψ.sub ρ) = mixedBoundaryOperator χ ψ - mixedBoundaryOperator χ ρ := by
-  simp only [mixedBoundaryOperator, weakPotential_sub, ContinuousLinearMap.comp_sub]
 
-/-- The two actual coefficient differences are split between the two cutoff positions. -/
-theorem mixedBoundaryOperator_difference (χ₁ χ₀ ψ₁ ψ₀ : Cutoff) :
-    mixedBoundaryOperator χ₁ ψ₁ - mixedBoundaryOperator χ₀ ψ₀ =
-      mixedBoundaryOperator (χ₁.sub χ₀) ψ₁ + mixedBoundaryOperator χ₀ (ψ₁.sub ψ₀) := by
-  rw [mixedBoundaryOperator_sub_left, mixedBoundaryOperator_sub_right]
-  abel
 
-theorem mixedBoundaryOperator_difference_norm_le (χ₁ χ₀ ψ₁ ψ₀ : Cutoff) :
-    ‖mixedBoundaryOperator χ₁ ψ₁ - mixedBoundaryOperator χ₀ ψ₀‖ ≤
-      cutoffBound (χ₁.sub χ₀) * cutoffBound ψ₁ + cutoffBound χ₀ * cutoffBound (ψ₁.sub ψ₀) := by
-  rw [mixedBoundaryOperator_difference]
-  exact (norm_add_le _ _).trans (add_le_add (mixedBoundaryOperator_norm_le _ _)
-    (mixedBoundaryOperator_norm_le _ _))
 
 end EulerMeanBoundary

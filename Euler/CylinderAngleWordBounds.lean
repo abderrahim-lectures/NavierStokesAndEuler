@@ -25,19 +25,7 @@ theorem primitive_mixed_translation (a : LiftTangent) (u : LiftL2 P) :
 
 variable {X ι : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [Fintype ι]
 
-theorem primitive_block_bound (directions : ι → X) (q : ℕ)
-    (f : X → LiftL2 P) (hf : ContDiff ℝ ∞ f) (n : ℕ) (x : X) :
-    block directions q (fun y => primitive P (f y)) n x ≤ P*block directions q f n x :=
-  (block_comp_clm_le directions q (primitive P) f hf n x).trans
-    (mul_le_mul_of_nonneg_right (primitive_norm P) (block_nonneg directions q f n x))
 
-theorem primitive_block_majorant (directions : ι → X) (q : ℕ)
-    (f : X → LiftL2 P) (hf : ContDiff ℝ ∞ f) (R C : ℝ) (d : ℕ)
-    (hb : ∀ n x, block directions q f n x ≤ C*majorant R d n) (n : ℕ) (x : X) :
-    block directions q (fun y => primitive P (f y)) n x ≤ (P*C)*majorant R d n :=
-  (primitive_block_bound P directions q f hf n x).trans
-    ((mul_le_mul_of_nonneg_left (hb n x) (le_of_lt (Fact.out : 0 < P))).trans_eq
-      (mul_assoc P C _).symm)
 
 variable {K : Type*} [TopologicalSpace K] [CompactSpace K]
 
@@ -71,12 +59,5 @@ theorem pathPrimitive_block_bound (directions : ι → X) (q : ℕ)
   have hn : ‖pathPrimitive (K := K) P‖ ≤ P := pathPrimitive_norm P
   exact h.trans (mul_le_mul_of_nonneg_right hn (block_nonneg directions q f n x))
 
-theorem pathPrimitive_block_majorant (directions : ι → X) (q : ℕ)
-    (f : X → C(K,LiftL2 P)) (hf : ContDiff ℝ ∞ f) (R C : ℝ) (d : ℕ)
-    (hb : ∀ n x, block directions q f n x ≤ C*majorant R d n) (n : ℕ) (x : X) :
-    block directions q (fun y => pathPrimitive P (f y)) n x ≤ (P*C)*majorant R d n :=
-  (pathPrimitive_block_bound P directions q f hf n x).trans
-    ((mul_le_mul_of_nonneg_left (hb n x) (le_of_lt (Fact.out : 0 < P))).trans_eq
-      (mul_assoc P C _).symm)
 
 end EulerCylinderAnglePrimitive

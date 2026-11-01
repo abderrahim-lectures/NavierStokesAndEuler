@@ -32,10 +32,6 @@ theorem reflection_ae (u : L2) : reflection u =ᵐ[volume] fun x => u (-x) :=
 
 theorem reflection_norm (u : L2) : ‖reflection u‖ = ‖u‖ := reflection.norm_map u
 
-theorem reflection_inner_shift (u v : L2) : ⟪reflection u, v⟫_ℝ = ⟪u, reflection v⟫_ℝ := by
-  calc
-    _ = ⟪reflection u, reflection (reflection v)⟫_ℝ := by rw [reflection_involutive]
-    _ = _ := reflection.inner_map_map u (reflection v)
 
 /-- The two signs in the derivative of `-f(-x)` cancel. -/
 theorem fderiv_neg_reflect {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
@@ -83,22 +79,7 @@ theorem reflection_solenoidal_mem {u : L2} (hu : u ∈ solenoidalSpace) :
     _ = ⟪reflection g, u⟫_ℝ := reflection.inner_map_map _ _
     _ = 0 := hu _ (reflection_gradient_mem hg)
 
-theorem solenoidalSpace_map_reflection :
-    solenoidalSpace.map reflection.toLinearMap = solenoidalSpace := by
-  apply le_antisymm
-  · rintro u ⟨v, hv, rfl⟩
-    exact reflection_solenoidal_mem hv
-  · intro u hu
-    exact ⟨reflection u, reflection_solenoidal_mem hu, reflection_involutive u⟩
 
-/-- The actual ordinary Helmholtz projection commutes with reflection. -/
-theorem solenoidalProjection_reflection (u : L2) :
-    reflection (solenoidalProjection u) = solenoidalProjection (reflection u) := by
-  have hmap := solenoidalSpace_map_reflection
-  let : (solenoidalSpace.map reflection.toLinearMap).HasOrthogonalProjection := by
-    rw [hmap]
-    infer_instance
-  simpa only [solenoidalProjection, hmap] using reflection.map_starProjection solenoidalSpace u
 
 theorem reflection_translation (a : Space) (u : L2) :
     reflection (translation a u) = translation (-a) (reflection u) := by

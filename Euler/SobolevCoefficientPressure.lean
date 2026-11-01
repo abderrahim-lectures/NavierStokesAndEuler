@@ -97,11 +97,6 @@ def pressureL2Operator (A : SmoothCoefficient period) (κ : ℝ) (m : Vector3) (
     (pressureSolver (gradientSpace period κ m) A.operator c hc
       (coefficientOperator_coercive A.coefficient A.measurable A.bound A.norm_bound c hpos))
 
-/-- The bounded L² pressure operator agrees with the already constructed actual coercive pressure. -/
-@[simp]
-theorem pressureL2Operator_apply (A : SmoothCoefficient period) (κ : ℝ) (m : Vector3) (c : ℝ) (hc : 0 < c)
-    (hpos : ∀ x v, c * ‖v‖ ^ 2 ≤ ⟪A.coefficient x v, v⟫_ℝ) (f : LiftL2 period) :
-    pressureL2Operator period A κ m c hc hpos f = A.pressure κ m c hc hpos f := rfl
 
 /-- The genuine coercive projected pressure inverse is a bounded map on every finite Sobolev space. -/
 def pressureSobolevOperator {q : ℕ} {A : SmoothCoefficient period}
@@ -121,14 +116,6 @@ theorem pressureSobolevOperator_value {q : ℕ} {A : SmoothCoefficient period}
   jetLift_value period (pressureL2Operator period A κ m c hc hpos)
     (fun J => J.solvePressure K κ m c hc hpos) u
 
-/-- The explicit finite-order pressure bound on the complete Sobolev norm. -/
-theorem pressureSobolevOperator_bound {q : ℕ} {A : SmoothCoefficient period}
-    (K : CoefficientJet period standardDirection q A) (κ : ℝ) (m : Vector3) (c : ℝ) (hc : 0 < c)
-    (hpos : ∀ x v, c * ‖v‖ ^ 2 ≤ ⟪A.coefficient x v, v⟫_ℝ) (u : SobolevSpace period q) :
-    ‖pressureSobolevOperator period K κ m c hc hpos u‖ ≤
-      (K.pressureConstant c * (Fintype.card (SobolevWord q) : ℝ)) * ‖u‖ :=
-  jetLift_bound period _ _ _ (K.pressureConstant_nonneg c hc)
-    (fun J => J.solvePressure_norm_le K κ m c hc hpos) u
 
 /-- Subtracting the actual coefficient-weighted pressure defines the projected Euler forcing. -/
 def projectedSourceOperator {q : ℕ} {A : SmoothCoefficient period}

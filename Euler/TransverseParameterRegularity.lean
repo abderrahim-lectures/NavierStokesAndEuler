@@ -100,39 +100,6 @@ theorem contDiff_fixedFrameSolution (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff �
         K hK (hPotential x) hsmall (f x)) :=
   (contDiff_fixedFrameSolver T hT Q Q₁ H c hc hLower hd K hK hPotential hsmall hQ hQ₁ hH).clm_apply hf
 
-include hd in
-/-- The coordinates of the original physical transverse solve inherit the
-proved parameter regularity through equality with the fixed-space inverse. -/
-theorem contDiff_transverse_coordinates
-    (m : P → Icc (0 : ℝ) T → E)
-    (hTangent : ∀ x t v, ⟪m x t, Q x t v⟫_ℝ = 0)
-    (hRange : ∀ x t η, ⟪m x t, η⟫_ℝ = 0 → ∃ v : U, Q x t v = η)
-    (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) (hH : ContDiff ℝ n H)
-    (f : P → TimeLp T E) (hf : ContDiff ℝ n f) :
-    ContDiff ℝ n (fun x => coordinateDerivative T hT (Q x) (Q₁ x) c hc (hLower x)
-      (transverseSolver T hT (m x) (H x) K hK (hPotential x) hsmall (f x) : TimeLp T E)) := by
-  have hsol := (zeroTraceDerivatives (U := U) T hT).subtypeL.contDiff.comp
-    (contDiff_fixedFrameSolution T hT Q Q₁ H c hc hLower hd K hK hPotential hsmall hQ hQ₁ hH f hf)
-  convert hsol using 1
-  funext x
-  have heq := fixedFrameSolver_eq_transverse T hT (Q x) (Q₁ x) (H x) c hc (hLower x) (hd x)
-    K hK (hPotential x) hsmall (m x) (hTangent x) (hRange x) (f x)
-  exact congrArg (fun v : zeroTraceDerivatives (U := U) T hT => (v : TimeLp T U)) heq.symm
 
-include hd in
-/-- The physical velocity of the original constructed inverse has the actual
-parameter regularity of the prescribed frame and forcing. -/
-theorem contDiff_transverse_velocity
-    (m : P → Icc (0 : ℝ) T → E)
-    (hTangent : ∀ x t v, ⟪m x t, Q x t v⟫_ℝ = 0)
-    (hRange : ∀ x t η, ⟪m x t, η⟫_ℝ = 0 → ∃ v : U, Q x t v = η)
-    (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) (hH : ContDiff ℝ n H)
-    (f : P → TimeLp T E) (hf : ContDiff ℝ n f) :
-    ContDiff ℝ n (fun x => timeMultiplier T hT (Q x)
-      (coordinateDerivative T hT (Q x) (Q₁ x) c hc (hLower x)
-        (transverseSolver T hT (m x) (H x) K hK (hPotential x) hsmall (f x) : TimeLp T E))) :=
-  (contDiff_timeMultiplier T hT Q hQ).clm_apply
-    (contDiff_transverse_coordinates T hT Q Q₁ H c hc hLower hd K hK hPotential hsmall
-      m hTangent hRange hQ hQ₁ hH f hf)
 
 end EulerTransverseParameterRegularity

@@ -18,14 +18,7 @@ def zeroJet : (q : ℕ) → EulerSpatialSobolevInverse.SpatialJet period directi
   | q + 1 => .succ (fun _ => 0) (fun _ => zeroJet q) (fun _ => by
       simpa only [map_zero] using hasDerivAt_const (0 : ℝ) (0 : LiftL2 period))
 
-theorem zeroJet_norm (q : ℕ) : (zeroJet period (directions := directions) q).sobolevNorm = 0 := by
-  induction q with
-  | zero => simp [zeroJet, EulerSpatialSobolevInverse.SpatialJet.sobolevNorm]
-  | succ q ih => simp [zeroJet, EulerSpatialSobolevInverse.SpatialJet.sobolevNorm, ih]
 
-@[simp]
-theorem sobolevSize_zero (q : ℕ) : sobolevSize period (directions := directions) q 0 = 0 := by
-  rw [sobolevSize_eq period (zeroJet period q), zeroJet_norm]
 
 variable {period}
 
@@ -57,18 +50,6 @@ theorem commutatorBlock_nonneg {s q n : ℕ} {A : SmoothCoefficient period} {f :
     (J : EulerSpatialSobolevInverse.SpatialJet period directions s f) : 0 ≤ commutatorBlock K J q n :=
   Finset.sum_nonneg (fun _ _ => sobolevSize_nonneg _ _)
 
-/-- Truncation preserves every valid external commutator as an actual L² field. -/
-theorem commutatorBlock_truncate {s q n : ℕ} {A : SmoothCoefficient period} {f : LiftL2 period}
-    (K : EulerSpatialSobolevInverse.CoefficientJet period directions (s + 1) A)
-    (J : EulerSpatialSobolevInverse.SpatialJet period directions (s + 1) f) (h : n ≤ s) :
-    commutatorBlock K.truncate J.truncate q n = commutatorBlock K J q n := by
-  unfold commutatorBlock
-  apply Finset.sum_congr rfl
-  intro w _
-  rw [EulerPressureJetIdentities.SpatialJet.word_unique
-    (EulerSpatialSobolevInverse.SpatialJet.multiply K.truncate J.truncate)
-    (EulerSpatialSobolevInverse.SpatialJet.multiply K J) rfl h (by omega) w,
-    EulerPressureJetIdentities.SpatialJet.word_unique J.truncate J rfl h (by omega) w]
 
 /-- The external commutator recurrence uses a fixed Sobolev norm at every leaf. -/
 theorem commutatorBlock_succ_le {s q n : ℕ} {A : SmoothCoefficient period} {f : LiftL2 period}

@@ -56,32 +56,8 @@ def sobolevReflection (q : ℕ) : SobolevSpace period q →L[ℝ] SobolevSpace p
   apply value_injective period
   rw [value_sobolevReflection, value_sobolevReflection, reflection_involutive]
 
-/-- Every genuine derivative coordinate keeps its L² norm under reflection. -/
-theorem sobolevReflection_word_norm {q : ℕ} (u : SobolevSpace period q) (w : SobolevWord q) :
-    ‖(sobolevReflection period q u).val w‖ = ‖u.val w‖ := by
-  rw [sobolevReflection_apply, norm_smul, reflection_norm, norm_pow]
-  norm_num
 
-/-- Reflection preserves the actual finite Sobolev norm. -/
-theorem sobolevReflection_norm {q : ℕ} (u : SobolevSpace period q) :
-    ‖sobolevReflection period q u‖ = ‖u‖ := by
-  apply le_antisymm
-  · change ‖(sobolevReflection period q u).val‖ ≤ ‖u.val‖
-    apply (pi_norm_le_iff_of_nonneg (norm_nonneg u.val)).mpr
-    intro w
-    rw [sobolevReflection_word_norm]
-    exact norm_le_pi_norm u.val w
-  · change ‖u.val‖ ≤ ‖(sobolevReflection period q u).val‖
-    apply (pi_norm_le_iff_of_nonneg (norm_nonneg _)).mpr
-    intro w
-    have hh := norm_le_pi_norm (sobolevReflection period q u).val w
-    rwa [sobolevReflection_word_norm] at hh
 
-/-- Reflection also preserves the source's sum-over-derivatives Sobolev norm. -/
-theorem sobolevReflection_sumNorm {q : ℕ} (u : SobolevSpace period q) :
-    sumNorm period (sobolevReflection period q u) = sumNorm period u := by
-  unfold sumNorm
-  exact Finset.sum_congr rfl fun w _ => sobolevReflection_word_norm period u w
 
 /-- Truncating the Sobolev order commutes with actual reflection. -/
 theorem truncate_reflection {q : ℕ} (u : SobolevSpace period (q + 1)) :
@@ -108,14 +84,7 @@ def oddReflection (q : ℕ) : SobolevSpace period q →L[ℝ] SobolevSpace perio
 @[simp] theorem oddReflection_apply {q : ℕ} (u : SobolevSpace period q) :
     oddReflection period q u = -sobolevReflection period q u := rfl
 
-/-- The signed reflection is involutive. -/
-theorem oddReflection_involutive {q : ℕ} (u : SobolevSpace period q) :
-    oddReflection period q (oddReflection period q u) = u := by
-  simp only [oddReflection_apply, map_neg, neg_neg, sobolevReflection_involutive]
 
-/-- The signed reflection preserves the Sobolev norm. -/
-theorem oddReflection_norm {q : ℕ} (u : SobolevSpace period q) :
-    ‖oddReflection period q u‖ = ‖u‖ := by rw [oddReflection_apply, norm_neg, sobolevReflection_norm]
 
 /-- Signed reflection preserves the genuine weak divergence constraint. -/
 theorem oddReflection_divergenceFree {q : ℕ} (κ : ℝ) (m : Vector3) (u : SobolevSpace period q)

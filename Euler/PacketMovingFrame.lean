@@ -31,11 +31,6 @@ def crossBilinear : Space →L[ℝ] Space →L[ℝ] Space :=
 
 theorem crossBilinear_apply (a b : Space) : crossBilinear a b = cross a b := rfl
 
-theorem cross_hasDerivAt {p q : ℝ → Space} {p' q' : Space} {t : ℝ}
-    (hp : HasDerivAt p p' t) (hq : HasDerivAt q q' t) :
-    HasDerivAt (fun s => cross (p s) (q s)) (cross p' (q t) + cross (p t) q') t := by
-  have h := (crossBilinear.hasFDerivAt.comp_hasDerivAt t hp).clm_apply hq
-  simpa only [Function.comp_def, crossBilinear_apply] using h
 
 theorem cross_hasDerivWithinAt {p q : ℝ → Space} {p' q' : Space} {t : ℝ} {S : Set ℝ}
     (hp : HasDerivWithinAt p p' S t) (hq : HasDerivWithinAt q q' S t) :
@@ -170,18 +165,6 @@ theorem frameRate_skew (B : Space →L[ℝ] Space) (p q : Space)
 
 def normalizedFrame (m v : ℝ → Space) (t : ℝ) : Fin 3 → Space := frame (unit (m t)) (unit (v t))
 
-theorem normalizedFrame_hasDerivAt (B : Space →L[ℝ] Space) {m v : ℝ → Space} {t : ℝ}
-    (hm : HasDerivAt m (-B.adjoint (m t)) t)
-    (hv : HasDerivAt v (-B (v t) + (2*⟪m t,B (v t)⟫_ℝ / ‖m t‖^2) • m t) t)
-    (hm0 : m t ≠ 0) (hv0 : v t ≠ 0) (hmv : ⟪m t,v t⟫_ℝ = 0) (i : Fin 3) :
-    HasDerivAt (fun s => normalizedFrame m v s i)
-      (frameRate B (unit (m t)) (unit (v t)) i) t := by
-  have hp := normalized_ray_hasDerivAt B hm hm0
-  have hq := normalized_velocity_hasDerivAt B hv hv0 hmv
-  fin_cases i
-  · exact hp
-  · exact hq
-  · exact cross_hasDerivAt hp hq
 
 theorem normalizedFrame_hasDerivWithinAt (B : Space →L[ℝ] Space)
     {m v : ℝ → Space} {t : ℝ} {S : Set ℝ}
@@ -197,16 +180,5 @@ theorem normalizedFrame_hasDerivWithinAt (B : Space →L[ℝ] Space)
   · exact hq
   · exact cross_hasDerivWithinAt hp hq
 
-/-- The source skew matrix is now identified with the derivative of the
-actual normalized ray/velocity frame. -/
-theorem normalizedFrame_skew (B : Space →L[ℝ] Space) {m v : ℝ → Space} {t : ℝ}
-    (hm : HasDerivAt m (-B.adjoint (m t)) t)
-    (hv : HasDerivAt v (-B (v t) + (2*⟪m t,B (v t)⟫_ℝ / ‖m t‖^2) • m t) t)
-    (hm0 : m t ≠ 0) (hv0 : v t ≠ 0) (hmv : ⟪m t,v t⟫_ℝ = 0) (i j : Fin 3) :
-    ⟪normalizedFrame m v t i, deriv (fun s => normalizedFrame m v s j) t⟫_ℝ =
-      EulerPacketRay.frameSkew (frameMatrix B (unit (m t)) (unit (v t))) i j := by
-  rw [(normalizedFrame_hasDerivAt B hm hv hm0 hv0 hmv j).deriv]
-  exact frameRate_skew B (unit (m t)) (unit (v t))
-    (unit_inner_self hm0) (unit_inner_self hv0) (unit_inner_zero hmv) i j
 
 end EulerPacketMovingFrame

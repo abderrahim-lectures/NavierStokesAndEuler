@@ -100,44 +100,8 @@ theorem base_inverse_le_previous_frequency_pow80 (J D : ℕ) (hJ : 3 ≤ J) (hD 
   exact (base_inverse_le_previous_frequency J D hJ hD X hX hbase n).trans (by
     simpa only [pow_one] using pow_le_pow_right₀ hk (by decide : 1 ≤ 80))
 
-theorem stepLength_nonneg (J : ℕ) (hJ : 1 ≤ J) (X : ℝ) (hX : 0 ≤ X)
-    (a β : ℕ → ℝ) (n : ℕ) : 0 ≤ stepLength J X a β n :=
-  div_nonneg (hX.trans (sequence_initial_le J hJ X hX (n+1))) (sqrt_nonneg _)
 
-theorem activation_lower_of_initial (J : ℕ) (hJ : 1 ≤ J) (X : ℝ) (hX : 0 < X)
-    (a β : ℕ → ℝ) (ha : 1/2 ≤ a 0) (ha₂ : a 0 ≤ 2)
-    (hβ : 1/2 ≤ β 0*X^2) (hβ₂ : β 0*X^2 ≤ 2) {n : ℕ} (hn : 1 ≤ n) :
-    baseHorizon J X/12 ≤ activationTime J X a β n := by
-  have hxnext : 0 ≤ scaleSequence J X 1 :=
-    hX.le.trans (sequence_initial_le J hJ X hX.le 1)
-  have hfirst : timeWidth J X 0/6 ≤ stepLength J X a β 0 :=
-    (EulerPacketScaleGeometry.activation_time_bounds ha ha₂
-      (previousShear_pos J hX 0) hX hxnext hβ hβ₂).1
-  have hsum : stepLength J X a β 0 ≤ activationTime J X a β n := by
-    apply Finset.single_le_sum
-    · intro i _
-      exact stepLength_nonneg J hJ X hX.le a β i
-    · exact Finset.mem_range.mpr (by omega)
-  rw [baseHorizon_eq_timeWidth J hX]
-  linarith only [hfirst,hsum]
 
-theorem reciprocal_activation_le_base (J : ℕ) (hJ : 1 ≤ J) (X : ℝ) (hX : 0 < X)
-    (a β : ℕ → ℝ) (ha : 1/2 ≤ a 0) (ha₂ : a 0 ≤ 2)
-    (hβ : 1/2 ≤ β 0*X^2) (hβ₂ : β 0*X^2 ≤ 2) {n : ℕ} (hn : 1 ≤ n) :
-    (activationTime J X a β n)⁻¹ ≤ 12/baseHorizon J X := by
-  have hb := baseHorizon_pos J hJ hX
-  have hs := activation_lower_of_initial J hJ X hX a β ha ha₂ hβ hβ₂ hn
-  have hi := one_div_le_one_div_of_le (div_pos hb (by norm_num)) hs
-  simpa only [one_div,inv_div] using hi
 
-theorem actual_reciprocal_activation (J D : ℕ) (hJ : 3 ≤ J) (hD : 2000 ≤ D)
-    (C c X δ : ℝ) (hX : 2 ≤ X) (hb : ActualBounds J D C c X δ)
-    (a β : ℕ → ℝ) (ha : 1/2 ≤ a 0) (ha₂ : a 0 ≤ 2)
-    (hβ : 1/2 ≤ β 0*X^2) (hβ₂ : β 0*X^2 ≤ 2) {n : ℕ} (hn : 1 ≤ n) :
-    (activationTime J X a β n)⁻¹ ≤ 12/baseHorizon J X ∧
-      12/baseHorizon J X ≤ previousFrequency J D X n^80 :=
-  ⟨reciprocal_activation_le_base J (by omega) X (by linarith only [hX])
-      a β ha ha₂ hβ hβ₂ hn,
-    base_inverse_le_previous_frequency_pow80 J D hJ hD X hX hb.initial_frequency n⟩
 
 end EulerParentHistoryFrequency

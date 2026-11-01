@@ -54,11 +54,6 @@ theorem staticTimeCost_nonneg (R : ℝ) (hR : 0 ≤ R) : 0 ≤ staticTimeCost P 
   unfold staticTimeCost
   positivity
 
-theorem staticPressureCost_nonneg (R : ℝ) (hR : 0 ≤ R) : 0 ≤ staticPressureCost P R := by
-  have hS := staticSourceCost_nonneg P R hR
-  have hP := zero_le_one.trans pressureBound_one_le
-  unfold staticPressureCost
-  positivity
 
 variable (u : SmoothL2Field Space) (C R : ℝ) (hC : 0 ≤ C) (hR : 0 ≤ R)
   (hu : u.HasJetBound C R) (hdiv : ∀ x, divergence u.field x=0)
@@ -69,8 +64,6 @@ theorem budget_retainedRadius :
 theorem budget_staticTimeCost (q : ℕ) (hq : 6 ≤ q) :
     (correctionBudget P u C R hC hR hu hdiv).timeDerivativeCost P q hq=staticTimeCost P R := rfl
 
-theorem budget_staticPressureCost (q : ℕ) (hq : 6 ≤ q) :
-    (correctionBudget P u C R hC hR hu hdiv).pressureCost P q hq=staticPressureCost P R := rfl
 
 theorem correction_weighted (n : ℕ) (t : Icc (0 : ℝ) 1) :
     weightedNorm P 6 n (retainedRadius R)
@@ -105,13 +98,5 @@ theorem time_weighted (n : ℕ) (t : Icc (0 : ℝ) 1) :
   rw [budget_retainedRadius,budget_staticTimeCost] at h
   exact h.trans_eq (mul_comm _ _)
 
-theorem pressure_weighted (n : ℕ) (t : Icc (0 : ℝ) 1) :
-    weightedNorm P 6 n (retainedRadius R)
-      (((correctionBudget P u C R hC hR hu hdiv).pressureTower P).realization (n+6) t) ≤
-      amplitude P C R hC hR*staticPressureCost P R := by
-  have h := (correctionBudget P u C R hC hR hu hdiv).pressureTower_reducedNorm_delta
-    P (n+6) (by omega) n (by omega) (n+6) le_rfl t
-  rw [budget_retainedRadius,budget_staticPressureCost] at h
-  exact h.trans_eq (mul_comm _ _)
 
 end EulerStaticEuler

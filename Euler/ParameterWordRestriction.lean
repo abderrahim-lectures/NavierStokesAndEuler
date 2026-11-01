@@ -13,27 +13,7 @@ variable {P Q E ι κ : Type*} [NormedAddCommGroup P] [NormedSpace ℝ P]
   [NormedAddCommGroup Q] [NormedSpace ℝ Q]
   [NormedAddCommGroup E] [NormedSpace ℝ E] [Fintype ι] [Fintype κ]
 
-/-- Restricting an alphabet only discards nonnegative summands. -/
-theorem wordSum_subalphabet_le (directions : κ → P) (e : ι → κ) (he : Function.Injective e)
-    (f : P → E) (n : ℕ) (x : P) :
-    wordSum (directions ∘ e) f n x ≤ wordSum directions f n x := by
-  classical
-  have hinj : Function.Injective (fun w : Fin n → ι => e ∘ w) := by
-    intro u v h
-    exact funext (fun j => he (congrFun h j))
-  calc
-    _ = ∑ w ∈ univ.image (fun w : Fin n → ι => e ∘ w), ‖wordDerivative directions f w x‖ := by
-      rw [sum_image hinj.injOn]
-      rfl
-    _ ≤ ∑ w : Fin n → κ, ‖wordDerivative directions f w x‖ :=
-      sum_le_sum_of_subset_of_nonneg (subset_univ _) (fun _ _ _ => norm_nonneg _)
 
-/-- The same literal subalphabet restriction is contractive on every fixed Sobolev block. -/
-theorem block_subalphabet_le (directions : κ → P) (e : ι → κ) (he : Function.Injective e)
-    (q : ℕ) (f : P → E) (hf : ContDiff ℝ ∞ f) (n : ℕ) (x : P) :
-    block (directions ∘ e) q f n x ≤ block directions q f n x := by
-  rw [block_eq_sum_levels _ q f hf,block_eq_sum_levels _ q f hf]
-  exact sum_le_sum (fun k _ => wordSum_subalphabet_le directions e he f (n+k) x)
 
 omit [Fintype ι] in
 /-- A linear parameter map transports the actual directions exactly. -/

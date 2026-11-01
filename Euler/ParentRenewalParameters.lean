@@ -23,12 +23,7 @@ def tiltError : ℝ := 1500*G.σ+30000000*neighborStabilityConstant*G.error*G.Θ
 /-- A lower bound for the magnitude of the leading compressive term. -/
 def compressionScale : ℝ := G.a/(20*G.ε*G.target)
 
-theorem start_lt_targetTime : G.t₀ < G.targetTime := by
-  change G.t₀ < G.t₀+(G.ε/G.a)*G.target
-  exact lt_add_of_pos_right _ (mul_pos (div_pos G.epsilon_pos G.a_pos) G.target_pos)
 
-theorem targetTime_pos (hstart : 0 ≤ G.t₀) : 0 < G.targetTime :=
-  hstart.trans_lt G.start_lt_targetTime
 
 theorem nextCoupling_pos : 0 < G.nextCoupling := by
   obtain ⟨F,F1,Z,Z1,J⟩ := G.exists_geometry
@@ -52,9 +47,6 @@ theorem nextTilt_pos (herror : G.tiltError ≤ 1/2) : 0 < G.nextTilt := by
   have hzero := mul_nonpos_of_nonneg_of_nonpos hn.le (le_of_not_gt hneg)
   linarith only [h,herror,hzero]
 
-theorem compressionScale_pos : 0 < G.compressionScale := by
-  unfold compressionScale
-  positivity [G.a_pos,G.epsilon_pos,G.target_pos]
 
 /-- The existing geometric smallness guard leaves enough compression
 margin for any subsequent center remainder of size at most one. -/
@@ -141,26 +133,9 @@ theorem shear_eq (hδ : 0 < G.δ) : P.shear=G.hchild := by
   rw [J.coefficient_eq,J.ray_eq,J.velocity_eq]
   exact G.target_shear_normalization hδ
 
-theorem epsilon_eq (hδ : 0 < G.δ) : P.epsilon=Real.sqrt (P.a/G.hchild) := by
-  rw [ParentFrame.epsilon,J.shear_eq hδ]
 
-theorem normalized_ray_eq : unit (P.m G.targetTime)=unit (G.r G.center G.targetTime) :=
-  congrArg unit J.ray_eq
 
-theorem normalized_velocity_eq : unit (P.v G.targetTime)=unit (G.w G.center G.targetTime) :=
-  congrArg unit J.velocity_eq
 
-/-- The actual next source matrix has the prescribed target shear and
-the original packet's center error. -/
-theorem target_remainder (hδ : 0 < G.δ) (hT : G.targetTime ≤ D.T) :
-    ‖D.M.field (D.clamp G.targetTime) 0-G.M G.center G.targetTime-
-      G.hchild • rankOne ℝ (unit (G.w G.center G.targetTime))
-        (unit (G.r G.center G.targetTime))‖ ≤ P.error := by
-  have h := P.remainder_bound G.targetTime ⟨le_rfl,hT⟩
-  change ‖D.M.field (D.clamp G.targetTime) 0-P.B G.targetTime-
-    P.shear • rankOne ℝ (unit (P.v G.targetTime)) (unit (P.m G.targetTime))‖ ≤ P.error at h
-  rw [J.matrix_eq,J.ray_eq,J.velocity_eq,J.shear_eq hδ] at h
-  exact h
 
 theorem coupling_pos : 0 < P.a := by rw [J.a_eq]; exact G.nextCoupling_pos
 
@@ -168,18 +143,7 @@ theorem coupling_error : |P.a/G.a-1| ≤ G.couplingError := by
   rw [J.a_eq]
   exact G.nextCoupling_error
 
-theorem coupling_interval :
-    (1-G.couplingError)*G.a ≤ P.a ∧ P.a ≤ (1+G.couplingError)*G.a := by
-  have h := abs_le.mp J.coupling_error
-  constructor
-  · have hh : 1-G.couplingError ≤ P.a/G.a := by linarith only [h.1]
-    exact (le_div_iff₀ G.a_pos).mp hh
-  · have hh : P.a/G.a ≤ 1+G.couplingError := by linarith only [h.2]
-    exact (div_le_iff₀ G.a_pos).mp hh
 
-theorem coupling_absolute_error : |P.a-G.a| ≤ G.a*G.couplingError := by
-  rw [abs_le]
-  constructor <;> nlinarith only [J.coupling_interval.1,J.coupling_interval.2]
 
 theorem sigma_sq (herror : G.tiltError ≤ 1/2) : P.sigma^2=G.nextTilt := by
   rw [J.sigma_eq,Real.sq_sqrt (G.nextTilt_pos herror).le]
@@ -229,11 +193,6 @@ theorem activation_compression (ht : 0 < G.targetTime) (hT : G.targetTime < D.T)
   have h := J.activation_normal_le ht hT
   linarith only [h,hmargin]
 
-theorem activation_compression_of_error_le_one
-    (ht : 0 < G.targetTime) (hT : G.targetTime < D.T) (he : P.error ≤ 1) :
-    ⟪D.M.field ⟨G.targetTime,ht.le,hT.le⟩ 0 (unit (P.m G.targetTime)),
-      unit (P.m G.targetTime)⟫_ℝ < 0 :=
-  J.activation_compression ht hT (G.compression_margin he)
 
 end RenewalAtTarget
 end EulerParentPacketFrames

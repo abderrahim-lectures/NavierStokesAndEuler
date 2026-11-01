@@ -33,16 +33,7 @@ variable (T : ℝ) (hT : 0 ≤ T)
   (H : P → C(Icc (0 : ℝ) T, E →L[ℝ] E))
   {n : ℕ∞ω}
 
-theorem contDiff_initialEnergy (hH : ContDiff ℝ n H) :
-    ContDiff ℝ n (fun x => energyOperator T hT (H x)) :=
-  contDiff_const.sub
-    (contDiff_const.clm_comp ((contDiff_timeMultiplier T hT H hH).clm_comp contDiff_const))
 
-omit [CompleteSpace U] [CompleteSpace E] in
-theorem contDiff_initialProductDerivative (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) :
-    ContDiff ℝ n (fun x => initialProductDerivative T hT (Q x) (Q₁ x)) :=
-  ((contDiff_timeMultiplier T hT Q₁ hQ₁).clm_comp contDiff_const).add
-    (contDiff_timeMultiplier T hT Q hQ)
 
 variable (c : ℝ) (hc : 0 < c) (hLower : ∀ x t v, c * ‖v‖ ^ 2 ≤ ‖Q x t v‖ ^ 2)
   (hd : ∀ x (t : Icc (0 : ℝ) T),
@@ -50,50 +41,8 @@ variable (c : ℝ) (hc : 0 < c) (hLower : ∀ x t v, c * ‖v‖ ^ 2 ≤ ‖Q x 
   (K : ℝ) (hK : 0 ≤ K) (hPotential : ∀ x t v, ⟪H x t v, v⟫_ℝ ≤ K * ‖v‖ ^ 2)
   (hsmall : K * (T ^ 2 / 2) ≤ 1 / 2)
 
-theorem contDiff_fixedEndpointCorrection
-    (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) (hH : ContDiff ℝ n H)
-    (L : P → V →L[ℝ] TimeLp T E) (hL : ContDiff ℝ n L) :
-    ContDiff ℝ n (fun x => fixedEndpointCorrection T hT (Q x) (Q₁ x) (H x)
-      c hc (hLower x) (hd x) K hK (hPotential x) hsmall (L x)) := by
-  have hA := contDiff_fixedFrameOperator T hT Q Q₁ H hQ hQ₁ hH
-  have hi := contDiff_coerciveInverse_variable
-    (fun x => fixedFrameOperator T hT (Q x) (Q₁ x) (H x))
-    (fun x => fixedCoercivity T (Q x) (Q₁ x) c)
-    (fun x => fixedCoercivity_pos T hT (Q x) (Q₁ x) c hc)
-    (fun x => fixedFrameOperator_coercive T hT (Q x) (Q₁ x) (H x)
-      c hc (hLower x) (hd x) K hK (hPotential x) hsmall) hA
-  have hD := contDiff_fixedFrameDerivative T hT Q Q₁ hQ hQ₁
-  have hE := contDiff_initialEnergy T hT H hH
-  exact hi.clm_comp ((contDiff_adjoint hD).clm_comp (hE.clm_comp hL))
 
-theorem contDiff_fixedEndpointDerivative
-    (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) (hH : ContDiff ℝ n H)
-    (L : P → V →L[ℝ] TimeLp T E) (hL : ContDiff ℝ n L) :
-    ContDiff ℝ n (fun x => fixedEndpointDerivative T hT (Q x) (Q₁ x) (H x)
-      c hc (hLower x) (hd x) K hK (hPotential x) hsmall (L x)) :=
-  hL.sub ((contDiff_fixedFrameDerivative T hT Q Q₁ hQ hQ₁).clm_comp
-    (contDiff_fixedEndpointCorrection T hT Q Q₁ H c hc hLower hd K hK hPotential hsmall
-      hQ hQ₁ hH L hL))
 
-include c hc hLower hd in
-/-- The physical endpoint solution inherits the proved parameter regularity. -/
-theorem contDiff_endpointDerivative
-    (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) (hH : ContDiff ℝ n H)
-    (L : P → V →L[ℝ] TimeLp T E) (hL : ContDiff ℝ n L)
-    (m : P → Icc (0 : ℝ) T → E) (hm : ∀ x t v, ⟪m x t, Q x t v⟫_ℝ = 0)
-    (hRange : ∀ x t η, ⟪m x t, η⟫_ℝ = 0 → ∃ v : U, Q x t v = η) :
-    ContDiff ℝ n (fun x => endpointDerivative T hT (m x) (H x)
-      K hK (hPotential x) hsmall (L x)) := by
-  have he : (fun x => endpointDerivative T hT (m x) (H x)
-      K hK (hPotential x) hsmall (L x)) =
-      (fun x => fixedEndpointDerivative T hT (Q x) (Q₁ x) (H x)
-        c hc (hLower x) (hd x) K hK (hPotential x) hsmall (L x)) := by
-    funext x
-    exact (fixedEndpointDerivative_eq_endpoint T hT (Q x) (Q₁ x) (H x)
-      c hc (hLower x) (hd x) K hK (hPotential x) hsmall (m x) (hm x) (hRange x) (L x)).symm
-  rw [he]
-  exact contDiff_fixedEndpointDerivative T hT Q Q₁ H c hc hLower hd K hK hPotential hsmall
-    hQ hQ₁ hH L hL
 
 section AffineTrial
 
@@ -134,22 +83,6 @@ theorem affineTrial_tangent
 
 end AffineTrial
 
-omit [CompleteSpace U] [CompleteSpace E] in
-theorem contDiff_affineTrial (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) :
-    ContDiff ℝ n (fun x => affineTrial T hT (Q x) (Q₁ x)) :=
-  (contDiff_initialProductDerivative T hT Q Q₁ hQ hQ₁).clm_comp contDiff_const
 
-include c hc hLower hd in
-/-- Neighboring labels use precisely the same terminal coordinate, and the
-resulting physical derivatives have the coefficient parameter regularity. -/
-theorem contDiff_affineEndpoint
-    (hQ : ContDiff ℝ n Q) (hQ₁ : ContDiff ℝ n Q₁) (hH : ContDiff ℝ n H)
-    (m : P → Icc (0 : ℝ) T → E) (hm : ∀ x t v, ⟪m x t, Q x t v⟫_ℝ = 0)
-    (hRange : ∀ x t η, ⟪m x t, η⟫_ℝ = 0 → ∃ v : U, Q x t v = η) (ξT : U) :
-    ContDiff ℝ n (fun x => endpointDerivative T hT (m x) (H x)
-      K hK (hPotential x) hsmall (affineTrial T hT (Q x) (Q₁ x)) ξT) :=
-  (contDiff_endpointDerivative T hT Q Q₁ H c hc hLower hd K hK hPotential hsmall
-    hQ hQ₁ hH (fun x => affineTrial T hT (Q x) (Q₁ x))
-    (contDiff_affineTrial T hT Q Q₁ hQ hQ₁) m hm hRange).clm_apply contDiff_const
 
 end EulerTransverseEndpointParameter

@@ -114,9 +114,6 @@ def highVectorField : Field P D.T (highSolve (P := P) τ hτ hτT B raw).1 :=
 def highDerivativeField : Field P D.T (vectorDerivative τ hτ hτT B (Classical.choice h)) :=
   vectorDerivativeField τ hτ hτT B (Classical.choice h)
 
-theorem highVectorField_time : TimeDerivative D.T_pos.le
-    (highVectorField τ hτ hτT B h) (highDerivativeField τ hτ hτT B h) :=
-  vectorField_time τ hτ hτT B (Classical.choice h)
 
 def highPressureGradientField : Field P D.T (pressureGradient (highSolve (P := P) τ hτ hτT B raw).2) :=
   (scalarGradientField τ hτ hτT B (Classical.choice h)).congr (fun t x θ => by
@@ -134,10 +131,6 @@ def highCorrectorDerivativeField : Field P D.T (correctorDerivative τ hτ hτT 
   orbit := correctorTimePath_orbit τ hτ hτT B (Classical.choice h)
   raw_eq t x θ := (correctorDerivativeField τ hτ hτT B (Classical.choice h)).raw_eq t x θ
 
-theorem highCorrectorField_time : TimeDerivative D.T_pos.le
-    (highCorrectorField τ hτ hτT B h) (highCorrectorDerivativeField τ hτ hτT B h) := by
-  intro t
-  exact correctorPath_time τ hτ hτT B (Classical.choice h) t
 
 include h in
 theorem highSolve_equation (t : Icc (0 : ℝ) D.T) (x : Space) (θ : ℝ) :

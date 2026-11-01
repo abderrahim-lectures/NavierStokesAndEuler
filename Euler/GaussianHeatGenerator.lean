@@ -26,16 +26,6 @@ theorem realLineHeat_eq (a : LiftTangent) {t : ℝ} (ht : 0 ≤ t) (f : LiftL2 p
   rw [realLineHeat_eq period a le_rfl]
   exact lineHeat_zero period a f
 
-theorem realLineHeat_continuous (a : LiftTangent) (f : LiftL2 period) :
-    Continuous (fun t : ℝ => realLineHeat period a t f) := by
-  apply continuous_of_dominated (bound := fun _ : ℝ => ‖f‖)
-  · intro t
-    exact ((lineOrbit_continuous period a f).comp (continuous_const.mul continuous_id)).aestronglyMeasurable
-  · intro t
-    exact Filter.Eventually.of_forall (fun x => (lineOrbit_norm period a f _).le)
-  · exact integrable_const _
-  · exact Filter.Eventually.of_forall (fun x =>
-      (lineOrbit_continuous period a f).comp (Real.continuous_sqrt.mul_const x))
 
 /-- The chain-rule derivative of a scaled orbit, before Gaussian integration. -/
 theorem scaledOrbit_hasDerivAt (a : LiftTangent) (f g : LiftL2 period)
@@ -128,21 +118,5 @@ theorem realLineHeat_generator_pos (a : LiftTangent) (f g h : LiftL2 period)
     ← realLineHeat_eq period a ht.le h] at hd
   exact hd
 
-/-- The generator formula also holds as a genuine right derivative at zero variance. -/
-theorem realLineHeat_generator_zero (a : LiftTangent) (f g h : LiftL2 period)
-    (hD : HasDerivAt (lineOrbit period a f) g 0)
-    (hDD : HasDerivAt (lineOrbit period a g) h 0) :
-    HasDerivWithinAt (fun s => realLineHeat period a s f) ((1/2 : ℝ) • h) (Set.Ici 0) 0 := by
-  have hlim : Filter.Tendsto (fun s => (1/2 : ℝ) • realLineHeat period a s h)
-      (𝓝[>] (0 : ℝ)) (𝓝 ((1/2 : ℝ) • h)) := by
-    have hc : ContinuousAt (fun s => (1/2 : ℝ) • realLineHeat period a s h) 0 :=
-      ((realLineHeat_continuous period a h).const_smul (1/2 : ℝ)).continuousAt
-    simpa only [realLineHeat_zero] using (hc.continuousWithinAt (s := Set.Ioi 0)).tendsto
-  apply hasDerivWithinAt_Ici_of_tendsto_deriv (s := Set.Ioi 0)
-    (fun t ht => (realLineHeat_generator_pos period a f g h hD hDD ht).differentiableAt.differentiableWithinAt)
-    (realLineHeat_continuous period a f).continuousAt.continuousWithinAt self_mem_nhdsWithin
-  apply hlim.congr'
-  filter_upwards [self_mem_nhdsWithin] with t ht
-  exact (realLineHeat_generator_pos period a f g h hD hDD ht).deriv.symm
 
 end EulerGaussianCylinderHeat

@@ -30,20 +30,7 @@ theorem vector_joint_continuous :
     G.path I.value G.path_orbit I.orbit).comp (continuous_cover (P := P) (D := D))
   simpa only [vector,Data.clamp_coe,Function.comp_def] using h
 
-theorem scalar_joint_continuous :
-    Continuous (fun z : Icc (0 : ℝ) D.T × (Space × ℝ) => G.scalar I (z.1,z.2)) := by
-  have h := (pressureField_joint_continuous P D.support D.support_measurable D.support_compact
-    D.T D.T_pos.le D.frame D.frameDerivative D.frameLower D.frameLower_pos D.frame_lower
-    G.path I.value G.path_orbit I.orbit D.M D.normal D.normalLower D.normalLower_pos D.normal_lower
-    G.mean_zero I.mean_zero).comp (continuous_cover (P := P) (D := D))
-  simpa only [scalar,Data.clamp_coe,Function.comp_def] using h
 
-theorem vectorDerivative_joint_continuous :
-    Continuous (fun z : Icc (0 : ℝ) D.T × (Space × ℝ) => G.vectorDerivative I (z.1,z.2)) := by
-  have h := (pointField_joint_continuous P
-    (includePath P D.support D.support_measurable (G.derivativePath I))
-    (G.derivativePath_orbit I)).comp (continuous_cover (P := P) (D := D))
-  simpa only [vectorDerivative,derivativeField,Data.clamp_coe,Function.comp_def] using h
 
 theorem vectorDerivative_zero_outside (t : ℝ) (x : Space) (hx : x ∉ D.support) (θ : ℝ) :
     G.vectorDerivative I (t,(x,θ)) = 0 := by
@@ -53,25 +40,9 @@ theorem vectorDerivative_zero_outside (t : ℝ) (x : Space) (hx : x ∉ D.suppor
   exact representative_zero_outside P D.support D.support_measurable D.support_compact.isClosed
     _ _ (G.derivativePath I (D.clamp t)).property (x,(θ : AddCircle P)) hx
 
-theorem vector_support (t θ : ℝ) :
-    tsupport (fun x : Space => G.vector I (t,(x,θ))) ⊆ D.support := by
-  apply closure_minimal _ D.support_compact.isClosed
-  intro x hx
-  by_contra hn
-  exact hx (G.vector_zero_outside I t x hn θ)
 
-theorem scalar_support (t θ : ℝ) :
-    tsupport (fun x : Space => G.scalar I (t,(x,θ))) ⊆ D.support := by
-  apply closure_minimal _ D.support_compact.isClosed
-  intro x hx
-  by_contra hn
-  exact hx (G.scalar_zero_outside I t x hn θ)
 
-theorem vector_compact (t θ : ℝ) : HasCompactSupport (fun x : Space => G.vector I (t,(x,θ))) :=
-  D.support_compact.of_isClosed_subset (isClosed_tsupport _) (G.vector_support I t θ)
 
-theorem scalar_compact (t θ : ℝ) : HasCompactSupport (fun x : Space => G.scalar I (t,(x,θ))) :=
-  D.support_compact.of_isClosed_subset (isClosed_tsupport _) (G.scalar_support I t θ)
 
 end Forcing
 

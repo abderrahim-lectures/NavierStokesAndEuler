@@ -61,10 +61,6 @@ theorem laplacianEvaluation_heat {q : ℕ} (hq : 2 ≤ q) (v : ℝ≥0) (u : Sob
 def heatFlow (q : ℕ) (ν t : ℝ) : SobolevSpace period q →L[ℝ] SobolevSpace period q :=
   heatOperator period q (2 * ν * t).toNNReal
 
-/-- The Sobolev flow has exactly the original genuine L² viscous heat value. -/
-@[simp]
-theorem heatFlow_value {q : ℕ} (ν t : ℝ) (u : SobolevSpace period q) :
-    value period (heatFlow period q ν t u) = viscousCylinderHeat period ν t (value period u) := rfl
 
 /-- Positive-time heat is differentiable in L² with the actual bounded Laplacian evaluation. -/
 theorem heatFlow_value_hasDerivAt {q : ℕ} (hq : 2 ≤ q) (ν : ℝ) (hν : 0 < ν)

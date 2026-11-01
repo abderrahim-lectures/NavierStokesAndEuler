@@ -70,36 +70,6 @@ theorem initializedInitial_common_support
     initializedInitialMean_support M D hTime τ hτ hτT B δ hδ ξ hs α N k⟩
   exact Metric.closedBall_subset_closedBall (by have := M.ℓ_le_one; linarith)
 
-include hTime in
-theorem initializedInitialMean_zero (hL : M.L=0) (N : ℕ) (k : ℝ) :
-    initializedInitialMean M D τ hτ hτT B δ hδ ξ hs α N k = 0 := by
-  funext x
-  change M.ℓ • EulerPacketInitial.mean N k⁻¹ 0
-    (initializedProfiles M D τ hτ hτT B δ hδ ξ hs α)
-    (0,(M.ℓ⁻¹ • x,k*inner ℝ D.m₀ (M.ℓ⁻¹ • x))) = 0
-  rw [EulerPacketInitial.mean_eq]
-  simp only [EulerPacketPointJets.fieldSum,EulerFiniteGrades.evaluate,EulerPacketInitial.timeSlice]
-  have hz (i : ℕ) := joinedSource_mean_initial_zero period M D hTime τ hτ hτT B
-    (joinedTerminalPrimary period M D τ hτ hτT B (initialData D δ hδ (α • ξ) hs))
-    (joinedTerminalPrimaryWitness period M D hTime τ hτ hτT B (initialData D δ hδ (α • ξ) hs))
-    rfl hL i (M.ℓ⁻¹ • x) (k*inner ℝ D.m₀ (M.ℓ⁻¹ • x))
-  simp only [show ∀ i, (initializedProfiles M D τ hτ hτT B δ hδ ξ hs α i).mean
-      (0,(M.ℓ⁻¹ • x,k*inner ℝ D.m₀ (M.ℓ⁻¹ • x))) = 0 from hz,
-    smul_zero,Finset.sum_const_zero]
-
-variable
-  (L : EulerTransversePacketJoin.Budget D τ hτ hτT B (Fin 4) 6)
-  (H : EulerTransversePacketPrimary.Budget L)
-  (NB : EulerTransversePacketJoin.NormalBudget D 6 L.R)
-  (W : EulerTransversePacketJoin.Budget.GradeGuards (P := period) L NB)
-  (LM : EulerMeanPacketProvider.Budget M 6 L.R)
-  (WM : EulerMeanPacketProvider.Budget.GradeGuards LM)
-  (BC : CoefficientBudget (joinedSourceCoefficientData period M D τ hτ hτT B hTime))
-  (hRc : sobolevCoefficientRadius (Fin 4) BC.Rc ≤ L.R) (hcost : BC.termCost ≤ L.R)
-  (hδ1 : δ ≤ 1) (hα : 0 < α) (hR : wordRadius (Fin 4) δ ≤ L.R)
-  (WP : EulerTransversePacketPrimary.Budget.GradeGuards (P := period) H NB (wordCost (Fin 4) 6 δ*‖ξ‖))
-  (S : Scales (Icc (0 : ℝ) M.T))
-  (hgrowth : timeProfileChange S.growth hTime=α • L.fullProfile)
 
 include hgrowth in
 theorem initialized_growth_initial : S.growth ⟨0,le_rfl,M.T_pos.le⟩=α := by

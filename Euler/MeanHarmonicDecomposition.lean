@@ -69,19 +69,7 @@ theorem cutoff_curlTest_eq (χ : Cutoff) (U : Set Space)
     change χ.field x • vectorCurl (f : Space → Space) x = _
     rw [image_eq_zero_of_notMem_tsupport hs, smul_zero]
 
-/-- The actual curl tensor of any homogeneous potential remains solenoidal. -/
-theorem homogeneous_curl_solenoidal (u : homogeneousSpace) :
-    curlTensor (u : GradientTensor) ∈ solenoidalSpace := by
-  refine homogeneousGradient_dense.induction_on u ?_ ?_
-  · exact gradientSpace.isClosed_orthogonal.preimage
-      (curlTensor.continuous.comp continuous_subtype_val)
-  · intro f
-    change curlTensor (EulerMeanGradientTest.testGradient f) ∈ solenoidalSpace
-    rw [curlTensor_test_eq]
-    exact curl_mem_solenoidal _ ((contDiff_piLp 2).mp f.smooth) (test_memLp (curlTest f))
 
-theorem harmonicPart_solenoidal (χ : Cutoff) (z : L2) :
-    harmonicPart χ z ∈ solenoidalSpace := homogeneous_curl_solenoidal (weakPotential χ z)
 
 /-- The source's `z - w` is genuinely weakly harmonic where the actual cutoff equals one. -/
 theorem weakHarmonicOn_sub_harmonicPart (χ : Cutoff) (U : Set Space) (z : L2)
@@ -102,12 +90,5 @@ theorem weakHarmonicOn_sub_harmonicPart (χ : Cutoff) (U : Set Space) (z : L2)
     linarith
   exact (l2_test_pairing (z - harmonicPart χ z) (laplacianTest f)).symm.trans hi
 
-/-- A quantitative decomposition constructed from the cutoff and the given solenoidal field. -/
-theorem exists_weak_harmonic_decomposition (χ : Cutoff) (U : Set Space) (z : L2)
-    (hz : z ∈ solenoidalSpace) (hχ : ∀ x ∈ U, χ.field x = 1) :
-    ∃ w : L2, w = harmonicPart χ z ∧ w ∈ solenoidalSpace ∧
-      ‖w‖ ≤ 6 * ‖weakPotential χ z‖ ∧ WeakHarmonicOn U (z - w) :=
-  ⟨harmonicPart χ z, rfl, harmonicPart_solenoidal χ z, harmonicPart_norm_le χ z,
-    weakHarmonicOn_sub_harmonicPart χ U z hz hχ⟩
 
 end EulerMeanHarmonic

@@ -77,54 +77,15 @@ def maximalVorticityDensity (r : ℝ) : ℝ := lifespan.maximalVorticityDensity 
 
 def maximalVorticityIntegral (t : MaximalTime) : ℝ := lifespan.maximalVorticityIntegral t
 
-theorem maximalVorticityNorm_spec (t : MaximalTime) (K : ℝ) :
-    maximalVorticityNorm t ≤ K ↔ ∀ x, ‖vectorCurl (maximalVelocity t) x‖ ≤ K :=
-  lifespan.maximalVorticityNorm_le_iff t K
 
-theorem maximalVorticityDensity_spec (t : MaximalTime) :
-    maximalVorticityDensity t=maximalVorticityNorm t :=
-  lifespan.maximalVorticityDensity_eq t
 
-theorem maximalVorticityIntegral_spec (t : MaximalTime) :
-    (∫ r in (0 : ℝ)..(t : ℝ), maximalVorticityDensity r)=maximalVorticityIntegral t :=
-  lifespan.maximalVorticityDensity_integral_eq t
 
 theorem initialDatum_nonzero : initialDatum.field ≠ 0 := lifespan.initial_nonzero
 
-theorem initialDatum_existence_iff (T : ℝ) :
-    HasSmoothEulerSolution initialDatum.field T ↔ 0 < T ∧ T < lifespan.duration :=
-  (hasSmoothEulerSolution_iff initialDatum T).trans (lifespan.hasEulerEvolution_iff T)
 
-theorem initialDatum_scalar_existence_iff (T : ℝ) :
-    HasScalarEulerEvolution initialDatum T ↔ 0 < T ∧ T < lifespan.duration :=
-  lifespan.hasScalarEulerEvolution_iff T
 
-theorem maximalVorticityIntegral_tendsto :
-    Tendsto maximalVorticityIntegral
-      (Filter.comap (fun t : MaximalTime => (t : ℝ)) (𝓝[<] lifespan.duration)) atTop := by
-  change Tendsto lifespan.maximalVorticityIntegral lifespan.endpointFilter atTop
-  rw [lifespan.endpointFilter_eq_atTop]
-  exact lifespan.vorticityIntegral_tendsto_atTop
 
-theorem maximalVorticity_integral_infinite :
-    (∫⁻ r in Ico (0 : ℝ) lifespan.duration, ENNReal.ofReal (maximalVorticityDensity r))=⊤ :=
-  lifespan.vorticity_lintegral_eq_top
 
-/-- The two breakdown conclusions for the actual constructed datum and
-the actual maximal smooth solution. No unproved estimate is a premise. -/
-theorem initialDatum_singularity :
-    ContDiff ℝ ∞ initialDatum.field ∧ HasCompactSupport initialDatum.field ∧
-      initialDatum.field ≠ 0 ∧ (∀ x, divergence initialDatum.field x=0) ∧
-      0 < lifespan.duration ∧ lifespan.duration ≤ 1 ∧
-      (∀ T : ℝ, HasSmoothEulerSolution initialDatum.field T ↔
-        0 < T ∧ T < lifespan.duration) ∧
-      Filter.limsup (fun t : MaximalTime => ENNReal.ofReal (maximalC1Norm t))
-        (Filter.comap (fun t : MaximalTime => (t : ℝ)) (𝓝[<] lifespan.duration))=⊤ ∧
-      (∫⁻ r in Ico (0 : ℝ) lifespan.duration,
-        ENNReal.ofReal (maximalVorticityDensity r))=⊤ :=
-  ⟨initialDatum.smooth,initialDatum_compact,initialDatum_nonzero,initialDatum_divergence,
-    lifespan.duration_pos,lifespan_le_one,initialDatum_existence_iff,
-    maximalC1Norm_limsup,maximalVorticity_integral_infinite⟩
 
 /-- An existential form of the manuscript's claim. Every restriction of
 the one maximal field is an actual Euler evolution. Its time and space

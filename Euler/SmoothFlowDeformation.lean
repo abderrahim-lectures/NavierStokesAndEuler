@@ -87,31 +87,8 @@ def deformationTimeCoefficient : SmoothTimeField (Icc (0 : ℝ) T) E (E →L[ℝ
 def deformationSecondCoefficient : SmoothTimeField (Icc (0 : ℝ) T) E (E →L[ℝ] E) :=
   (accelerationCoefficient T hT A B R hB hR hsmall hb A₁).derivative
 
-theorem displacementCoefficient_time : SmoothTimeField.TimeDerivative T hT
-    (displacementCoefficient T hT A B R hB hR hsmall hb)
-    (velocityCoefficient T hT A B R hB hR hsmall hb A₁ htime B₁ R₁ hB₁ hR₁ hb₁) := by
-  intro t x
-  exact displacementFamily_time_derivative T hT A x t
 
-theorem velocityCoefficient_time : SmoothTimeField.TimeDerivative T hT
-    (velocityCoefficient T hT A B R hB hR hsmall hb A₁ htime B₁ R₁ hB₁ hR₁ hb₁)
-    (accelerationCoefficient T hT A B R hB hR hsmall hb A₁) := by
-  intro t x
-  rw [accelerationCoefficient_apply]
-  exact velocityFamily_time_derivative T hT A A₁ htime x t
 
-theorem deformationCoefficient_time : SmoothTimeField.TimeDerivative T hT
-    (deformationCoefficient T hT A B R hB hR hsmall hb)
-    (deformationTimeCoefficient T hT A B R hB hR hsmall hb A₁ htime B₁ R₁ hB₁ hR₁ hb₁) := by
-  have hd := SmoothTimeField.TimeDerivative.derivative T hT _ _
-    (displacementCoefficient_time T hT A B R hB hR hsmall hb A₁ htime B₁ R₁ hB₁ hR₁ hb₁)
-  intro t x
-  exact (hd t x).const_add (ContinuousLinearMap.id ℝ E)
 
-theorem deformationTimeCoefficient_time : SmoothTimeField.TimeDerivative T hT
-    (deformationTimeCoefficient T hT A B R hB hR hsmall hb A₁ htime B₁ R₁ hB₁ hR₁ hb₁)
-    (deformationSecondCoefficient T hT A B R hB hR hsmall hb A₁) :=
-  SmoothTimeField.TimeDerivative.derivative T hT _ _
-    (velocityCoefficient_time T hT A B R hB hR hsmall hb A₁ htime B₁ R₁ hB₁ hR₁ hb₁)
 
 end EulerSmoothBanachFlow

@@ -51,53 +51,6 @@ def initializedPrimaryRemainderField (N : ℕ) (hN : 1 ≤ N) (κ : ℝ) :
     (initializedProfiles_one_mean M D τ hτ hτT B δ hδ ξ hs α) κ).changeTime hTime).congr
       (fun _ _ _ => by rw [initializedProfiles_one_high]; rfl)
 
-include hTime in
-/-- The exact derivative split, with the primary's genuine canonical
-velocity and transported normal. -/
-theorem initializedVelocity_gradient_split (N : ℕ) (hN : 1 ≤ N) (k : ℝ) (hk : k ≠ 0)
-    (t : Icc (0 : ℝ) D.T) (X Y : Space → Space)
-    (hX : HasFDerivAt X (D.F.field t 0) 0)
-    (hY : DifferentiableAt ℝ Y (X 0)) (hleft : ∀ y, Y (X y)=y) :
-    fderiv ℝ (fun y => initializedVelocity M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-      (t,(Y y,k*inner ℝ D.m₀ (Y y)))) (X 0) =
-      (α/δ) • rankOne ℝ (canonicalVelocity τ hτ hτT B ξ hs t 0) (D.normal.field t 0) +
-      fderiv ℝ (fun y => initializedPrimaryRemainder M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-        (t,(Y y,k*inner ℝ D.m₀ (Y y)))) (X 0) := by
-  let V := vectorField τ hτ hτT B (initialData D δ hδ (α • ξ) hs)
-  have hp := ((V.smul k⁻¹).raw_graph_contDiff t k D.m₀).differentiable (by simp)
-  have hr := ((initializedPrimaryRemainderField M D hTime τ hτ hτT B δ hδ ξ hs α N hN k⁻¹).raw_graph_contDiff
-    t k D.m₀).differentiable (by simp)
-  have hp' : DifferentiableAt ℝ (fun y => k⁻¹ • vector τ hτ hτT B
-      (initialData D δ hδ (α • ξ) hs) (t,(Y y,k*inner ℝ D.m₀ (Y y)))) (X 0) := by
-    simpa only [Function.comp_def,Pi.smul_apply] using (hp (Y (X 0))).comp (X 0) hY
-  have hr' : DifferentiableAt ℝ (fun y => initializedPrimaryRemainder M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-      (t,(Y y,k*inner ℝ D.m₀ (Y y)))) (X 0) := by
-    simpa only [Function.comp_def] using (hr (Y (X 0))).comp (X 0) hY
-  have he : (fun y => initializedVelocity M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-      (t,(Y y,k*inner ℝ D.m₀ (Y y)))) =
-      (fun y => k⁻¹ • vector τ hτ hτT B (initialData D δ hδ (α • ξ) hs)
-        (t,(Y y,k*inner ℝ D.m₀ (Y y)))) +
-      (fun y => initializedPrimaryRemainder M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-        (t,(Y y,k*inner ℝ D.m₀ (Y y)))) := by
-    funext y
-    dsimp only [initializedPrimaryRemainder,Pi.add_apply,Pi.sub_apply,Pi.smul_apply]
-    abel
-  rw [he,fderiv_add hp' hr',
-    scaled_terminal_physical_gradient τ hτ hτT B δ hδ ξ hs α k hk t X Y hX hY hleft]
-
-variable
-  (L : EulerTransversePacketJoin.Budget D τ hτ hτT B (Fin 4) 6)
-  (H : EulerTransversePacketPrimary.Budget L)
-  (NB : EulerTransversePacketJoin.NormalBudget D 6 L.R)
-  (W : EulerTransversePacketJoin.Budget.GradeGuards (P := period) L NB)
-  (LM : EulerMeanPacketProvider.Budget M 6 L.R)
-  (WM : EulerMeanPacketProvider.Budget.GradeGuards LM)
-  (BC : CoefficientBudget (joinedSourceCoefficientData period M D τ hτ hτT B hTime))
-  (hRc : sobolevCoefficientRadius (Fin 4) BC.Rc ≤ L.R) (hcost : BC.termCost ≤ L.R)
-  (hδ1 : δ ≤ 1) (hα : 0 < α) (hR : wordRadius (Fin 4) δ ≤ L.R)
-  (WP : EulerTransversePacketPrimary.Budget.GradeGuards (P := period) H NB (wordCost (Fin 4) 6 δ*‖ξ‖))
-  (S : Scales (Icc (0 : ℝ) M.T))
-  (hgrowth : timeProfileChange S.growth hTime=α • L.fullProfile)
 
 include H NB W LM WM BC hRc hcost hδ1 hα hR WP hgrowth
 
@@ -114,15 +67,6 @@ theorem initializedPrimaryRemainder_bound (N : ℕ) (hN : 1 ≤ N) (k : ℝ) (hk
     (initializedProfiles_one_mean M D τ hτ hτT B δ hδ ξ hs α) hN BC k hk hbase
   exact (h.changeTime hTime).of_raw_eq _ (fun _ _ _ => by rw [initializedProfiles_one_high]; rfl)
 
-theorem initializedPrimaryRemainder_physical_norm (N : ℕ) (hN : 1 ≤ N) (k : ℝ) (hk : 4 ≤ k)
-    (hbase : tailBase L.R S.H0 BC.termCost N ≤ k^(1/100 : ℝ))
-    (t : Icc (0 : ℝ) D.T) (Y : Space → Space) (x : Space) :
-    ‖initializedPrimaryRemainder M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-      (t,(Y x,k*inner ℝ D.m₀ (Y x)))‖ ≤
-      sobolevEmbeddingConstant period 3*((fixedVelocityGradeCost L.R S.H0 2+2)/k^2) :=
-  (initializedPrimaryRemainder_bound M D hTime τ hτ hτT B δ hδ ξ hs α
-    L H NB W LM WM BC hRc hcost hδ1 hα hR WP S hgrowth N hN k hk hbase).raw_graph_norm_le
-      (by norm_num) t k D.m₀ (Y x)
 
 theorem initializedPrimaryRemainder_physical_fderiv (N : ℕ) (hN : 1 ≤ N) (k : ℝ) (hk : 4 ≤ k)
     (hbase : tailBase L.R S.H0 BC.termCost N ≤ k^(1/100 : ℝ))
@@ -168,26 +112,5 @@ theorem initializedPrimaryRemainder_physical_fderiv_inv (N : ℕ) (hN : 1 ≤ N)
       mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_right hf hb) (norm_nonneg _)
     _ = _ := by unfold initializedRemainderDerivativeCost; field_simp; ring
 
-/-- The finite packet's actual center gradient differs from its exact
-primary shear by O(1/k), with the genuine inverse frame norm. -/
-theorem initializedVelocity_gradient_error (N : ℕ) (hN : 1 ≤ N)
-    (k : ℝ) (hk : 4 ≤ k) (hbase : tailBase L.R S.H0 BC.termCost N ≤ k^(1/100 : ℝ))
-    (t : Icc (0 : ℝ) D.T) (X Y : Space → Space)
-    (hX : HasFDerivAt X (D.F.field t 0) 0)
-    (hY : DifferentiableAt ℝ Y (X 0)) (hleft : ∀ y, Y (X y)=y) :
-    ‖fderiv ℝ (fun y => initializedVelocity M D τ hτ hτT B δ hδ ξ hs α N k⁻¹
-      (t,(Y y,k*inner ℝ D.m₀ (Y y)))) (X 0) -
-      (α/δ) • rankOne ℝ (canonicalVelocity τ hτ hτT B ξ hs t 0) (D.normal.field t 0)‖ ≤
-      (initializedRemainderDerivativeCost L.R S.H0/k)*‖D.FInv.field t 0‖ := by
-  have hk0 : k ≠ 0 := by linarith
-  rw [initializedVelocity_gradient_split M D hTime τ hτ hτT B δ hδ ξ hs α
-    N hN k hk0 t X Y hX hY hleft,add_sub_cancel_left]
-  have he : Y ∘ X = id := funext hleft
-  have hdY := EulerLagrangian.derivative_pullback_inverse Y X (D.deformationEquiv t 0) 0 hX hY
-  rw [he,fderiv_id,id_comp] at hdY
-  have h := initializedPrimaryRemainder_physical_fderiv_inv M D hTime τ hτ hτT B δ hδ ξ hs α
-    L H NB W LM WM BC hRc hcost hδ1 hα hR WP S hgrowth N hN k hk hbase t Y (X 0) hY
-  rw [hdY] at h
-  exact h
 
 end EulerPacketTerminalDatum

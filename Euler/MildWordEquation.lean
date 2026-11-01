@@ -88,46 +88,8 @@ def availableWordBlock {q n : ℕ} (h : n + 2 ≤ q) (w : Fin n → Fin 4) :
     SobolevSpace period q →L[ℝ] SobolevSpace period 2 :=
   (wordBlock period 2 n w).comp (restrictOperator period (by omega : 2+n ≤ q))
 
-/-- This available block is exactly the chosen derivative word as an L² field. -/
-theorem availableWordBlock_value {q n : ℕ} (h : n + 2 ≤ q) (w : Fin n → Fin 4)
-    (u : SobolevSpace period q) :
-    value period (availableWordBlock period h w u) = word period u (by omega : n ≤ q) w := by
-  change value period (wordBlock period 2 n w (restrictOperator period (by omega : 2+n ≤ q) u)) = _
-  rw [wordBlock_value]
-  rfl
 
-/-- Actual derivative-word blocks commute with heat, including the endpoint at zero variance. -/
-theorem availableWordBlock_heat {q n : ℕ} (h : n + 2 ≤ q) (w : Fin n → Fin 4)
-    (v : ℝ≥0) (u : SobolevSpace period q) :
-    availableWordBlock period h w (heatOperator period q v u) =
-      heatOperator period 2 v (availableWordBlock period h w u) := by
-  apply value_injective period
-  rw [availableWordBlock_value, heatOperator_value, availableWordBlock_value]
-  rfl
 
-/-- Truncation preserves every derivative coordinate still within its range. -/
-theorem word_truncate_coordinate {q n : ℕ} (hn : n ≤ q) (w : Fin n → Fin 4)
-    (u : SobolevSpace period (q+1)) :
-    word period (truncateOperator period q u) hn w = word period u (Nat.le_trans hn (Nat.le_succ q)) w := rfl
 
-/-- Every finite derivative word below the source's Sobolev margin obeys the differentiated L² equation. -/
-theorem viscous_mild_word_hasDerivAt {q n : ℕ} (h : n + 2 ≤ q) (w : Fin n → Fin 4)
-    (ν : ℝ) (hν : 0 < ν) (T : ℝ) (hT : 0 ≤ T) (u₀ : SobolevSpace period (q + 1))
-    (F : Icc (0 : ℝ) T → SobolevSpace period (q + 1) → SobolevSpace period q)
-    (hF : Continuous (fun p : Icc (0 : ℝ) T × SobolevSpace period (q + 1) => F p.1 p.2))
-    (u : C(Icc (0 : ℝ) T, SobolevSpace period (q + 1)))
-    (hsol : ∀ t : Icc (0 : ℝ) T,
-      u t = heatOperator period (q + 1) (2 * ν * t.val).toNNReal u₀ +
-        ∫ r in (0 : ℝ)..t.val, heatKernel period q ν hν r
-          (F (projIcc 0 T hT (t.val - r)) (u (projIcc 0 T hT (t.val - r)))))
-    (t : ℝ) (ht : t ∈ Ioo 0 T) :
-    HasDerivAt (fun r => word period (extendPath T hT u r) (by omega : n ≤ q+1) w)
-      (ν • laplacianEvaluation period 2 (by norm_num)
-        (availableWordBlock period h w (truncateOperator period q (u ⟨t, ht.1.le, ht.2.le⟩))) +
-        word period (F ⟨t, ht.1.le, ht.2.le⟩ (u ⟨t, ht.1.le, ht.2.le⟩)) (by omega : n ≤ q) w) t := by
-  have hd := viscous_mild_block_hasDerivAt period (by norm_num : 2 ≤ 2)
-    (availableWordBlock period h w) (availableWordBlock_heat period h w)
-    ν hν T hT u₀ F hF u hsol t ht
-  simpa only [availableWordBlock_value, word_truncate_coordinate] using hd
 
 end EulerMildWordEquation

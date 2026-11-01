@@ -69,10 +69,6 @@ def sourcePower : ℕ := sourcePolynomial.natDegree
 
 theorem sourceConstant_pos : 0 < sourceConstant := coefficientCost_pos _
 
-theorem sourceEnvelope_power (X : ℝ) (hX : 1 ≤ X) :
-    sourceEnvelope X ≤ sourceConstant*X^sourcePower := by
-  rw [← sourcePolynomial_eval]
-  exact (le_abs_self _).trans (eval_bound sourcePolynomial X hX)
 
 def parameterSize (K Ti TiTotal Cp B δ N : ℝ) : ℝ := 1+K+Ti+TiTotal+Cp+B+δ⁻¹+N
 
@@ -92,19 +88,11 @@ def fullEnvelope (X : ℝ) : ℝ := radiusEnvelope (sourceEnvelope X)
 def fullPolynomial : Polynomial ℝ :=
   radiusPolynomial.comp (sourceRadiusPolynomial.comp inputPolynomial)
 
-theorem fullPolynomial_eval (X : ℝ) : fullPolynomial.eval X=fullEnvelope X := by
-  simp only [fullPolynomial,fullEnvelope,sourceEnvelope,Polynomial.eval_comp,radiusPolynomial_eval,
-    sourceRadiusPolynomial_eval,inputPolynomial_eval]
 
 def fullConstant : ℝ := coefficientCost fullPolynomial
 def fullPower : ℕ := fullPolynomial.natDegree
 
-theorem fullConstant_pos : 0 < fullConstant := coefficientCost_pos _
 
-theorem fullEnvelope_power (X : ℝ) (hX : 1 ≤ X) :
-    fullEnvelope X ≤ fullConstant*X^fullPower := by
-  rw [← fullPolynomial_eval]
-  exact (le_abs_self _).trans (eval_bound fullPolynomial X hX)
 
 end EulerParentInitializedRadius
 
@@ -217,39 +205,7 @@ theorem joined_radius_primitives (δ : ℝ) (ξ : U) (X : ℝ)
     delta_inverse := hδX.trans hXV
     terminal := hξX.trans hXV }
 
-theorem canonicalInitializedRadius_power (δ : ℝ) (hδ : 0 < δ) (ξ : U) (X : ℝ)
-    (hKX : L.K ≤ X) (hTiX : Ti ≤ X) (hTiTotalX : TiTotal ≤ X)
-    (hCpX : Cp ≤ X) (hLX : H.L ≤ X) (hδX : δ⁻¹ ≤ X) (hξX : ‖ξ‖ ≤ X) :
-    L.canonicalInitializedRadius H m hm R S hS τ hτ hτT Ti Cp hτ1 hTi hCp
-      g hg hg0 Ω hΩ hΩo hsub hΩball hphysical TiTotal hT1 hTiTotal δ ξ ≤ fullConstant*X^fullPower := by
-  have hp := L.joined_radius_primitives H m hm R S hS τ hτ hτT Ti Cp hτ1 hTi hCp
-    g hg hg0 Ω hΩ hΩo hsub hΩball hphysical TiTotal hT1 hTiTotal δ ξ X
-    hKX hTiX hTiTotalX hCpX hLX hδX hξX
-  exact (initializedRadius_le_envelope (J).mean (J).linear (J).normal BC δ ξ
-    (sourceRadiusEnvelope (inputEnvelope X)) hδ hp).trans
-      (fullEnvelope_power X (L.K_one.trans hKX))
 
-theorem joined_radius_primitive_polynomial (δ : ℝ) (hδ : 0 < δ) (ξ : U) :
-    let X := parameterSize L.K Ti TiTotal Cp H.L δ ‖ξ‖
-    RadiusPrimitives (J).mean (J).linear (J).normal BC δ ξ (sourceEnvelope X) ∧
-      sourceEnvelope X ≤ sourceConstant*X^sourcePower := by
-  have hL0 : 0 ≤ H.L := (mul_nonneg boundaryLocalizationC1_nonneg H.Bc_nonneg).trans H.L_lower
-  obtain ⟨h1,hK,hI,hIT,hC,hB,hD,hN⟩ := parameterSize_bounds L.K Ti TiTotal Cp H.L δ ‖ξ‖
-    (zero_le_one.trans L.K_one) ((inv_pos.mpr hτ).le.trans hTi)
-    ((inv_pos.mpr G.T_pos).le.trans hTiTotal) hCp hL0 hδ (norm_nonneg ξ)
-  exact ⟨L.joined_radius_primitives H m hm R S hS τ hτ hτT Ti Cp hτ1 hTi hCp
-    g hg hg0 Ω hΩ hΩo hsub hΩball hphysical TiTotal hT1 hTiTotal δ ξ _ hK hI hIT hC hB hD hN,
-    sourceEnvelope_power _ h1⟩
 
-theorem canonicalInitializedRadius_polynomial (δ : ℝ) (hδ : 0 < δ) (ξ : U) :
-    L.canonicalInitializedRadius H m hm R S hS τ hτ hτT Ti Cp hτ1 hTi hCp
-      g hg hg0 Ω hΩ hΩo hsub hΩball hphysical TiTotal hT1 hTiTotal δ ξ ≤
-        fullConstant*(parameterSize L.K Ti TiTotal Cp H.L δ ‖ξ‖)^fullPower := by
-  have hL0 : 0 ≤ H.L := (mul_nonneg boundaryLocalizationC1_nonneg H.Bc_nonneg).trans H.L_lower
-  obtain ⟨_,hK,hI,hIT,hC,hB,hD,hN⟩ := parameterSize_bounds L.K Ti TiTotal Cp H.L δ ‖ξ‖
-    (zero_le_one.trans L.K_one) ((inv_pos.mpr hτ).le.trans hTi)
-    ((inv_pos.mpr G.T_pos).le.trans hTiTotal) hCp hL0 hδ (norm_nonneg ξ)
-  exact L.canonicalInitializedRadius_power H m hm R S hS τ hτ hτT Ti Cp hτ1 hTi hCp
-    g hg hg0 Ω hΩ hΩo hsub hΩball hphysical TiTotal hT1 hTiTotal δ hδ ξ _ hK hI hIT hC hB hD hN
 
 end EulerParentPacketFrames.LabelData

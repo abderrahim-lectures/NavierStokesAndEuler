@@ -69,16 +69,6 @@ def coefficientMap : C(Icc (0 : ℝ) T, E →L[ℝ] F) →L[ℝ] (TimeLp T E →
     change ‖timeMultiplier T hT A‖ ≤ (1 : ℝ) * ‖A‖
     simpa only [one_mul] using timeMultiplier_norm (E := E) (F := F) T hT A)
 
-/-- Coefficient derivatives give genuine operator-norm derivatives of the time multiplier. -/
-theorem hasDerivAt_timeMultiplier
-    (A : ℝ → C(Icc (0 : ℝ) T, E →L[ℝ] F))
-    (A₁ : C(Icc (0 : ℝ) T, E →L[ℝ] F)) (x : ℝ)
-    (hA : HasDerivAt A A₁ x) :
-    HasDerivAt (fun r => timeMultiplier T hT (A r)) (timeMultiplier T hT A₁) x := by
-  change HasDerivAt ((coefficientMap T hT) ∘ A) (coefficientMap T hT A₁) x
-  exact HasFDerivAt.comp_hasDerivAt
-    (F := C(Icc (0 : ℝ) T, E →L[ℝ] F)) (E := TimeLp T E →L[ℝ] TimeLp T F) x
-    (coefficientMap (E := E) (F := F) T hT).hasFDerivAt hA
 
 /-- Every order of actual coefficient regularity passes to operator norm regularity. -/
 theorem contDiff_timeMultiplier {P : Type*} [NormedAddCommGroup P] [NormedSpace ℝ P]
@@ -91,17 +81,6 @@ theorem contDiff_timeMultiplier {P : Type*} [NormedAddCommGroup P] [NormedSpace 
       (E := C(Icc (0 : ℝ) T, E →L[ℝ] F)) (F := TimeLp T E →L[ℝ] TimeLp T F)
       (coefficientMap (E := E) (F := F) T hT)) hA
 
-/-- Differentiating the actual frame H¹ transport with respect to an external parameter. -/
-theorem hasDerivAt_productDerivative
-    (A B : ℝ → C(Icc (0 : ℝ) T, E →L[ℝ] F))
-    (A₁ B₁ : C(Icc (0 : ℝ) T, E →L[ℝ] F)) (x : ℝ)
-    (hA : HasDerivAt A A₁ x) (hB : HasDerivAt B B₁ x) :
-    HasDerivAt (fun r => productDerivative T hT (A r) (B r))
-      ((timeMultiplier T hT B₁).comp (primitiveTimeLp T hT) + timeMultiplier T hT A₁) x := by
-  have h := ((hasDerivAt_timeMultiplier T hT B B₁ x hB).clm_comp
-    (hasDerivAt_const x (primitiveTimeLp (E := E) T hT))).add
-      (hasDerivAt_timeMultiplier T hT A A₁ x hA)
-  convert h using 1 <;> first | rfl | simp only [comp_zero, add_zero]
 
 /-- Arbitrary-order parameter regularity of the genuine H¹ frame transport. -/
 theorem contDiff_productDerivative {P : Type*} [NormedAddCommGroup P] [NormedSpace ℝ P]

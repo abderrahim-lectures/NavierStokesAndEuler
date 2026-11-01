@@ -43,14 +43,6 @@ theorem blockNorm_metric_lower {s q n : ℕ} (u : SobolevSpace period s) (h : n+
   rw [blockNorm_baseWords period u h, Finset.mul_sum]
   exact Finset.sum_le_sum fun w _ => sobolevNorm_le_baseWordMetric period K _ c hc hK
 
-/-- The upper metric comparison is independent of the external word count. -/
-theorem blockNorm_metric_upper {s q n : ℕ} (u : SobolevSpace period s) (h : n+q ≤ s)
-    (K : LiftL2 period →L[ℝ] LiftL2 period) :
-    (∑ w : Fin n → Fin 4, baseWordMetricNorm period K
-      (EulerH6Pressure.SpatialJet.derivativeJet (q := q) (toJet period u) w h)) ≤
-      Real.sqrt ‖K‖ * blockNorm period (toJet period u) q n := by
-  rw [blockNorm_baseWords period u h, Finset.mul_sum]
-  exact Finset.sum_le_sum fun w _ => baseWordMetric_le_sobolevNorm period K _
 
 /-- The metric-weighted energy is exactly the external-word sum of fixed-base metric roots. -/
 theorem metricSum_eq {s : ℕ} (q N : ℕ) (hN : N+q ≤ s) (ρ : ℝ)
@@ -74,17 +66,6 @@ theorem weightedNorm_metric_lower {s : ℕ} (q N : ℕ) (hN : N+q ≤ s) (ρ : �
     (weight_pos hρ n.val).le
   exact h.trans_eq (by ring)
 
-/-- The actual metric weighted energy is bounded by its Sobolev counterpart without a cutoff factor. -/
-theorem weightedNorm_metric_upper {s : ℕ} (q N : ℕ) (hN : N+q ≤ s) (ρ : ℝ) (hρ : 0 < ρ)
-    (K : LiftL2 period →L[ℝ] LiftL2 period) (u : SobolevSpace period s) :
-    weightedMetricSum ρ (fun I : ExternalWord N => I.1.val) K (energyValues period q N hN u) ≤
-      Real.sqrt ‖K‖ * weightedNorm period q N ρ u := by
-  rw [metricSum_eq, weightedNorm, ← Fin.sum_univ_eq_sum_range, Finset.mul_sum]
-  apply Finset.sum_le_sum
-  intro n _
-  have h := mul_le_mul_of_nonneg_left (blockNorm_metric_upper period (q := q) (n := n.val) u (by have := n.isLt; omega) K)
-    (weight_pos hρ n.val).le
-  exact h.trans_eq (by ring)
 
 /-- At the fixed base index six the comparison uses exactly 5461 base words. -/
 theorem card_baseWord_six : Fintype.card (BaseWord 6) = 5461 := by

@@ -78,13 +78,6 @@ theorem projectedRhsPath_eq (A : Icc (0 : ℝ) T → SmoothL2Field Space)
   intro t
   exact projectedRhs_toLp (A t)
 
-theorem pressurePath_eq (A : Icc (0 : ℝ) T → SmoothL2Field Space)
-    (hA : ∀ n, Continuous (fun t => (A t).jetLp n)) :
-    pressurePath A hA=(solenoidalProjection-ContinuousLinearMap.id ℝ L2).compLeftContinuous ℝ
-      (Icc (0 : ℝ) T) (advectionPath A hA) := by
-  apply ContinuousMap.ext
-  intro t
-  exact pressureField_toLp (A t)
 
 theorem advectionPath_sub_norm (A B : Icc (0 : ℝ) T → SmoothL2Field Space)
     (hA : ∀ n, Continuous (fun t => (A t).jetLp n))
@@ -139,12 +132,6 @@ theorem projectedRhsPath_convergence (hT : 0 ≤ T) (M : ℝ)
   exact ((-solenoidalProjection).compLeftContinuous ℝ (Icc (0 : ℝ) T)).continuous.tendsto _
     |>.comp (L.advectionPath_convergence hT M hb)
 
-theorem pressurePath_convergence (hT : 0 ≤ T) (M : ℝ)
-    (hb : ∀ k t, tensorNorm 3 (A k t) ≤ M) :
-    Tendsto (fun k => pressurePath (A k) (hA k)) atTop (𝓝 (pressurePath L.field L.field_continuous)) := by
-  simp only [pressurePath_eq]
-  exact ((solenoidalProjection-ContinuousLinearMap.id ℝ L2).compLeftContinuous ℝ
-    (Icc (0 : ℝ) T)).continuous.tendsto _ |>.comp (L.advectionPath_convergence hT M hb)
 
 end SmoothLimitData
 end EulerOrdinarySobolev

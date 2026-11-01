@@ -63,23 +63,6 @@ def ofPathFamily : SmoothTimeField (Icc (0 : ℝ) T) E V where
       iteratedFDeriv ℝ n (fun y => f y t) x :=
   jetFamily_apply T f hf n x t
 
-theorem ofPathFamily_jet_norm (n : ℕ) :
-    ‖(ofPathFamily T hT f q hf hq hd C D hC hD).jet n‖ ≤ C n := by
-  have hnonneg : 0 ≤ C n := (norm_nonneg _).trans (hC n ⟨0,le_rfl,hT⟩ 0)
-  apply (ContinuousMap.norm_le _ hnonneg).2
-  intro t
-  apply (BoundedContinuousFunction.norm_le hnonneg).2
-  intro x
-  rw [ofPathFamily_jet_apply]
-  exact hC n t x
 
-theorem ofPathFamily_field_norm :
-    ‖(ofPathFamily T hT f q hf hq hd C D hC hD).field‖ ≤ C 0 := by
-  have hnonneg : 0 ≤ C 0 := (norm_nonneg _).trans (hC 0 ⟨0,le_rfl,hT⟩ 0)
-  apply (ContinuousMap.norm_le _ hnonneg).2
-  intro t
-  apply (BoundedContinuousFunction.norm_le hnonneg).2
-  intro x
-  exact value_bound T f C hC t x
 
 end SmoothTimeField

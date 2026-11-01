@@ -31,69 +31,15 @@ def labelDerivative : meanDerivatives T hT FInv →L[ℝ] TimeLp T L2 :=
 def labelPath (u : meanDerivatives T hT FInv) : ℝ → L2 :=
   productPrimitive T hT FInv (u : TimeLp T L2)
 
-/-- The label path takes values in the actual ordinary solenoidal space. -/
-theorem labelPath_solenoidal (u : meanDerivatives T hT FInv) (t : ℝ)
-    (ht : t ∈ Icc (0 : ℝ) T) : labelPath T hT FInv u t ∈ solenoidalSpace := by
-  change FInv (projIcc 0 T hT t) (realPrimitive T (u : TimeLp T L2) t) ∈ solenoidalSpace
-  simpa only [projIcc_of_mem hT ht, terminalPrimitive_apply] using u.property ⟨t, ht⟩
 
 variable (hFInv : ∀ t : Icc (0 : ℝ) T,
   HasDerivWithinAt (extendPath T hT FInv) (FInv' t) (Icc (0 : ℝ) T) t)
 
-include hFInv in
-/-- The actual label displacement is absolutely continuous. -/
-theorem labelPath_absolutelyContinuous (u : meanDerivatives T hT FInv) :
-    AbsolutelyContinuousOnInterval (labelPath T hT FInv u) 0 T :=
-  productPrimitive_absolutelyContinuous T hT FInv FInv' hFInv (u : TimeLp T L2)
 
-include hFInv in
-/-- Its L² derivative is obtained from the literal product rule. -/
-theorem labelPath_hasDerivAt_ae (u : meanDerivatives T hT FInv) :
-    ∀ᵐ t ∂timeMeasure T,
-      HasDerivAt (labelPath T hT FInv u) (labelDerivative T hT FInv FInv' u t) t :=
-  productPrimitive_hasDerivAt_ae T hT FInv FInv' hFInv (u : TimeLp T L2)
 
-include hFInv in
-/-- Integration recovers the actual H¹ label path from that derivative. -/
-theorem labelPath_eq_realPrimitive (u : meanDerivatives T hT FInv) (t : ℝ)
-    (ht : t ∈ Icc (0 : ℝ) T) :
-    labelPath T hT FInv u t = realPrimitive T (labelDerivative T hT FInv FInv' u) t :=
-  productPrimitive_eq_realPrimitive T hT FInv FInv' hFInv (u : TimeLp T L2) t ht
 
-include hFInv in
-/-- Differentiating a path in the closed solenoidal subspace preserves its
-constraint almost everywhere; this is an actual L² membership statement. -/
-theorem labelDerivative_solenoidal_ae (u : meanDerivatives T hT FInv) :
-    ∀ᵐ t ∂timeMeasure T, labelDerivative T hT FInv FInv' u t ∈ solenoidalSpace := by
-  have hmem : ∀ᵐ t ∂timeMeasure T, t ∈ Ioo (0 : ℝ) T := by
-    change ∀ᵐ t ∂volume.restrict (Icc (0 : ℝ) T), t ∈ Ioo (0 : ℝ) T
-    rw [← restrict_Ioo_eq_restrict_Icc]
-    exact ae_restrict_mem measurableSet_Ioo
-  filter_upwards [hmem, labelPath_hasDerivAt_ae T hT FInv FInv' hFInv u] with t ht hd
-  have hp := solenoidalProjection.hasFDerivAt.comp_hasDerivAt t hd
-  have heq : labelPath T hT FInv u =ᶠ[𝓝 t]
-      fun s => solenoidalProjection (labelPath T hT FInv u s) := by
-    filter_upwards [Icc_mem_nhds ht.1 ht.2] with s hs
-    exact (solenoidalSpace.starProjection_eq_self_iff.mpr
-      (labelPath_solenoidal T hT FInv u s hs)).symm
-  exact solenoidalSpace.starProjection_eq_self_iff.mp
-    ((hp.congr_of_eventuallyEq heq).unique hd)
 
-/-- The norm comparison required by the source H¹ model follows from the
-actual coefficient bounds and the sharp terminal Poincaré bound. -/
-theorem labelDerivative_norm_le (u : meanDerivatives T hT FInv) :
-    ‖labelDerivative T hT FInv FInv' u‖ ≤
-      (‖FInv'‖ * Real.sqrt (T^2/2) + ‖FInv‖) * ‖u‖ :=
-  productDerivative_norm_le T hT FInv FInv' (u : TimeLp T L2)
 
-/-- Squaring the genuine derivative comparison gives the source energy control. -/
-theorem labelDerivative_norm_sq_le (u : meanDerivatives T hT FInv) :
-    ‖labelDerivative T hT FInv FInv' u‖^2 ≤
-      (‖FInv'‖ * Real.sqrt (T^2/2) + ‖FInv‖)^2 * ‖u‖^2 := by
-  calc
-    _ ≤ ((‖FInv'‖ * Real.sqrt (T^2/2) + ‖FInv‖) * ‖u‖)^2 :=
-      pow_le_pow_left₀ (norm_nonneg _) (labelDerivative_norm_le T hT FInv FInv' u) 2
-    _ = _ := mul_pow _ _ _
 
 variable (F F' : C(Icc (0 : ℝ) T, L2 →L[ℝ] L2))
 
@@ -156,10 +102,5 @@ theorem meanTestMap_trace (v : TimeLp T solenoidalSpace) :
   initialTrace_productDerivative T hT (solenoidalFrame T F) (solenoidalFrame T F')
     (solenoidalFrame_hasDerivWithinAt T hT F F' hF) v
 
-/-- Therefore zero-endpoint label tests remove both actual initial boundary terms. -/
-theorem meanTestMap_trace_zero (v : TimeLp T solenoidalSpace) (hv : initialTrace T hT v = 0) :
-    meanTrace T hT FInv (meanTestMap T hT FInv F F' hF hInv v) = 0 := by
-  rw [meanTestMap_trace T hT FInv F F' hF hInv v, hv]
-  exact map_zero _
 
 end EulerMeanVariationalInverse

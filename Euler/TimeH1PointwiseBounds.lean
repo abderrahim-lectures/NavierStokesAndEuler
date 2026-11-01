@@ -72,34 +72,7 @@ theorem increment_norm_le (s t : ℝ) (hs : s ∈ Icc (0 : ℝ) T)
   rw [mul_pow, Real.sq_sqrt (sub_nonneg.mpr hst)]
   exact increment_norm_sq_le T hT g η hη hder s t hs ht hst
 
-include hT hη hder in
-/-- The actual initial trace and L² derivative control the whole time path. -/
-theorem norm_le_initial_add (t : ℝ) (ht : t ∈ Icc (0 : ℝ) T) :
-    ‖η t‖ ≤ ‖η 0‖+Real.sqrt t*‖g‖ := by
-  have hi := increment_norm_le T hT g η hη hder 0 t ⟨le_rfl, hT⟩ ht ht.1
-  simp only [sub_zero] at hi
-  calc
-    ‖η t‖ = ‖(η t-η 0)+η 0‖ := congrArg norm (sub_add_cancel (η t) (η 0)).symm
-    _ ≤ ‖η t-η 0‖+‖η 0‖ := norm_add_le _ _
-    _ ≤ Real.sqrt t*‖g‖+‖η 0‖ := add_le_add hi le_rfl
-    _ = ‖η 0‖+Real.sqrt t*‖g‖ := add_comm _ _
 
-include hT hη hder in
-/-- The uniform-in-time version needed by fixed-index inverse estimates. -/
-theorem norm_le_initial_add_uniform (t : ℝ) (ht : t ∈ Icc (0 : ℝ) T) :
-    ‖η t‖ ≤ ‖η 0‖+Real.sqrt T*‖g‖ :=
-  (norm_le_initial_add T hT g η hη hder t ht).trans
-    (add_le_add le_rfl (mul_le_mul_of_nonneg_right (Real.sqrt_le_sqrt ht.2) (norm_nonneg g)))
 
-include hT hη hder in
-/-- The actual terminal trace has the corresponding backward-in-time bound. -/
-theorem norm_le_terminal_add (t : ℝ) (ht : t ∈ Icc (0 : ℝ) T) :
-    ‖η t‖ ≤ ‖η T‖+Real.sqrt (T-t)*‖g‖ := by
-  have he := eq_primitive_add_terminal T hT g η hη hder t ht
-  calc
-    ‖η t‖ = ‖realPrimitive T g t+η T‖ := congrArg norm he
-    _ ≤ ‖realPrimitive T g t‖+‖η T‖ := norm_add_le _ _
-    _ ≤ Real.sqrt (T-t)*‖g‖+‖η T‖ := add_le_add (realPrimitive_norm_le T g t ht) le_rfl
-    _ = ‖η T‖+Real.sqrt (T-t)*‖g‖ := add_comm _ _
 
 end EulerTimeH1PointwiseBounds

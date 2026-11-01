@@ -235,63 +235,10 @@ theorem weightedDriftNorm_eq_classical {s : ℕ} (q N : ℕ) (hN : N+q ≤ s) (�
   intro n hn
   rw [driftBlockNorm_eq_classical period (by have := Finset.mem_range.mp hn; omega) L u f hu hf]
 
-/-- Restriction of the finite Sobolev ambient space preserves each retained drift coordinate. -/
-theorem driftLevelNorm_restrict {s t n : ℕ} (h : t ≤ s) (hn : n ≤ t)
-    (L : Vector3 →L[ℝ] Domain 4) (u : SobolevSpace period s) :
-    driftLevelNorm period n L (restrictOperator period h u) = driftLevelNorm period n L u := by
-  apply Finset.sum_congr rfl
-  intro w _
-  rw [toJet_word period (restrictOperator period h u) hn, toJet_word period u (hn.trans h)]
-  rfl
 
-theorem weightedDriftNorm_restrict {s t : ℕ} (h : t ≤ s) (q N : ℕ) (hN : N+q ≤ t)
-    (ρ : ℝ) (L : Vector3 →L[ℝ] Domain 4) (u : SobolevSpace period s) :
-    weightedDriftNorm period q N ρ L (restrictOperator period h u) = weightedDriftNorm period q N ρ L u := by
-  apply Finset.sum_congr rfl
-  intro n hn
-  congr 1
-  apply Finset.sum_congr rfl
-  intro r hr
-  exact driftLevelNorm_restrict period h
-    (by have := Finset.mem_range.mp hn; have := Finset.mem_range.mp hr; omega) L u
 
-theorem weightedDriftNorm_truncate {s : ℕ} (q N : ℕ) (hN : N+q ≤ s)
-    (ρ : ℝ) (L : Vector3 →L[ℝ] Domain 4) (u : SobolevSpace period (s+1)) :
-    weightedDriftNorm period q N ρ L (truncateOperator period s u) = weightedDriftNorm period q N ρ L u := by
-  have he : truncateOperator period s u = restrictOperator period (Nat.le_succ s) u := by
-    apply value_injective period
-    rfl
-  rw [he]
-  exact weightedDriftNorm_restrict period (Nat.le_succ s) q N hN ρ L u
 
-/-- Actual smooth approximations converge in the drift norm at every retained weighted cutoff. -/
-theorem weightedDriftNorm_smoothApprox_tendsto {s : ℕ} (q N : ℕ) (hN : N+q ≤ s)
-    (ρ : ℝ) (L : Vector3 →L[ℝ] Domain 4) (u : SobolevSpace period s) :
-    Tendsto (fun n => weightedDriftNorm period q N ρ L
-      (restrictOperator period (by omega : s ≤ s+3) (smoothApprox period s n u))) atTop
-        (𝓝 (weightedDriftNorm period q N ρ L u)) :=
-  ((continuous_weightedDriftNorm period q N hN ρ L).tendsto u).comp (smoothApprox_tendsto period u)
 
-/-- A zero field has zero drift at every valid weighted cutoff. -/
-theorem weightedDriftNorm_zero {s : ℕ} (q N : ℕ) (hN : N+q ≤ s) (ρ : ℝ)
-    (L : Vector3 →L[ℝ] Domain 4) : weightedDriftNorm period q N ρ L (0 : SobolevSpace period s) = 0 := by
-  apply Finset.sum_eq_zero
-  intro n hn
-  apply mul_eq_zero_of_right
-  apply Finset.sum_eq_zero
-  intro r hr
-  apply Finset.sum_eq_zero
-  intro w _
-  rw [driftWordOperator_eq period
-    (by have := Finset.mem_range.mp hn; have := Finset.mem_range.mp hr; omega : n+r ≤ s), map_zero, norm_zero]
 
-/-- Smoothing errors themselves tend to zero in the genuine drift norm. -/
-theorem weightedDriftNorm_smoothApprox_sub_tendsto {s : ℕ} (q N : ℕ) (hN : N+q ≤ s)
-    (ρ : ℝ) (L : Vector3 →L[ℝ] Domain 4) (u : SobolevSpace period s) :
-    Tendsto (fun n => weightedDriftNorm period q N ρ L
-      (restrictOperator period (by omega : s ≤ s+3) (smoothApprox period s n u) - u)) atTop (𝓝 0) := by
-  have h := ((continuous_weightedDriftNorm period q N hN ρ L).tendsto (0 : SobolevSpace period s)).comp
-    (by simpa only [sub_self] using (smoothApprox_tendsto period u).sub (tendsto_const_nhds (x := u)))
-  simpa only [Function.comp_def, weightedDriftNorm_zero period q N hN ρ L] using h
 
 end EulerSobolevDriftNorm

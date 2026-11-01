@@ -28,13 +28,6 @@ theorem scalarEulerForce_field (A B : SmoothL2Field Space) (x : Space) :
     (scalarEulerForce A B).field x = -((B.field x)+fderiv ℝ A.field x (A.field x)) := by
   simp only [scalarEulerForce,fieldNeg_field,addField_field,advectionField_field]
 
-theorem scalarEulerForce_continuous
-    (A B : Icc (0 : ℝ) T → SmoothL2Field Space)
-    (hA : ∀ n, Continuous (fun t => (A t).jetLp n))
-    (hB : ∀ n, Continuous (fun t => (B t).jetLp n)) (n : ℕ) :
-    Continuous (fun t => (scalarEulerForce (A t) (B t)).jetLp n) :=
-  continuous_jetLp_mapField _ _
-    (continuous_jetLp_addField B _ hB (advectionField_continuous A hA)) n
 
 /-- An ordinary scalar Euler equation implies the actual projected L² equation.
 Spatial differentiability of pressure is used only at interior times. -/
@@ -110,56 +103,9 @@ variable (A B : Icc (0 : ℝ) T → SmoothL2Field Space)
       fderiv ℝ (A ⟨t,ht.1.le,ht.2.le⟩).field x
         ((A ⟨t,ht.1.le,ht.2.le⟩).field x)+gradient (p t) x=0)
 
-theorem evolutionOfScalarEuler_velocity :
-    (evolutionOfScalarEuler A B hA hd p hdiv hp he).velocity=A := rfl
 
-include hB in
-theorem evolutionOfScalarEuler_derivative (hpos : 0 < T) (t : Icc (0 : ℝ) T) :
-    (evolutionOfScalarEuler A B hA hd p hdiv hp he).derivative t=B t := by
-  let U := evolutionOfScalarEuler A B hA hd p hdiv hp he
-  have h₁ := U.sobolevTimeDerivative 3 t
-  have h₂ := sobolev_derivative_of_l2 T hT A B hA hB hd 3 t
-  change HasDerivWithinAt (extendPath T hT (sobolevPath A hA 3))
-    (sobolevPath U.derivative U.derivative_continuous 3 t) (Icc (0 : ℝ) T) t at h₁
-  have hh := (h₁.derivWithin (uniqueDiffOn_Icc hpos t t.property)).symm.trans
-    (h₂.derivWithin (uniqueDiffOn_Icc hpos t t.property))
-  apply field_ext
-  funext x
-  have h := congrArg (observation 3 (le_refl 3) (x,(0 : AddCircle (1 : ℝ)))) hh
-  simpa only [sobolevPath,ContinuousMap.coe_mk,observation_apply] using h
 
-include hB in
-theorem evolutionOfScalarEuler_pressureForce (hpos : 0 < T) (t : Icc (0 : ℝ) T) :
-    (evolutionOfScalarEuler A B hA hd p hdiv hp he).pressureForce t=
-      scalarEulerForce (A t) (B t) := by
-  let U := evolutionOfScalarEuler A B hA hd p hdiv hp he
-  have hd' := evolutionOfScalarEuler_derivative A B hA hB hd p hdiv hp he hpos t
-  apply field_ext
-  funext x
-  have hv := congrArg (fun C : SmoothL2Field Space => C.field x) hd'
-  rw [Evolution.derivative_field] at hv
-  change -fderiv ℝ (A t).field x ((A t).field x)-(U.pressureForce t).field x=(B t).field x at hv
-  rw [scalarEulerForce_field]
-  apply add_left_cancel (a := (B t).field x)
-  calc
-    (B t).field x+(U.pressureForce t).field x = -fderiv ℝ (A t).field x ((A t).field x) :=
-      ((sub_eq_iff_eq_add).mp hv).symm
-    _ = (B t).field x+-((B t).field x+fderiv ℝ (A t).field x ((A t).field x)) := by abel
 
-include hB in
-theorem evolutionOfScalarEuler_scalarPressure (hpos : 0 < T)
-    (t : ℝ) (ht : t ∈ Ioo 0 T) (x : Space) :
-    (evolutionOfScalarEuler A B hA hd p hdiv hp he).scalarPressure ⟨t,ht.1.le,ht.2.le⟩ x=
-      p t x-p t 0 := by
-  let U := evolutionOfScalarEuler A B hA hd p hdiv hp he
-  let s : Icc (0 : ℝ) T := ⟨t,ht.1.le,ht.2.le⟩
-  have hg (y : Space) : (U.pressureForce s).field y=gradient (p t) y := by
-    rw [evolutionOfScalarEuler_pressureForce A B hA hB hd p hdiv hp he hpos s,
-      scalarEulerForce_field]
-    exact (eq_neg_of_add_eq_zero_right (he t ht y)).symm
-  exact EulerCanonicalGraphPotential.radialPotential_eq_sub (U.pressureForce s).field
-    (U.pressureForce s).smooth.continuous (p t)
-    (potential_smooth (U.pressureForce s) (p t) (hp t ht) hg) (fun y => (hg y).symm) x
 
 end Identification
 

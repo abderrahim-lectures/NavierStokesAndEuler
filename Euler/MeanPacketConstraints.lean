@@ -77,13 +77,6 @@ theorem inverse_vector_divergence (t : Icc (0 : ℝ) D.T) (x : Space) (θ : ℝ)
   exact representative_divergence (G.coordinateOrdinaryPath t) (G.solution.velocity t).property
     (pathTranslation_evaluation_contDiff D.T G.coordinateOrdinaryPath G.coordinateOrdinaryPath_orbit t) x
 
-theorem inverse_vector_smooth (t : Icc (0 : ℝ) D.T) (θ : ℝ) :
-    ContDiff ℝ ∞ (fun y => D.inverseFrame (t,(y,θ)) (G.vector (t,(y,θ)))) := by
-  have he : (fun y => D.inverseFrame (t,(y,θ)) (G.vector (t,(y,θ)))) =
-      pathRepresentative D.T G.coordinateOrdinaryPath G.coordinateOrdinaryPath_orbit t :=
-    funext (fun y => G.inverse_vector_eq_coordinate t y θ)
-  rw [he]
-  exact pathRepresentative_smooth D.T G.coordinateOrdinaryPath G.coordinateOrdinaryPath_orbit t
 
 /-- The initial raw velocity is the actual localized boundary value. -/
 theorem initial_vector_ae (θ : ℝ) :
@@ -107,11 +100,6 @@ theorem initial_vector_support (θ : ℝ) :
     ((G.vector_spatial_smooth 0).continuous.comp (continuous_id.prodMk continuous_const))
     (G.initial_vector_ae θ)
 
-theorem initial_vector_compact (θ : ℝ) : HasCompactSupport (fun x => G.vector (0,(x,θ))) :=
-  scaledBoundary_continuous_compact D.ℓ D.ℓ_pos D.L (G.solution.label 0 : L2)
-    (fun x => G.vector (0,(x,θ)))
-    ((G.vector_spatial_smooth 0).continuous.comp (continuous_id.prodMk continuous_const))
-    (G.initial_vector_ae θ)
 
 /-- The time-space representative is jointly continuous on the actual interval. -/
 theorem vector_joint_continuous :

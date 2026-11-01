@@ -55,29 +55,7 @@ theorem scaled_first_majorant (A : ℝ) :
   norm_num [majorant,scaledRadius]
   ring
 
-theorem source_frame_derivative_norm :
-    ‖(G.transverseData m hm R S hS).frame.derivative.field‖ ≤ L.frameDifferenceCost*G.ell := by
-  have h0 := frameAmplitude_nonneg L.K
-  have h1 := coefficientRadius_nonneg L.K
-  have hell := G.ell_pos
-  apply SmoothCoefficientPath.derivative_norm_le_of_bound _ _ (by unfold frameDifferenceCost; positivity)
-  intro t x
-  have h := coefficient_derivative_bound m R G.frame.toSmoothCoefficientPath 1
-    (frameAmplitude L.K*majorant L.scaledRadius 0 1) (L.frame_scaled_bound 1) t x
-  rw [L.scaled_first_majorant] at h
-  exact h
 
-theorem source_first_derivative_norm :
-    ‖(G.transverseData m hm R S hS).frameDerivative.derivative.field‖ ≤ L.firstDifferenceCost*G.ell := by
-  have h0 := gradientAmplitude_nonneg L.K
-  have h1 := coefficientRadius_nonneg L.K
-  have hell := G.ell_pos
-  apply SmoothCoefficientPath.derivative_norm_le_of_bound _ _ (by unfold firstDifferenceCost; positivity)
-  intro t x
-  have h := coefficient_derivative_bound m R G.first.toSmoothCoefficientPath 1
-    (gradientAmplitude L.K*majorant L.scaledRadius 0 1) (L.first_scaled_bound 1) t x
-  rw [L.scaled_first_majorant] at h
-  exact h
 
 theorem source_normal_derivative_norm :
     ‖(G.transverseData m hm R S hS).normal.derivative.field‖ ≤ L.normalDifferenceCost*G.ell := by
@@ -101,16 +79,6 @@ theorem source_strain_derivative_norm :
   rw [L.scaled_first_majorant] at h
   exact h
 
-theorem source_curvature_derivative_norm (H : LowBounds G) :
-    ‖(G.historyData m hm R S hS H).H.derivative.field‖ ≤ L.strainDifferenceCost*G.ell := by
-  have h0 := gradientAmplitude_nonneg L.K
-  have h1 := coefficientRadius_nonneg L.K
-  have hell := G.ell_pos
-  apply SmoothCoefficientPath.derivative_norm_le_of_bound _ _ (by unfold strainDifferenceCost; positivity)
-  intro t x
-  have h := L.curvature_scaled_bound 1 t x
-  rw [L.scaled_first_majorant] at h
-  exact h
 
 variable [CompleteSpace U]
 
@@ -121,20 +89,5 @@ def historyDifferenceScaleCost (H : LowBounds G) : ℝ :=
     (G.T*‖D.frameDerivative.field‖+‖D.frame.field‖) (1+G.T^2*‖B.H.field‖)
     (historyTransportCost (D := D)) L.frameDifferenceCost L.firstDifferenceCost L.strainDifferenceCost
 
-omit [CompleteSpace U] in
-theorem source_history_derivative_scale (H : LowBounds G) :
-    historyLabelDifferenceCost (G.historyData m hm R S hS H) ≤
-      L.historyDifferenceScaleCost m hm R S hS H*G.ell := by
-  apply historyDifferenceCost_le_scale
-  · exact G.T_pos.le
-  · exact (G.transverseData m hm R S hS).frameLower_pos.le
-  · positivity
-  · positivity
-  · exact add_nonneg (mul_nonneg G.T_pos.le (norm_nonneg _)) (norm_nonneg _)
-  · positivity
-  · exact historyTransportCost_nonneg
-  · exact L.source_frame_derivative_norm m hm R S hS
-  · exact L.source_first_derivative_norm m hm R S hS
-  · exact L.source_curvature_derivative_norm m hm R S hS H
 
 end EulerParentPacketFrames.LabelData

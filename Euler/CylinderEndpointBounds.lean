@@ -26,15 +26,6 @@ variable (P : ℝ) [Fact (0 < P)] {T : ℝ} {U E : Type*}
 
 include hdir hY hA hYb
 
-theorem coordinate_bound (n : ℕ) :
-    block directions q (fun a : LiftTangent => pathTranslate P a (D.endpointCoordinate P Y)) n 0 ≤
-      (L.coordinateCost*A)*majorant L.R (d+2) n :=
-  terminal_amplitude_bound P directions q (D.endpointCoordinate P)
-    (fun Z hZ => D.endpointCoordinate_orbit_contDiff P L.frame_smooth
-      L.frameDerivative_smooth L.hessian_smooth Z hZ)
-    L.R L.coordinateCost d (d+2)
-    (fun Z hZ hb => L.coordinate_unit_bound P directions hdir Z hZ d hb)
-    Y hY A hA hYb n
 
 theorem acceleration_bound (n : ℕ) :
     block directions q (fun a : LiftTangent => pathTranslate P a (D.endpointAcceleration P Y)) n 0 ≤

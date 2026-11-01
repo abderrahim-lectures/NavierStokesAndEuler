@@ -62,18 +62,8 @@ theorem pointwise_vorticity_le (t : Icc (0 : ℝ) T) (x : Space) :
 
 def vorticityIntegral (t : Icc (0 : ℝ) T) : ℝ := realIntegral T hT U.vorticityNormPath t
 
-theorem vorticityIntegral_nonneg (t : Icc (0 : ℝ) T) : 0 ≤ U.vorticityIntegral t :=
-  intervalIntegral.integral_nonneg_of_forall t.property.1
-    (fun r => U.vorticityNormPath_nonneg (projIcc 0 T hT r))
 
-theorem vorticityIntegral_initial : U.vorticityIntegral ⟨0,le_rfl,hT⟩=0 :=
-  intervalIntegral.integral_same
 
-theorem vorticityIntegral_continuous : Continuous U.vorticityIntegral :=
-  (show Continuous (realIntegral T hT U.vorticityNormPath) from
-    (show Differentiable ℝ (realIntegral T hT U.vorticityNormPath) from
-      fun t => (realIntegral_hasDerivAt T hT U.vorticityNormPath t).differentiableAt).continuous).comp
-        continuous_subtype_val
 
 theorem vorticityIntegral_mono (s t : Icc (0 : ℝ) T) (hst : (s : ℝ) ≤ t) :
     U.vorticityIntegral s ≤ U.vorticityIntegral t :=
@@ -92,13 +82,6 @@ theorem vorticityIntegral_le_const (K : ℝ)
           (U.vorticityNormPath_le_iff (projIcc 0 T hT r) K).mpr (hK _))
     _ = _ := by simp only [intervalIntegral.integral_const,sub_zero,smul_eq_mul]; ring
 
-theorem vorticityNormPath_le_gradient (t : Icc (0 : ℝ) T) :
-    U.vorticityNormPath t ≤ ‖curlOperator‖*U.gradientNormPath t := by
-  apply (U.vorticityNormPath_le_iff t _).mpr
-  intro x
-  rw [← vorticityField_apply]
-  exact (curlOperator.le_opNorm (fderiv ℝ (U.velocity t).field x)).trans
-    (mul_le_mul_of_nonneg_left (U.pointwise_gradient_le t x) (norm_nonneg _))
 
 end Evolution
 end EulerOrdinarySobolev

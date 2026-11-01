@@ -30,19 +30,12 @@ theorem maximalVorticityDensity_nonneg (r : ℝ) : 0 ≤ L.maximalVorticityDensi
   · exact L.maximalVorticityNorm_nonneg _
   · exact le_rfl
 
-theorem maximalVorticityDensity_measurable : Measurable L.maximalVorticityDensity := by
-  classical
-  exact L.maximalVorticityNorm_continuous.measurable.dite measurable_const measurableSet_Ico
 
 theorem maximalVorticityDensity_eq (t : L.Time) :
     L.maximalVorticityDensity t=L.maximalVorticityNorm t := by
   classical
   simp only [maximalVorticityDensity,dite_eq_left t.property]
 
-theorem maximalVorticityDensity_le_iff (t : L.Time) (K : ℝ) :
-    L.maximalVorticityDensity t ≤ K ↔ ∀ x, ‖vectorCurl (L.maximalVelocity t) x‖ ≤ K := by
-  rw [L.maximalVorticityDensity_eq]
-  exact L.maximalVorticityNorm_le_iff t K
 
 theorem maximalVorticityDensity_eq_evolution (S : ℝ) (hS : 0 < S) (hSL : S < L.duration)
     (t : Icc (0 : ℝ) S) :
@@ -82,10 +75,6 @@ theorem maximalVorticityDensity_integral_eq_evolution (S : ℝ) (hS : 0 < S)
   rw [projIcc_of_mem hS.le hrS]
   exact L.maximalVorticityDensity_eq_evolution S hS hSL ⟨r,hrS⟩
 
-theorem maximalVorticityDensity_integral_eq (t : L.Time) :
-    (∫ r in (0 : ℝ)..(t : ℝ), L.maximalVorticityDensity r)=L.maximalVorticityIntegral t :=
-  L.maximalVorticityDensity_integral_eq_evolution (L.intermediateHorizon t)
-    (L.intermediateHorizon_pos t) (L.intermediateHorizon_lt t) (L.intermediateTime t)
 
 /-- This is the improper integral as an extended nonnegative integral,
 not the totalized real Bochner integral at the singular endpoint. -/

@@ -56,8 +56,6 @@ instance sobolevNormedAddCommGroup (q : ℕ) : NormedAddCommGroup (SobolevSpace 
 instance sobolevNormedSpace (q : ℕ) : NormedSpace ℝ (SobolevSpace period q) :=
   inferInstanceAs (NormedSpace ℝ (sobolevSubspace period q).toSubmodule)
 
-/-- Completeness follows from closedness of the derivative graphs in a finite product of L² spaces. -/
-theorem sobolev_complete (q : ℕ) : CompleteSpace (SobolevSpace period q) := inferInstance
 
 /-- The underlying L² field of a Sobolev derivative array. -/
 def value {q : ℕ} (u : SobolevSpace period q) : LiftL2 period := u.val (emptyWord q)
@@ -136,10 +134,5 @@ theorem value_injective {q : ℕ} : Function.Injective (value period : SobolevSp
     toJet_word period v (Nat.le_of_lt_succ w.1.isLt)] at h
   exact h
 
-/-- Reconstructing a jet and then its array is the identity. -/
-@[simp]
-theorem ofJet_toJet {q : ℕ} (u : SobolevSpace period q) : ofJet period (toJet period u) = u := by
-  apply value_injective period
-  exact value_ofJet period (toJet period u)
 
 end EulerCylinderSobolevSpace

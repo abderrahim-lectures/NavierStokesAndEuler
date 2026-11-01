@@ -111,46 +111,7 @@ def liftEvolution : Evolution T hT (operatorPath μ S hS T B) where
     rw [operator_mul] at hd
     exact hd
 
-/-- The pointwise localized (H3) estimate is the actual L² propagator norm,
-with the identical relative profile factor. -/
-theorem liftEvolution_propagator_norm (g : Icc (0 : ℝ) T → ℝ) (hg : ∀ t, 0 < g t)
-    (C : ℝ) (hC : 0 ≤ C)
-    (hprop : ∀ t s : Icc (0 : ℝ) T, s ≤ t → ∀ x ∈ S,
-      ‖(Φ t x).comp (Ψ s x)‖ ≤ C*g t/g s)
-    (t s : Icc (0 : ℝ) T) (hst : s ≤ t) :
-    ‖(liftEvolution μ S hS T hT B Φ Ψ hRight hLeft hΦ).propagator t s‖ ≤ C*g t/g s := by
-  change ‖(operator μ S hS (Φ t)).comp (operator μ S hS (Ψ s))‖ ≤ _
-  rw [← operator_mul]
-  exact operator_norm_le μ S hS (Φ t*Ψ s) (C*g t/g s)
-    (div_nonneg (mul_nonneg hC (hg t).le) (hg s).le) (hprop t s hst)
 
-/-- The actual forced supported-L² path has the source's polynomial profile bound. -/
-theorem liftedSolution_profile_bound
-    (f : C(Icc (0 : ℝ) T,supportedSpace (V := V) μ S hS))
-    (a₀ : supportedSpace (V := V) μ S hS)
-    (g : Icc (0 : ℝ) T → ℝ) (hg : ∀ t, 0 < g t) (hg₀ : g ⟨0,le_rfl,hT⟩ = 1)
-    (C D : ℝ) (hC : 0 ≤ C)
-    (hprop : ∀ t s : Icc (0 : ℝ) T, s ≤ t → ∀ x ∈ S,
-      ‖(Φ t x).comp (Ψ s x)‖ ≤ C*g t/g s)
-    (hf : ∀ s, ‖f s‖ ≤ D*g s) (t : Icc (0 : ℝ) T) :
-    ‖(liftEvolution μ S hS T hT B Φ Ψ hRight hLeft hΦ).solution f a₀ t‖ ≤
-      C*g t*(‖a₀‖+(t : ℝ)*D) :=
-  (liftEvolution μ S hS T hT B Φ Ψ hRight hLeft hΦ).solution_profile_bound f a₀ g hg hg₀ C D hC
-    (liftEvolution_propagator_norm μ S hS T hT B Φ Ψ hRight hLeft hΦ g hg C hC hprop) hf t
 
-/-- This profile-bounded path solves the actual supported-L² differential equation. -/
-theorem liftedSolution_hasDerivWithinAt
-    (f : C(Icc (0 : ℝ) T,supportedSpace (V := V) μ S hS))
-    (a₀ : supportedSpace (V := V) μ S hS) (t : Icc (0 : ℝ) T) :
-    HasDerivWithinAt
-      (extendPath T hT ((liftEvolution μ S hS T hT B Φ Ψ hRight hLeft hΦ).solution f a₀))
-      (operator μ S hS (B t) ((liftEvolution μ S hS T hT B Φ Ψ hRight hLeft hΦ).solution f a₀ t) + f t)
-      (Icc (0 : ℝ) T) t := by
-  let U := liftEvolution μ S hS T hT B Φ Ψ hRight hLeft hΦ
-  have hd := U.solution_derivative f a₀ t
-  apply hd.congr_of_mem _ t.property
-  intro s hs
-  simp only [extendPath, projIcc_of_mem hT hs]
-  rfl
 
 end EulerLpSupportedEvolution

@@ -113,11 +113,6 @@ def fullMap : (α →ᵇ (E →L[ℝ] F)) →L[ℝ] (Lp E 2 μ →L[ℝ] Lp F 2 
       change ‖full μ A‖ ≤ (1 : ℝ)*‖A‖
       simpa only [one_mul] using full_norm μ A)
 
-theorem fullMap_norm : ‖fullMap (E := E) (F := F) μ‖ ≤ 1 := by
-  apply opNorm_le_bound _ zero_le_one
-  intro A
-  change ‖full μ A‖ ≤ (1 : ℝ)*‖A‖
-  simpa only [one_mul] using full_norm μ A
 
 end EulerLpOperatorField
 
@@ -144,9 +139,6 @@ def supported (A : α →ᵇ (E →L[ℝ] F)) :
   ((full μ A).comp (supportedSpace μ S hS).subtypeL).codRestrict
     (supportedSpace μ S hS) (full_mem μ S hS A)
 
-theorem supported_ae (A : α →ᵇ (E →L[ℝ] F)) (u : supportedSpace (V := E) μ S hS) :
-    ((supported μ S hS A u : supportedSpace (V := F) μ S hS) : Lp F 2 μ) =ᵐ[μ]
-      fun x => A x ((u : Lp E 2 μ) x) := full_ae μ A u
 
 /-- Only values on the supporting region enter the actual operator norm. -/
 theorem supported_norm (A : α →ᵇ (E →L[ℝ] F)) (C : ℝ) (hC : 0 ≤ C)
@@ -162,25 +154,5 @@ theorem supported_norm (A : α →ᵇ (E →L[ℝ] F)) (C : ℝ) (hC : 0 ≤ C)
   · exact ((A x).le_opNorm _).trans (mul_le_mul_of_nonneg_right (hA x hx) (norm_nonneg _))
   · simp only [hu hx,map_zero,norm_zero,mul_zero,le_refl]
 
-/-- A pointwise lower frame bound becomes the actual spatial-L² lower frame bound. -/
-theorem supported_norm_sq_lower (A : α →ᵇ (E →L[ℝ] F)) (c : ℝ) (hc : 0 ≤ c)
-    (hA : ∀ x ∈ S, ∀ v : E, c*‖v‖^2 ≤ ‖A x v‖^2)
-    (u : supportedSpace (V := E) μ S hS) :
-    c*‖u‖^2 ≤ ‖supported μ S hS A u‖^2 := by
-  have hroot : (Real.sqrt c)^2 = c := Real.sq_sqrt hc
-  have h : ‖Real.sqrt c • (u : Lp E 2 μ)‖ ≤ ‖full μ A (u : Lp E 2 μ)‖ := by
-    apply Lp.norm_le_norm_of_ae_le
-    filter_upwards [full_ae μ A (u : Lp E 2 μ), Lp.coeFn_smul (Real.sqrt c) (u : Lp E 2 μ),
-      (mem_supportedSpace_ae μ S hS (u : Lp E 2 μ)).1 u.property] with x ha hs hu
-    rw [ha,hs,Pi.smul_apply,norm_smul,Real.norm_eq_abs,abs_of_nonneg (Real.sqrt_nonneg c)]
-    by_cases hx : x ∈ S
-    · apply (sq_le_sq₀ (mul_nonneg (Real.sqrt_nonneg c) (norm_nonneg _)) (norm_nonneg _)).1
-      rw [mul_pow,hroot]
-      exact hA x hx _
-    · simp only [hu hx,map_zero,norm_zero,mul_zero,le_refl]
-  rw [norm_smul,Real.norm_eq_abs,abs_of_nonneg (Real.sqrt_nonneg c)] at h
-  have hs := (sq_le_sq₀ (mul_nonneg (Real.sqrt_nonneg c) (norm_nonneg _)) (norm_nonneg _)).2 h
-  change c*‖(u : Lp E 2 μ)‖^2 ≤ ‖full μ A (u : Lp E 2 μ)‖^2
-  simpa only [mul_pow,hroot] using hs
 
 end EulerLpOperatorField

@@ -17,8 +17,6 @@ def derivativeBound (f : Space → ℝ) (hc : HasCompactSupport f)
     (hs : ContDiff ℝ ∞ f) (n : ℕ) : ℝ :=
   max 1 (Classical.choose (derivative_bound_exists f hc hs n))
 
-theorem one_le_derivativeBound (f : Space → ℝ) (hc : HasCompactSupport f)
-    (hs : ContDiff ℝ ∞ f) (n : ℕ) : 1 ≤ derivativeBound f hc hs n := le_max_left _ _
 
 theorem norm_iteratedFDeriv_le_derivativeBound (f : Space → ℝ) (hc : HasCompactSupport f)
     (hs : ContDiff ℝ ∞ f) (n : ℕ) (x : Space) :
@@ -67,14 +65,6 @@ theorem abs_inner_le_one (x : Space) : |innerCutoff x| ≤ 1 := by
   change |innerBump x| ≤ 1
   rw [abs_of_nonneg innerBump.nonneg]
   exact innerBump.le_one
-theorem abs_middle_le_one (x : Space) : |middleCutoff x| ≤ 1 := by
-  change |middleBump x| ≤ 1
-  rw [abs_of_nonneg middleBump.nonneg]
-  exact middleBump.le_one
-theorem abs_outer_le_one (x : Space) : |outerCutoff x| ≤ 1 := by
-  change |outerBump x| ≤ 1
-  rw [abs_of_nonneg outerBump.nonneg]
-  exact outerBump.le_one
 
 theorem inner_one_on_halfBall {x : Space} (hx : x ∈ Metric.closedBall 0 (1/2 : ℝ)) :
     innerCutoff x = 1 := innerBump.one_of_mem_closedBall hx

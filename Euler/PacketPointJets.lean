@@ -72,27 +72,6 @@ def fieldSum {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (M : ℕ) (κ : ℝ) (u : ℕ → Domain → E) (z : Domain) : E :=
   evaluate M κ (fun n => u n z)
 
-/-- Taking the actual first jet commutes with a finite packet sum. -/
-theorem jet_fieldSum {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (M : ℕ) (κ : ℝ) (u : ℕ → Domain → E) (z : Domain)
-    (hu : ∀ n ≤ M, DifferentiableAt ℝ (u n) z) :
-    jet (fieldSum M κ u) z = evaluate M κ (fun n => jet (u n) z) := by
-  have hd := HasFDerivAt.fun_sum (u := Finset.range (M+1))
-    (fun n hn => ((hu n (by have h := Finset.mem_range.mp hn; omega)).hasFDerivAt).const_smul (κ^n))
-  apply Prod.ext
-  · change (∑ n ∈ Finset.range (M+1), κ^n • u n z) =
-      (AddMonoidHom.fst E (Domain →L[ℝ] E))
-        (∑ n ∈ Finset.range (M+1), κ^n • jet (u n) z)
-    rw [map_sum]
-    rfl
-  · change fderiv ℝ (fieldSum M κ u) z = _
-    rw [show fderiv ℝ (fieldSum M κ u) z =
-      ∑ n ∈ Finset.range (M+1), κ^n • fderiv ℝ (u n) z from hd.fderiv]
-    change (∑ n ∈ Finset.range (M+1), κ^n • fderiv ℝ (u n) z) =
-      (AddMonoidHom.snd E (Domain →L[ℝ] E))
-        (∑ n ∈ Finset.range (M+1), κ^n • jet (u n) z)
-    rw [map_sum]
-    rfl
 
 /-- This is the literal normalized momentum expression evaluated through its true first derivatives. -/
 def momentumResidual (κ : ℝ) (FInv M : Space →L[ℝ] Space) (m : Space)
@@ -100,13 +79,5 @@ def momentumResidual (κ : ℝ) (FInv M : Space →L[ℝ] Space) (m : Space)
   linearPart M (jet u z) + slowPressure FInv (jet p z) + κ⁻¹ • fastPressure m (jet p z) +
     slowAdvection FInv (jet u z) (jet u z) + κ⁻¹ • fastAdvection m (jet u z) (jet u z)
 
-theorem momentumResidual_formula (κ : ℝ) (FInv M : Space →L[ℝ] Space) (m : Space)
-    (u : Domain → Space) (p : Domain → ℝ) (z : Domain) :
-    momentumResidual κ FInv M m u p z =
-      fderiv ℝ u z timeDirection + M (u z) +
-      FInv.adjoint ((toDual ℝ Space).symm ((fderiv ℝ p z).comp spatialInjection)) +
-      κ⁻¹ • (fderiv ℝ p z angleDirection • m) +
-      fderiv ℝ u z (spatialInjection (FInv (u z))) +
-      κ⁻¹ • (⟪m, u z⟫_ℝ • fderiv ℝ u z angleDirection) := rfl
 
 end EulerPacketPointJets

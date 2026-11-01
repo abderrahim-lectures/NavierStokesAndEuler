@@ -13,11 +13,6 @@ open scoped ContDiff
 
 private local instance : Fact (0 < (1 : ℝ)) := ⟨by norm_num⟩
 
-private theorem hasDerivAt_submodule_iff {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (S : Submodule ℝ E) (f : ℝ → S) (v : S) (t : ℝ) :
-    HasDerivAt f v t ↔ HasDerivAt (fun s => (f s : E)) (v : E) t := by
-  rw [hasDerivAt_iff_tendsto, hasDerivAt_iff_tendsto]
-  rfl
 
 private theorem hasDerivWithinAt_submodule_iff {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (S : Submodule ℝ E) (f : ℝ → S) (v : S) (U : Set ℝ) (t : ℝ) :
@@ -25,23 +20,6 @@ private theorem hasDerivWithinAt_submodule_iff {E : Type*} [NormedAddCommGroup E
   rw [hasDerivWithinAt_iff_tendsto, hasDerivWithinAt_iff_tendsto]
   rfl
 
-/-- The derivative of the complete Sobolev array is fixed by the actual finite L² derivative tensors. -/
-theorem ordinarySobolev_hasDerivAt (q : ℕ) (u : ℝ → EulerMeanSolenoidal.L2)
-    (hu : ∀ t, SmoothOrbit (u t)) (v : EulerMeanSolenoidal.L2) (hv : SmoothOrbit v) (t : ℝ)
-    (hjet : ∀ n ≤ q, HasDerivAt
-      (fun s => iteratedFDeriv ℝ n (fun a : Space => EulerMeanSolenoidal.translation a (u s)) 0)
-      (iteratedFDeriv ℝ n (fun a : Space => EulerMeanSolenoidal.translation a v) 0) t) :
-    HasDerivAt (fun s => ordinarySobolev q (u s) (hu s)) (ordinarySobolev q v hv) t := by
-  apply (hasDerivAt_submodule_iff (sobolevSubspace 1 q).toSubmodule _ _ _).mpr
-  apply hasDerivAt_pi.mpr
-  intro w
-  change HasDerivAt (fun s => (ordinarySobolev q (u s) (hu s)).val w)
-    ((ordinarySobolev q v hv).val w) t
-  simp_rw [ordinarySobolev_coordinate]
-  let L := ordinaryLift.toContinuousLinearMap.comp
-    (ContinuousMultilinearMap.apply ℝ (fun _ : Fin w.1.val => Space) EulerMeanSolenoidal.L2
-      (coordinateTuple w.2))
-  exact L.hasFDerivAt.comp_hasDerivAt t (hjet w.1.val (Nat.le_of_lt_succ w.1.isLt))
 
 theorem ordinarySobolev_hasDerivWithinAt (q : ℕ) (u : ℝ → EulerMeanSolenoidal.L2)
     (hu : ∀ t, SmoothOrbit (u t)) (v : EulerMeanSolenoidal.L2) (hv : SmoothOrbit v)
@@ -61,17 +39,6 @@ theorem ordinarySobolev_hasDerivWithinAt (q : ℕ) (u : ℝ → EulerMeanSolenoi
       (coordinateTuple w.2))
   exact L.hasFDerivAt.comp_hasDerivWithinAt t (hjet w.1.val (Nat.le_of_lt_succ w.1.isLt))
 
-/-- The actual pointwise time derivative equals the smooth representative of the L² derivative. -/
-theorem representative_hasDerivAt (u : ℝ → EulerMeanSolenoidal.L2) (hu : ∀ t, SmoothOrbit (u t))
-    (v : EulerMeanSolenoidal.L2) (hv : SmoothOrbit v) (t : ℝ)
-    (hjet : ∀ n ≤ 3, HasDerivAt
-      (fun s => iteratedFDeriv ℝ n (fun a : Space => EulerMeanSolenoidal.translation a (u s)) 0)
-      (iteratedFDeriv ℝ n (fun a : Space => EulerMeanSolenoidal.translation a v) 0) t)
-    (x : Space) :
-    HasDerivAt (fun s => representative (u s) (hu s) x) (representative v hv x) t := by
-  have H := (pointEvaluation 1 (x, 0)).hasFDerivAt.comp_hasDerivAt t
-    (ordinarySobolev_hasDerivAt 3 u hu v hv t hjet)
-  simpa only [Function.comp_def, pointEvaluation_ordinary] using H
 
 theorem representative_hasDerivWithinAt (u : ℝ → EulerMeanSolenoidal.L2)
     (hu : ∀ t, SmoothOrbit (u t)) (v : EulerMeanSolenoidal.L2) (hv : SmoothOrbit v)

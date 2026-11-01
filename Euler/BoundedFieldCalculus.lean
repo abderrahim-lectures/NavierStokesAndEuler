@@ -84,8 +84,6 @@ def bilinearMap (B : E →L[ℝ] F →L[ℝ] G) : (α →ᵇ E) →L[ℝ] (α �
 @[simp] theorem bilinearMap_apply (B : E →L[ℝ] F →L[ℝ] G) (f : α →ᵇ E) (g : α →ᵇ F) (x : α) :
     bilinearMap B f g x = B (f x) (g x) := rfl
 
-theorem bilinearMap_norm (B : E →L[ℝ] F →L[ℝ] G) : ‖bilinearMap (α := α) B‖ ≤ ‖B‖ :=
-  (bilinearLinear B).mkContinuous₂_norm_le (norm_nonneg B) (bilinearValue_norm B)
 
 /-- Pointwise postcomposition preserves the coefficient map's norm bound. -/
 theorem postcomposition_norm (L : E →L[ℝ] F) : ‖L.compLeftContinuousBounded α‖ ≤ ‖L‖ := by
@@ -123,8 +121,6 @@ private local instance : NormedSpace ℝ ((α →ᵇ U →L[ℝ] E) →L[ℝ] (�
 def compositionMap : (α →ᵇ E →L[ℝ] F) →L[ℝ] (α →ᵇ U →L[ℝ] E) →L[ℝ] (α →ᵇ U →L[ℝ] F) :=
   bilinearMap (compL ℝ U E F)
 
-theorem compositionMap_norm : ‖compositionMap (α := α) (U := U) (E := E) (F := F)‖ ≤ 1 :=
-  (bilinearMap_norm (compL ℝ U E F)).trans (norm_compL_le ℝ U E F)
 
 @[simp] theorem compositionMap_apply (A : α →ᵇ E →L[ℝ] F) (B : α →ᵇ U →L[ℝ] E) (x : α) :
     compositionMap A B x = (A x).comp (B x) := rfl
