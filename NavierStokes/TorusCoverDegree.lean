@@ -90,30 +90,7 @@ theorem covering_eq_iff_rawLift (d : ℕ) (p : Torus) (y : Plane) :
     exact covering_rawLift d k y
 
 
-/-- Distinct lattice classes give disjoint lifted copies of an injective chart. -/
-theorem disjoint_rawLift_images (d : ℕ) (k l : Frequency) {s : Set Plane}
-    (hs : InjOn quotientPoint s) (hkl : ¬ ∃ n : Frequency, k = l + coverIndex d n) :
-    Disjoint (rawLift d k '' s) (rawLift d l '' s) := by
-  rw [Set.disjoint_left]
-  rintro p ⟨x, hx, hxp⟩ ⟨y, hy, hyp⟩
-  have hxy : rawLift d k x = rawLift d l y := hxp.trans hyp.symm
-  have hq : quotientPoint x = quotientPoint y := by
-    simpa only [covering_rawLift] using congrArg (torusCovering^[d]) hxy
-  have heq := hs hx hy hq
-  subst y
-  exact hkl ((rawLift_eq_iff d k l x).mp hxy)
 
-/-- The inverse image of a native set is the union of the displayed lifts. -/
-theorem preimage_eq_iUnion_rawLift (d : ℕ) (s : Set Plane) :
-    (torusCovering^[d]) ⁻¹' (quotientPoint '' s) = ⋃ k : Frequency, rawLift d k '' s := by
-  ext p
-  simp only [Set.mem_preimage, Set.mem_image, Set.mem_iUnion]
-  constructor
-  · rintro ⟨y, hy, hp⟩
-    obtain ⟨k, hk⟩ := (covering_eq_iff_rawLift d p y).mp hp.symm
-    exact ⟨k, y, hy, hk.symm⟩
-  · rintro ⟨k, y, hy, rfl⟩
-    exact ⟨y, hy, (covering_rawLift d k y).symm⟩
 
 /-- The explicit sheet is the copy-point formula used by the common-cover
 ODE construction, with the same center and native basis. -/
@@ -140,17 +117,6 @@ theorem liftedRectangle_eq_rawLift (g : Geometry) (r : ℝ) (k : Frequency) :
   funext z
   exact (rawLift_geometry_point g k z).symm
 
-theorem preimage_nativeRectangle (g : Geometry) (r : ℝ) :
-    (torusCovering^[g.gap]) ⁻¹' nativeRectangle g r =
-      ⋃ k : Frequency, liftedRectangle g r k := by
-  have heq : nativeRectangle g r = quotientPoint ''
-      ((fun z => g.center + g.basis z) '' Metric.ball (0 : Plane) r) := by
-    rw [Set.image_image]
-    rfl
-  rw [heq, preimage_eq_iUnion_rawLift]
-  congr 1
-  funext k
-  exact (liftedRectangle_eq_rawLift g r k).symm
 
 
 open TorusCoverLattice
@@ -197,61 +163,12 @@ def sheetRectangle (g : Geometry) (r : ℝ) (i : Sheet g.gap) : Set Torus :=
   (liftedRectangle_eq_rawLift g r k).symm
 
 
-theorem pairwise_disjoint_sheetRectangles_of_injOn (g : Geometry) (r : ℝ)
-    (hr : InjOn quotientPoint
-      ((fun z => g.center + g.basis z) '' Metric.ball (0 : Plane) r)) :
-    Pairwise (fun i j : Sheet g.gap => Disjoint (sheetRectangle g r i)
-      (sheetRectangle g r j)) := by
-  intro i j
-  induction i, j using Quotient.inductionOn₂ with
-  | h k l =>
-      intro hkl
-      simp only [sheetRectangle_mk, liftedRectangle_eq_rawLift]
-      exact disjoint_rawLift_images g.gap k l hr (fun h =>
-        hkl ((sheet_eq_iff g.gap k l).mpr h))
 
 
-theorem sheetRectangle_nonempty (g : Geometry) {r : ℝ} (hr : 0 < r)
-    (i : Sheet g.gap) : (sheetRectangle g r i).Nonempty :=
-  ((Metric.nonempty_ball.mpr hr).image _).image _
-
-/-- Each of the disjoint pieces maps bijectively to the given native rectangle. -/
-theorem covering_bijOn_sheetRectangle_of_injOn (g : Geometry) (r : ℝ)
-    (hr : InjOn quotientPoint
-      ((fun z => g.center + g.basis z) '' Metric.ball (0 : Plane) r))
-    (i : Sheet g.gap) :
-    BijOn (torusCovering^[g.gap]) (sheetRectangle g r i) (nativeRectangle g r) := by
-  refine ⟨?_, ?_, ?_⟩
-  · rintro p ⟨y, ⟨z, hz, rfl⟩, rfl⟩
-    exact ⟨z, hz, (covering_sheetLift g.gap i _).symm⟩
-  · rintro p ⟨y, hy, rfl⟩ q ⟨z, hz, rfl⟩ h
-    have heq : y = z := hr hy hz (by simpa only [covering_sheetLift] using h)
-    rw [heq]
-  · rintro p ⟨z, hz, rfl⟩
-    exact ⟨sheetLift g.gap i (g.center + g.basis z),
-      ⟨g.center + g.basis z, ⟨z, hz, rfl⟩, rfl⟩, covering_sheetLift g.gap i _⟩
 
 
-/-- The collection of distinct, nonempty lifted rectangles has exactly the
-degree of the covering, not merely an upper bound on the number of labels. -/
-theorem card_liftedRectangles_of_injOn (g : Geometry) {r : ℝ} (hr : 0 < r)
-    (hchart : InjOn quotientPoint
-      ((fun z => g.center + g.basis z) '' Metric.ball (0 : Plane) r)) :
-    Nat.card (Set.range (sheetRectangle g r)) = 14 ^ g.gap := by
-  have hinj : Injective (sheetRectangle g r) := by
-    intro i j hij
-    by_contra hne
-    have hdis := pairwise_disjoint_sheetRectangles_of_injOn g r hchart hne
-    dsimp only at hdis
-    rw [hij] at hdis
-    exact (sheetRectangle_nonempty g hr j).ne_empty (disjoint_self.mp hdis)
-  exact (Nat.card_congr (Equiv.ofInjective _ hinj)).symm.trans (card_sheet g.gap)
 
-theorem card_liftedRectangles (g : Geometry) {r : ℝ} (hr : 0 < r)
-    (hsmall : ‖(g.basis : Plane →L[ℝ] Plane)‖ * r < 1 / 2) :
-    Nat.card (Set.range (sheetRectangle g r)) = 14 ^ g.gap :=
-  card_liftedRectangles_of_injOn g hr
-    (quotientPoint_injOn_small_chart g.basis g.center r hsmall)
+
 
 
 end NavierStokes.TorusCoverDegree

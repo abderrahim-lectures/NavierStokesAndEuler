@@ -723,14 +723,6 @@ theorem stepResult_of_particular (H : Invariant σ x)
   CorrectionAnalyticStep.step _ _ _ _ _ _ _ _ _ _ _ _
     (staticData B) H hσ kappa_small (stepData_of_particular H hN hσ hl P)
 
-theorem afterTemporal_debt_of_particular (H : Invariant σ x)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (hσ : 1/5 ≤ σ)
-    (hl : (v).labels = ActualPrimary.activeLabels ActualPrimary.standardRegion B N0)
-    (P : ActualParticularCycleData.Data x σ) :
-    UnweightedClass ActualInitialization.slowStrip (1+σ-2*κ)
-      (debt c (ActualIntermediateDebtBounds.postTemporal x)) :=
-  ActualIntermediateDebtBounds.afterTemporal_debt_from_stepData
-    (staticData B) H hσ (P.inputs H hN) (stepData_of_particular H hN hσ hl P)
 
 end Factory
 

@@ -62,35 +62,7 @@ theorem spatialDivergence_add
   rw [spatialDerivative_add u e t x hu he]
   simp only [add_apply, PiLp.add_apply, Finset.sum_add_distrib]
 
-/-- The spatial C² hypothesis gives differentiability of each first directional
-derivative. This is the second-derivative fact needed for the Laplacian. -/
-theorem differentiable_spatial_direction
-    (u : VelocityField) (t : ℝ)
-    (hu : ContDiff ℝ 2 (fun y : Space => u (t, y))) (v : Space) :
-    Differentiable ℝ (fun y : Space => spatialDerivative u t y v) := by
-  have hfirst : ContDiff ℝ 1 (fderiv ℝ (fun y : Space => u (t, y))) :=
-    hu.fderiv_right (by norm_num)
-  exact (hfirst.clm_apply contDiff_const).differentiable (by norm_num)
 
-/-- Additivity of the concrete iterated-derivative Laplacian on C² slices. -/
-theorem spatialLaplacian_add
-    (u e : VelocityField) (t : ℝ) (x : Space)
-    (hu : ContDiff ℝ 2 (fun y : Space => u (t, y)))
-    (he : ContDiff ℝ 2 (fun y : Space => e (t, y))) :
-    spatialLaplacian (fun z => u z + e z) t x =
-      spatialLaplacian u t x + spatialLaplacian e t x := by
-  have hdu := hu.differentiable (by norm_num)
-  have hde := he.differentiable (by norm_num)
-  have hsum : ∀ y : Space,
-      spatialDerivative (fun z => u z + e z) t y =
-        spatialDerivative u t y + spatialDerivative e t y :=
-    fun y => spatialDerivative_add u e t y (hdu y) (hde y)
-  unfold spatialLaplacian
-  simp_rw [hsum, add_apply]
-  simp_rw [fderiv_fun_add
-    (differentiable_spatial_direction u t hu _ x)
-    (differentiable_spatial_direction e t he _ x), add_apply]
-  exact Finset.sum_add_distrib
 
 /-- The quadratic advection term produces exactly its two cross terms and the
 self-advection of the perturbation. -/
@@ -106,49 +78,8 @@ theorem advection_add
   simp only [add_apply, map_add]
   abel
 
-/-- Exact perturbation formula for the physical residual, at viscosity one.
-Every operator in this statement is the concrete operator in `ProblemStatement`. -/
-theorem navierStokesResidual_add_sub
-    (u e : VelocityField) (p q : PressureField) (t : ℝ) (x : Space)
-    (hut : DifferentiableAt ℝ (fun s : ℝ => u (s, x)) t)
-    (het : DifferentiableAt ℝ (fun s : ℝ => e (s, x)) t)
-    (hu : ContDiff ℝ 2 (fun y : Space => u (t, y)))
-    (he : ContDiff ℝ 2 (fun y : Space => e (t, y)))
-    (hp : DifferentiableAt ℝ (fun y : Space => p (t, y)) x)
-    (hq : DifferentiableAt ℝ (fun y : Space => q (t, y)) x) :
-    navierStokesResidual (fun z => u z + e z) (fun z => p z + q z) t x -
-      navierStokesResidual u p t x =
-        temporalDerivative e t x - spatialLaplacian e t x + pressureGradient q t x +
-          spatialDerivative u t x (e (t, x)) + spatialDerivative e t x (u (t, x)) +
-          spatialDerivative e t x (e (t, x)) := by
-  have hdu := hu.differentiable (by norm_num)
-  have hde := he.differentiable (by norm_num)
-  unfold navierStokesResidual
-  rw [temporalDerivative_add u e t x hut het, advection_add u e t x (hdu x) (hde x),
-    spatialLaplacian_add u e t x hu he, pressureGradient_add p q t x hp hq]
-  unfold advection
-  abel
 
-/-- A spatial slice of a field smooth on the actual presingular domain is
-globally smooth in space at each interior time. -/
-theorem spatial_contDiff_of_presingular_smooth
-    {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
-    (g : SpaceTime → V) (hg : ContDiffOn ℝ ∞ g preSingularDomain)
-    (t : ℝ) (ht : t ∈ Ioo (0 : ℝ) 1) :
-    ContDiff ℝ ∞ (fun y : Space => g (t, y)) := by
-  apply contDiff_iff_contDiffAt.mpr
-  intro x
-  exact (smooth_at_interior hg ht x).comp x (contDiffAt_const.prodMk contDiffAt_id)
 
-/-- Interior time differentiability follows from the same domain smoothness;
-no extension through the singular time is assumed. -/
-theorem temporal_differentiable_of_presingular_smooth
-    {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
-    (g : SpaceTime → V) (hg : ContDiffOn ℝ ∞ g preSingularDomain)
-    (t : ℝ) (ht : t ∈ Ioo (0 : ℝ) 1) (x : Space) :
-    DifferentiableAt ℝ (fun s : ℝ => g (s, x)) t := by
-  exact ((smooth_at_interior hg ht x).differentiableAt (by simp)).comp t
-    (differentiableAt_id.prodMk (differentiableAt_const x))
 
 
 /-- A constant spatial scalar factors out of the actual spatial derivative. -/
@@ -158,14 +89,6 @@ theorem spatialDerivative_const_smul
     spatialDerivative (fun z => c • u z) t x = c • spatialDerivative u t x := by
   exact fderiv_fun_const_smul hu c
 
-/-- Constant-scalar linearity of the actual pressure gradient. -/
-theorem pressureGradient_const_smul
-    (p : PressureField) (t : ℝ) (x : Space) (c : ℝ)
-    (hp : DifferentiableAt ℝ (fun y : Space => p (t, y)) x) :
-    pressureGradient (fun z => c • p z) t x = c • pressureGradient p t x := by
-  unfold pressureGradient
-  rw [fderiv_fun_const_smul hp c]
-  simp only [smul_apply, smul_eq_mul, mul_smul, Finset.smul_sum]
 
 /-- Constant-scalar linearity of divergence, using coordinate evaluation. -/
 theorem spatialDivergence_const_smul
@@ -176,70 +99,9 @@ theorem spatialDivergence_const_smul
   rw [spatialDerivative_const_smul u t x c hu]
   simp only [smul_apply, PiLp.smul_apply, smul_eq_mul, Finset.mul_sum]
 
-/-- Constant-scalar linearity of the concrete second spatial derivative. -/
-theorem spatialLaplacian_const_smul
-    (u : VelocityField) (t : ℝ) (x : Space) (c : ℝ)
-    (hu : ContDiff ℝ 2 (fun y : Space => u (t, y))) :
-    spatialLaplacian (fun z => c • u z) t x = c • spatialLaplacian u t x := by
-  have hdu := hu.differentiable (by norm_num)
-  have hscale : ∀ y : Space,
-      spatialDerivative (fun z => c • u z) t y = c • spatialDerivative u t y :=
-    fun y => spatialDerivative_const_smul u t y c (hdu y)
-  unfold spatialLaplacian
-  simp_rw [hscale, smul_apply]
-  simp_rw [fderiv_fun_const_smul (differentiable_spatial_direction u t hu _ x) c,
-    smul_apply]
-  exact (Finset.smul_sum).symm
 
-/-- Velocity scaling squares in advection, because both the direction and the
-spatial derivative scale. -/
-theorem advection_const_smul
-    (u : VelocityField) (t : ℝ) (x : Space) (c : ℝ)
-    (hu : DifferentiableAt ℝ (fun y : Space => u (t, y)) x) :
-    advection (fun z => c • u z) t x = (c * c) • advection u t x := by
-  unfold advection
-  rw [spatialDerivative_const_smul u t x c hu]
-  simp only [smul_apply, map_smul, smul_smul]
 
-/-- The time derivative of a switched velocity includes the derivative of the
-switch; it is proved using the Frechet derivative product rule. -/
-theorem temporalDerivative_time_smul
-    (u : VelocityField) (a : ℝ → ℝ) (t : ℝ) (x : Space)
-    (ha : DifferentiableAt ℝ a t)
-    (hu : DifferentiableAt ℝ (fun s : ℝ => u (s, x)) t) :
-    temporalDerivative (fun z => a z.1 • u z) t x =
-      a t • temporalDerivative u t x + (fderiv ℝ a t 1) • u (t, x) := by
-  unfold temporalDerivative
-  rw [fderiv_fun_smul ha hu]
-  rfl
 
-/-- Exact time-switch identity for the physical PDE, when both velocity and
-pressure are multiplied by the same scalar time switch. -/
-theorem navierStokesResidual_time_smul
-    (u : VelocityField) (p : PressureField) (a : ℝ → ℝ) (t : ℝ) (x : Space)
-    (ha : DifferentiableAt ℝ a t)
-    (hut : DifferentiableAt ℝ (fun s : ℝ => u (s, x)) t)
-    (hu : ContDiff ℝ 2 (fun y : Space => u (t, y)))
-    (hp : DifferentiableAt ℝ (fun y : Space => p (t, y)) x) :
-    navierStokesResidual (fun z => a z.1 • u z) (fun z => a z.1 • p z) t x =
-      a t • navierStokesResidual u p t x + (fderiv ℝ a t 1) • u (t, x) +
-        (a t * a t - a t) • advection u t x := by
-  have hdu := hu.differentiable (by norm_num)
-  have hadv : advection (fun z => a z.1 • u z) t x = (a t * a t) • advection u t x := by
-    change advection (fun z => a t • u z) t x = _
-    exact advection_const_smul u t x (a t) (hdu x)
-  have hlap : spatialLaplacian (fun z => a z.1 • u z) t x =
-      a t • spatialLaplacian u t x := by
-    change spatialLaplacian (fun z => a t • u z) t x = _
-    exact spatialLaplacian_const_smul u t x (a t) hu
-  have hgrad : pressureGradient (fun z => a z.1 • p z) t x =
-      a t • pressureGradient p t x := by
-    change pressureGradient (fun z => a t • p z) t x = _
-    exact pressureGradient_const_smul p t x (a t) hp
-  unfold navierStokesResidual
-  rw [temporalDerivative_time_smul u a t x ha hut, hadv, hlap, hgrad]
-  simp only [smul_add, smul_sub, sub_smul]
-  abel
 
 
 end NavierStokes.ResidualCalculus

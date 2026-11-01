@@ -31,13 +31,6 @@ theorem support_mono {h C D qbig : ℝ} {f : SpaceTime → V}
   intro w ht hq hn
   exact (hf w ht hq hn).trans (mul_le_mul_of_nonneg_right hCD (Real.sqrt_nonneg _))
 
-theorem support_congr {h C qbig : ℝ} {f g : SpaceTime → V}
-    (hf : SublevelShrinkingSupport h C qbig f)
-    (he : EqOn f g (CutStageEstimates.physicalSublevel h qbig)) :
-    SublevelShrinkingSupport h C qbig g := by
-  intro w ht hq hn
-  apply hf w ht hq
-  rwa [he ⟨ht, hq⟩]
 
 theorem support_map_zero {E : Type*} [NormedAddCommGroup E]
     {h C qbig : ℝ} {f : SpaceTime → V}
@@ -66,9 +59,6 @@ end SupportAlgebra
 /-- This constant is shared by the entire stage sequence. -/
 noncomputable def outerConstant (R : ℝ) : ℝ := 4 * R * Real.sqrt 2
 
-theorem outerConstant_pos {R : ℝ} (hR : 0 < R) : 0 < outerConstant R := by
-  unfold outerConstant
-  positivity
 
 section Waves
 
@@ -102,35 +92,7 @@ section Means
 
 variable {h degree : ℝ}
 
-/-- Exact coherence and the native moving annulus supply the physical
-support for the same scalar field on the common valid sublevel. -/
-theorem mean_field_support (M : MeanData h degree)
-    (hh : 0 < h) (hh1 : h < 1 / 2) {qbig R : ℝ}
-    (hq : qbig ≤ ChartScales.Q M.firstBand) (hR : M.upperRadius ≤ R) :
-    SublevelShrinkingSupport h (outerConstant R) qbig M.family.field := by
-  intro w ht hqw hn
-  have hqpos := PhysicalWaveSum.physicalQ_pos hh hh1 ht
-  obtain ⟨n, hnN, hqn, hnq⟩ := PhysicalMeanJetBounds.exists_comparable_band
-    M.firstBand hqpos (hqw.le.trans hq)
-  have hlo : PhysicalWaveSum.physicalQ h w / 2 ≤ ChartScales.Q n := by linarith
-  have hu := M.region_covers (PhysicalMeanJetBounds.graph_slow_normalized
-    hh hh1 n (M.family.gap n) ht hlo hnq.le)
-  have hann := M.family.annulus_on_tsupport hh hh1 M.lower_pos M.radii_lt M.region_open
-    M.support n hnN ht hu hlo hnq.le (subset_tsupport _ hn)
-  have hb := AnnularEndpoint.radius_le_of_scaled_annulus hann hnq.le
-  apply hb.trans
-  apply mul_le_mul_of_nonneg_right _ (Real.sqrt_nonneg _)
-  dsimp only [outerConstant]
-  nlinarith [Real.sqrt_nonneg (2 : ℝ)]
 
-/-- The Cartesian angular reconstruction is pointwise zero-preserving. -/
-theorem mean_angular_support (M : MeanData h degree)
-    (hh : 0 < h) (hh1 : h < 1 / 2) {qbig R : ℝ}
-    (hq : qbig ≤ ChartScales.Q M.firstBand) (hR : M.upperRadius ≤ R) :
-    SublevelShrinkingSupport h (outerConstant R) qbig M.family.angularField := by
-  exact support_map_zero (mean_field_support M hh hh1 hq hR)
-    (fun w c => c • PhysicalMeanJetBounds.angularVector (PhysicalGraphBounds.radialProjection w))
-    (fun _ => zero_smul _ _)
 
 end Means
 
@@ -195,21 +157,7 @@ section Increments
 
 variable {h : ℝ} {D : Type} [NormedAddCommGroup D] [NormedSpace ℝ D] {I K : Type*}
 
-theorem potentialIncrement_support (W : WaveData h D I K (Fin 3))
-    (M : MeanData h (CoordinateAlgebra.A h - 1 / 2))
-    (hh : 0 < h) (hh1 : h < 1 / 2) {qbig R : ℝ}
-    (hq : qbig ≤ ChartScales.Q M.firstBand)
-    (hW : W.upperRadius ≤ 2 * R) (hM : M.upperRadius ≤ R) :
-    SublevelShrinkingSupport h (outerConstant R) qbig (potentialIncrement W M) :=
-  support_add (wave_vector_support W hW) (mean_angular_support M hh hh1 hq hM)
 
-theorem pressureIncrement_support (W : WaveData h D I K Unit)
-    (M : MeanData h (2 * CoordinateAlgebra.A h))
-    (hh : 0 < h) (hh1 : h < 1 / 2) {qbig R : ℝ}
-    (hq : qbig ≤ ChartScales.Q M.firstBand)
-    (hW : W.upperRadius ≤ 2 * R) (hM : M.upperRadius ≤ R) :
-    SublevelShrinkingSupport h (outerConstant R) qbig (pressureIncrement W M) :=
-  support_add (wave_pressure_support W hW) (mean_field_support M hh hh1 hq hM)
 
 end Increments
 
@@ -244,25 +192,6 @@ theorem NativeOuterBounds.radius_pos {R : ℝ}
     (H : NativeOuterBounds R WA MA MB WP MP) : 0 < R :=
   ((MA 0).lower_pos.trans (MA 0).radii_lt).trans_le (H.potentialMean 0)
 
-/-- All three increment families share this explicit constant, independently
-of stage-dependent harmonics, native bands, cover gaps, and jet constants. -/
-theorem all_increment_support (hh : 0 < h) (hh1 : h < 1 / 2) {qbig R : ℝ}
-    (hqA : ∀ j, qbig ≤ ChartScales.Q (MA j).firstBand)
-    (hqB : ∀ j, qbig ≤ ChartScales.Q (MB j).firstBand)
-    (hqP : ∀ j, qbig ≤ ChartScales.Q (MP j).firstBand)
-    (H : NativeOuterBounds R WA MA MB WP MP) :
-    (∀ j, SublevelShrinkingSupport h (outerConstant R) qbig (potentialIncrement (WA j) (MA j))) ∧
-    (∀ j, SublevelShrinkingSupport h (outerConstant R) qbig (directStages MB j)) ∧
-    (∀ j, SublevelShrinkingSupport h (outerConstant R) qbig (pressureIncrement (WP j) (MP j))) := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro j
-    exact potentialIncrement_support (WA j) (MA j) hh hh1 (hqA j)
-      (H.potentialWave j) (H.potentialMean j)
-  · intro j
-    exact mean_angular_support (MB j) hh hh1 (hqB j) (H.directMean j)
-  · intro j
-    exact pressureIncrement_support (WP j) (MP j) hh hh1 (hqP j)
-      (H.pressureWave j) (H.pressureMean j)
 
 
 
@@ -283,8 +212,6 @@ section FixedPatch
 noncomputable def geometryOuterConstant (G : SignedMeanGain.Geometry) : ℝ :=
   outerConstant G.patch.b
 
-theorem geometryOuterConstant_pos (G : SignedMeanGain.Geometry) : 0 < geometryOuterConstant G :=
-  outerConstant_pos (G.patch.a_pos.trans G.patch.a_lt_b)
 
 /-- The concrete common constant for the manuscript's fixed actual patch. -/
 noncomputable def actualOuterConstant : ℝ := geometryOuterConstant ActualInitialization.geometry

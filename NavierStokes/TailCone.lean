@@ -543,18 +543,6 @@ theorem releaseP1_large {d : TailData} {K : ℝ} (w : ResetWitness d K) {XR eta 
   apply (lt_div_iff₀ hL).mpr
   nlinarith
 
-theorem release_true_cone {d : TailData} {K : ℝ} (w : ResetWitness d K)
-    (hwait : d.core.wait = 60 * Real.log (1 / d.core.lam))
-    (hsmall : releaseConeConstant d.core.P d.core.m * d.core.lam ^ (29 : ℕ) ≤ 1 / 2)
-    {XR eta y : ℝ} (hXR : releaseRadiusThreshold d < XR) (heta : |eta| ≤ 1)
-    (hy : d.releaseStart ≤ y) (hy' : y ≤ tailStart d + 1 / 2) :
-    2 < releaseP1 d w.coefficients XR eta y ∧ 2 < releaseA d y ∧
-      releaseA d y < ConeAlgebra.coneBound (releaseP1 d w.coefficients XR eta y)
-        (releaseP1 d w.coefficients XR eta y * releaseVelocityRatio d w.coefficients eta y) := by
-  have heta2 : eta ^ 2 ≤ 1 := by have h := abs_le.mp heta; nlinarith
-  exact cone_of_zero_bs (releaseA_bounds d y).1 (releaseA_bounds d y).2
-    ((releaseVelocityRatio_uniform w hwait heta hy hy').trans hsmall)
-    (releaseP1_large w hXR heta2 hy hy')
 
 theorem exists_release_cone_threshold (P m : ℝ) (hP : 0 < P) :
     ∃ lam0 : ℝ, 0 < lam0 ∧ ∀ d : TailData, d.core.P = P → d.core.m = m →
@@ -1493,8 +1481,6 @@ theorem reset_scale_le_one {d : TailData} {K : ℝ} (w : ResetWitness d K)
 noncomputable def tailRadiusThreshold (d : TailData) : ℝ :=
   max (finiteRadiusThreshold d) (releaseRadiusThreshold d)
 
-theorem tailRadiusThreshold_pos (d : TailData) : 0 < tailRadiusThreshold d :=
-  (finiteRadiusThreshold_pos d).trans_le (le_max_left _ _)
 
 /-- All quantities are those of the corrected profile and its actual integral
 histories. The scalar smallness conditions are arranged by the thresholds below. -/

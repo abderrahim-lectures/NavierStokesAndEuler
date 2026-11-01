@@ -85,17 +85,6 @@ theorem mem_window_pos (F : Profile) (XR : ℝ) (hXR : 0 < XR)
   (left_pos F XR hXR s).trans hX.1
 
 
-theorem windows_disjoint (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    {s t : Slot} (hst : s ≠ t) : Disjoint (window F XR s) (window F XR t) := by
-  apply Set.disjoint_left.mpr
-  intro X hXs hXt
-  rcases offsets_separated hst with h | h
-  · have hr : right F XR s ≤ left F XR t :=
-      (radius_strictMono XR hXR).monotone (add_le_add_right h _)
-    exact (not_lt_of_ge hr) (hXt.1.trans hXs.2)
-  · have hr : right F XR t ≤ left F XR s :=
-      (radius_strictMono XR hXR).monotone (add_le_add_right h _)
-    exact (not_lt_of_ge hr) (hXs.1.trans hXt.2)
 
 theorem clock_bounds (F : Profile) (XR : ℝ) (hXR : 0 < XR) (s : Slot)
     {X : ℝ} (hX : X ∈ window F XR s) :
@@ -123,12 +112,6 @@ theorem window_inside_wait (F : Profile) (XR : ℝ) (hXR : 0 < XR)
   obtain ⟨hwl, hwr⟩ := clock_inside_wait F s
   exact ⟨hwl.trans hl, hr.trans hwr⟩
 
-/-- An explicit small-lambda threshold for the canonical sixty-log wait. -/
-theorem canonical_wait_gt_54 {lam : ℝ} (hlam : 0 < lam) (hlam' : lam < 1 / 10) :
-    54 < 60 * Real.log (1 / lam) := by
-  have h := Real.one_sub_inv_le_log_of_pos (one_div_pos.mpr hlam)
-  simp only [one_div, inv_inv] at h ⊢
-  nlinarith
 
 
 theorem pulse_before_switch (F : Profile) :
@@ -309,48 +292,9 @@ theorem heated_fields (F : Profile) (XR : ℝ) (hXR : 0 < XR)
 
 /-! ## The heat correction lies in its own closed interior support region -/
 
-theorem terminal_lower_min (P : TerminalCompensation.Patch) (j : Fin 3) :
-    TerminalCompensation.lower P 0 ≤ TerminalCompensation.lower P j := by
-  fin_cases j <;> norm_num [TerminalCompensation.lower] <;> linarith [P.ordered]
 
-theorem terminal_upper_max (P : TerminalCompensation.Patch) (j : Fin 3) :
-    TerminalCompensation.upper P j ≤ TerminalCompensation.upper P 2 := by
-  fin_cases j <;> norm_num [TerminalCompensation.upper] <;> linarith [P.ordered]
 
-theorem terminal_correction_inner_support (P : TerminalCompensation.Patch)
-    (c : TerminalCompensation.Coeff) :
-    support (TerminalCompensation.correction P c) ⊆
-      Icc (TerminalCompensation.lower P 0) (TerminalCompensation.upper P 2) := by
-  intro x hx
-  by_contra hn
-  apply hx
-  apply Finset.sum_eq_zero
-  intro j _
-  have hb : TerminalCompensation.bump P j x = 0 := by
-    by_contra hne
-    have ht := TerminalCompensation.bump_tsupport P j (subset_tsupport _ hne)
-    exact hn ⟨(terminal_lower_min P j).trans ht.1.le,
-      ht.2.le.trans (terminal_upper_max P j)⟩
-  rw [hb, mul_zero]
 
-theorem heat_increment_support (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    (c : ℝ → HeatedOutgoing.Coeff) (eta : ℝ) :
-    support (fun X => HeatedOutgoing.patchIncrement F XR c (X, eta)) ⊆
-      closedPatch F XR .heat := by
-  intro X hX
-  have hn : TerminalCompensation.correction OutgoingDilation.compensationPatch (c eta)
-      (X / OutgoingDilation.patchRadius F XR) ≠ 0 := by
-    intro hz
-    exact hX (by simp only [HeatedOutgoing.patchIncrement, hz, mul_zero])
-  have ht := terminal_correction_inner_support OutgoingDilation.compensationPatch (c eta) hn
-  have hp := OutgoingDilation.patchRadius_pos F XR hXR
-  constructor
-  · change left F XR .heat * innerLower .heat ≤ X
-    rw [heat_left]
-    simpa only [innerLower, mul_comm] using (le_div_iff₀ hp).mp ht.1
-  · change X ≤ left F XR .heat * innerUpper .heat
-    rw [heat_left]
-    simpa only [innerUpper, mul_comm] using (div_le_iff₀ hp).mp ht.2
 
 
 /-! ## Conversion to the similarity radius R, where X = R squared / 2 -/
@@ -412,19 +356,6 @@ theorem square_half_mem_Ioo {a b R : ℝ} (ha : 0 < a)
   rw [Real.sq_sqrt (by positivity)] at hr
   constructor <;> nlinarith
 
-theorem square_half_mem_Icc {a b R : ℝ} (ha : 0 < a)
-    (hR : R ∈ Icc (Real.sqrt (2 * a)) (Real.sqrt (2 * b))) :
-    R ^ 2 / 2 ∈ Icc a b := by
-  have hRp : 0 < R := (Real.sqrt_pos.mpr (mul_pos (by norm_num) ha)).trans_le hR.1
-  have hb : 0 < b := by
-    have hsb : 0 < Real.sqrt (2 * b) := hRp.trans_le hR.2
-    have h2b := Real.sqrt_pos.mp hsb
-    linarith
-  have hl := (sq_le_sq₀ (Real.sqrt_nonneg (2 * a)) hRp.le).mpr hR.1
-  have hr := (sq_le_sq₀ hRp.le (Real.sqrt_nonneg (2 * b))).mpr hR.2
-  rw [Real.sq_sqrt (by positivity)] at hl
-  rw [Real.sq_sqrt (by positivity)] at hr
-  constructor <;> nlinarith
 
 theorem radial_mem_window (F : Profile) (XR : ℝ) (hXR : 0 < XR) (s : Slot)
     {R : ℝ} (hR : R ∈ radialWindow F XR s) : R ^ 2 / 2 ∈ window F XR s :=
@@ -437,12 +368,6 @@ theorem radial_closedPatch_subset (F : Profile) (XR : ℝ) (hXR : 0 < XR) (s : S
   obtain ⟨hl, _, hr⟩ := radial_support_margins F XR hXR s
   exact ⟨hl.trans_le hR.1, hR.2.trans_lt hr⟩
 
-theorem radial_windows_disjoint (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    {s t : Slot} (hst : s ≠ t) : Disjoint (radialWindow F XR s) (radialWindow F XR t) := by
-  apply Set.disjoint_left.mpr
-  intro R hRs hRt
-  exact Set.disjoint_left.mp (windows_disjoint F XR hXR hst)
-    (radial_mem_window F XR hXR s hRs) (radial_mem_window F XR hXR t hRt)
 
 
 noncomputable def radialAmplitude (F : Profile) (XR eta : ℝ) : ℝ :=
@@ -472,18 +397,6 @@ theorem square_half_power (lam R : ℝ) (hR : 0 < R) :
   congr 1
   ring
 
-/-- This is the precise R-power interface used by positive-order and mean repairs. -/
-theorem radial_heated_fields (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    (c : ℝ → HeatedOutgoing.Coeff) {s : Slot} (hs : s ≠ .heat)
-    (eta : ℝ) {R : ℝ} (hR : R ∈ radialWindow F XR s) :
-    HeatedOutgoing.U F XR (R ^ 2 / 2, eta) = 0 ∧
-      HeatedOutgoing.E F XR c (R ^ 2 / 2, eta) =
-        FiveRowRank.background F.data.core.lam (radialAmplitude F XR eta) R := by
-  have hp : 0 < R := (radialLeft_pos F XR hXR s).trans hR.1
-  obtain ⟨hu, he⟩ := heated_fields F XR hXR c hs eta (radial_mem_window F XR hXR s hR)
-  refine ⟨hu, ?_⟩
-  rw [he, square_half_power _ _ hp]
-  simp only [FiveRowRank.background, radialAmplitude, mul_assoc]
 
 
 
@@ -494,30 +407,8 @@ def Supported (F : Profile) (XR : ℝ) (s : Slot) (v : ℝ × ℝ → ℝ) : Pro
 
 
 
-theorem supported_vanishes (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    {s t : Slot} (hst : s ≠ t) {v : ℝ × ℝ → ℝ} (hv : Supported F XR s v)
-    (eta : ℝ) {X : ℝ} (hX : X ∈ window F XR t) : v (X, eta) = 0 := by
-  by_contra hn
-  have hs := closedPatch_subset F XR hXR s (hv eta hn)
-  exact Set.disjoint_left.mp (windows_disjoint F XR hXR hst) hs hX
 
-theorem supported_update_eqOn (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    {s t : Slot} (hst : s ≠ t) {v : ℝ × ℝ → ℝ} (hv : Supported F XR s v)
-    (g : ℝ × ℝ → ℝ) :
-    EqOn (fun p => g p + v p) g (window F XR t ×ˢ (univ : Set ℝ)) := by
-  intro p hp
-  change g p + v p = g p
-  have hz : v p = 0 := supported_vanishes F XR hXR hst hv p.2 hp.1
-  rw [hz, add_zero]
 
-theorem supported_update_germ (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    {s t : Slot} (hst : s ≠ t) {v : ℝ × ℝ → ℝ} (hv : Supported F XR s v)
-    (g : ℝ × ℝ → ℝ) {p : ℝ × ℝ} (hp : p.1 ∈ window F XR t) :
-    (fun q => g q + v q) =ᶠ[𝓝 p] g := by
-  have ho : IsOpen (window F XR t ×ˢ (univ : Set ℝ)) := isOpen_Ioo.prod isOpen_univ
-  filter_upwards [ho.mem_nhds (show p ∈ window F XR t ×ˢ (univ : Set ℝ) from
-    ⟨hp, mem_univ _⟩)] with q hq
-  exact supported_update_eqOn F XR hXR hst hv g hq
 
 
 
@@ -525,13 +416,6 @@ theorem supported_update_germ (F : Profile) (XR : ℝ) (hXR : 0 < XR)
 def RadialSupported (F : Profile) (XR : ℝ) (s : Slot) (v : ℝ × ℝ → ℝ) : Prop :=
   ∀ eta, support (fun R => v (R, eta)) ⊆ radialWindow F XR s
 
-/-- This premise is exactly the open-support conclusion of the positive-order
-and mean bump solvers. They may use the full window or any smaller subpatch. -/
-theorem radial_supported_vanishes (F : Profile) (XR : ℝ) (hXR : 0 < XR)
-    {s t : Slot} (hst : s ≠ t) {v : ℝ × ℝ → ℝ} (hv : RadialSupported F XR s v)
-    (eta : ℝ) {R : ℝ} (hR : R ∈ radialWindow F XR t) : v (R, eta) = 0 := by
-  by_contra hn
-  exact Set.disjoint_left.mp (radial_windows_disjoint F XR hXR hst) (hv eta hn) hR
 
 
 

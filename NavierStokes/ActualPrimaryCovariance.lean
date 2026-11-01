@@ -1100,38 +1100,11 @@ theorem piece_support (l : Label B N0 × Fin 2) (n : ℕ) (x : Point)
         (slotSet h slots.radius radialVector temporalVector (signedLabelOf l)) :=
   cutAmplitude_tsupport l.2 l.1 n hx theta ht
 
-theorem cutAmplitude_tsupport_active (l : Label B N0 × Fin 2) (n : ℕ) {x : Point}
-    (hx : x ∈ (BaseContextAssembly.nativeStrip nominal standardRegion).domain) (theta : ℝ)
-    (ht : (x, theta) ∈ tsupport (cutAmplitude l.2 l.1 n)) :
-    l ∈ activeLabels standardRegion B N0 n :=
-  activeLabels_cover n hx l.1 l.2 (cutAmplitude_tsupport_physical l.2 l.1 n hx theta ht).1
 
 
 
-theorem cutAmplitude_tsupport_disjoint (n : ℕ) {l m : Label B N0 × Fin 2} (hlm : l ≠ m) :
-    Disjoint
-      ((Prod.fst ⁻¹' (BaseContextAssembly.nativeStrip nominal standardRegion).domain) ∩
-        tsupport (cutAmplitude l.2 l.1 n))
-      ((Prod.fst ⁻¹' (BaseContextAssembly.nativeStrip nominal standardRegion).domain) ∩
-        tsupport (cutAmplitude m.2 m.1 n)) := by
-  apply Set.disjoint_left.mpr
-  rintro ⟨x, theta⟩ ⟨hx, hl⟩ ⟨_, hm⟩
-  obtain ⟨hwl, hsl⟩ := cutAmplitude_tsupport l.2 l.1 n hx theta hl
-  obtain ⟨hwm, hsm⟩ := cutAmplitude_tsupport m.2 m.1 n hx theta hm
-  have hne : signedLabelOf l ≠ signedLabelOf m := fun he => hlm (signedLabelOf_injective he)
-  exact Set.disjoint_left.mp (slots.disjoint _ _ (LabelSumBounds.closedWindow_adjacency
-    l.1.val.property.1 m.1.val.property.1 hne hwl hwm)) hsl hsm
 
 
-theorem velocity_tsupport_disjoint (n : ℕ) {l m : Label B N0 × Fin 2} (hlm : l ≠ m) :
-    Disjoint
-      ((Prod.fst ⁻¹' (BaseContextAssembly.nativeStrip nominal standardRegion).domain) ∩
-        tsupport ((piece standardRegion l.2 l.1).velocity n))
-      ((Prod.fst ⁻¹' (BaseContextAssembly.nativeStrip nominal standardRegion).domain) ∩
-        tsupport ((piece standardRegion m.2 m.1).velocity n)) :=
-  (cutAmplitude_tsupport_disjoint n hlm).mono
-    (inter_subset_inter_right _ ((piece standardRegion l.2 l.1).velocity_tsupport_subset_tangent n))
-    (inter_subset_inter_right _ ((piece standardRegion m.2 m.1).velocity_tsupport_subset_tangent n))
 
 /-! ## Inactive physical labels vanish on entire slow fibers
 

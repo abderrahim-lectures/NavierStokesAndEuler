@@ -648,55 +648,7 @@ theorem first_components_even {W : Field} {R : ℝ} {U : Set ℂ}
   simpa [parityVec_apply, paritySign, hi] using congrFun (hW r ⟨hr.1.le, hr.2.le⟩ z hz) i
 
 
-/-- Two derivatives with the same value and axis trace glue to an ordinary
-two-sided derivative. -/
-theorem hasDerivAt_glue_zero {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {f g : ℝ → E} {v : E} (hf : HasDerivAt f v 0) (hg : HasDerivAt g v 0)
-    (h0 : f 0 = g 0) :
-    HasDerivAt (fun r => if 0 ≤ r then f r else g r) v 0 := by
-  apply hasDerivAt_iff_tendsto_slope_zero.mpr
-  have hh := hf.tendsto_slope_zero.if' (p := fun r : ℝ => 0 ≤ r) hg.tendsto_slope_zero
-  convert! hh using 1
-  funext r
-  by_cases hr : 0 ≤ r <;> simp [hr, h0]
 
 
-/-- Uniqueness of the glued actual lifts in the holomorphic path class.
-Both sides are compared by the proved positive Volterra uniqueness
-theorem; no uniqueness premise is introduced. -/
-theorem glued_solution_unique {R : ℝ} (hR : 0 ≤ R) {U : Set ℂ} (hU : IsOpen U)
-    {A₀ A₁ : Bool → ℂ → NilpotentVolterra.CoefficientPath R}
-    {f W₀ W₁ : Bool → ℂ → NilpotentVolterra.Path R}
-    (hA₀ : ∀ b, DifferentiableOn ℂ (A₀ b) U)
-    (hA₁ : ∀ b, DifferentiableOn ℂ (A₁ b) U)
-    (hW₀ : ∀ b, DifferentiableOn ℂ (W₀ b) U)
-    (hW₁ : ∀ b, DifferentiableOn ℂ (W₁ b) U)
-    (hshape : ∀ b, DerivativeShape (NilpotentVolterra.rawCoefficient hR (A₁ b)))
-    (heq₀ : ∀ b z, z ∈ U → W₀ b z = NilpotentVolterra.pathInverse hR exponent
-      (NilpotentVolterra.rhsPath (A₀ b) (A₁ b) (f b) (W₀ b) z))
-    (heq₁ : ∀ b z, z ∈ U → W₁ b z = NilpotentVolterra.pathInverse hR exponent
-      (NilpotentVolterra.rhsPath (A₀ b) (A₁ b) (f b) (W₁ b) z))
-    (r : ℝ) {z : ℂ} (hz : z ∈ U) :
-    glue (NilpotentVolterra.liftedField hR (A₀ false) (A₁ false) (f false) (W₀ false))
-      (NilpotentVolterra.liftedField hR (A₀ true) (A₁ true) (f true) (W₀ true)) r z =
-    glue (NilpotentVolterra.liftedField hR (A₀ false) (A₁ false) (f false) (W₁ false))
-      (NilpotentVolterra.liftedField hR (A₀ true) (A₁ true) (f true) (W₁ true)) r z := by
-  have heq (b : Bool) : EqOn (W₀ b) (W₁ b) U :=
-    NilpotentVolterra.integral_solution_unique hR hU (hA₀ b) (hA₁ b) (hW₀ b) (hW₁ b)
-      (hshape b) (heq₀ b) (heq₁ b)
-  have hboth (b : Bool) (s : ℝ) :
-      NilpotentVolterra.liftedField hR (A₀ b) (A₁ b) (f b) (W₀ b) s z =
-      NilpotentVolterra.liftedField hR (A₀ b) (A₁ b) (f b) (W₁ b) s z := by
-    have hder : deriv (W₀ b) z = deriv (W₁ b) z :=
-      (show W₀ b =ᶠ[𝓝 z] W₁ b from Filter.eventuallyEq_of_mem (hU.mem_nhds hz) (heq b)).deriv_eq
-    have hrhs : NilpotentVolterra.rhsPath (A₀ b) (A₁ b) (f b) (W₀ b) z =
-        NilpotentVolterra.rhsPath (A₀ b) (A₁ b) (f b) (W₁ b) z := by
-      simp only [NilpotentVolterra.rhsPath, heq b hz, hder]
-    unfold NilpotentVolterra.liftedField
-    rw [hrhs]
-  unfold glue
-  split_ifs
-  · exact hboth false r
-  · exact hboth true (-r)
 
 end NavierStokes.VolterraParity

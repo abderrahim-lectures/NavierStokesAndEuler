@@ -169,15 +169,6 @@ theorem radialSource_weight (C : ℝ) (d : TailData) (y0 η : ℝ) {R : ℝ} (hR
   · simp [hx]
   · field_simp [hR.ne', hx]
 
-theorem radialSource_weight_integrable (C : ℝ) (d : TailData) (y0 η : ℝ)
-    {R : ℝ} (hR : 0 < R) :
-    IntegrableOn (fun u => u ^ 2 * radialSource C d y0 η u) (Ioi R) := by
-  apply (radialFlatDensity_integrable (by norm_num : (0 : ℝ) < 4)
-    (profileRadius_pos y0 0) hR 6
-    ((ParametricFlatFactor.coefficient_slice_contDiff
-      (primitiveCoefficient_contDiff C d y0) η).continuous)).congr
-  filter_upwards [ae_restrict_mem measurableSet_Ioi] with u hu
-  exact (radialSource_weight C d y0 η (hR.trans hu)).symm
 
 theorem radialStress_eq_primitive (C : ℝ) (d : TailData) (y0 η : ℝ)
     {R : ℝ} (hR : 0 < R) :
@@ -221,13 +212,6 @@ theorem profileStress_zero_of_nonpos (C : ℝ) (d : TailData) (y0 : ℝ)
     {y : ℝ × ℝ} (hy : y.2 ≤ 0) : profileStress C d y0 y = 0 := by
   rw [profileStress_factorization, FlatCutoff.edge_of_nonpos 4 hy, zero_div, zero_mul]
 
-theorem profileStress_edge_jets (C : ℝ) (d : TailData) (y0 η : ℝ) (n : ℕ) :
-    iteratedFDeriv ℝ n (profileStress C d y0) (η, 0) = 0 := by
-  have he : profileStress C d y0 = EdgeWeightJets.weighted 4 3 (stressFactor C d y0) :=
-    funext (profileStress_factorization C d y0)
-  rw [he]
-  exact EdgeWeightJets.weighted_iteratedFDeriv_zero (by norm_num) 3
-    (stressFactor_contDiff C d y0) n η
 
 /-- All full joint derivative tensors, uniformly including both parameter endpoints. -/
 theorem profileStress_jets (C : ℝ) (d : TailData) (y0 : ℝ) (n : ℕ)
@@ -592,67 +576,11 @@ theorem physicalSource_radial_scaled (C : ℝ) (d : TailData) (y0 : ℝ)
     scaledRadius_identity (physicalScale_pos d ht)]
   rfl
 
-/-- Backward radial integration contributes exactly one half power of `q`. -/
-theorem backwardStress_scale (b : ℝ) {Q r : ℝ} (hQ : 0 < Q) (hr : 0 < r) (g : ℝ → ℝ) :
-    backwardStress (fun u => Q ^ b * g (u / Real.sqrt Q)) r =
-      Q ^ (b + 1 / 2) * backwardStress g (r / Real.sqrt Q) := by
-  have hf : (fun u => u ^ 2 * (Q ^ b * g (u / Real.sqrt Q))) =
-      fun u => (Q * Q ^ b) * ((u / Real.sqrt Q) ^ 2 * g (u / Real.sqrt Q)) := by
-    funext u
-    rw [div_pow, Real.sq_sqrt hQ.le]
-    field_simp [hQ.ne']
-  unfold backwardStress
-  rw [hf, integral_const_mul]
-  have hs := integral_comp_mul_right_Ioi (fun R => R ^ 2 * g R) r
-    (inv_pos.mpr (Real.sqrt_pos.mpr hQ))
-  simp only [inv_inv, smul_eq_mul, ← div_eq_mul_inv] at hs
-  rw [hs]
-  have hp : Q * Q ^ b * Real.sqrt Q = Q * Q ^ (b + 1 / 2) := by
-    rw [Real.sqrt_eq_rpow, Real.rpow_add hQ]
-    ring
-  rw [← mul_assoc, hp, div_pow, Real.sq_sqrt hQ.le]
-  field_simp [hQ.ne', hr.ne']
 
 noncomputable def physicalStress (C : ℝ) (d : TailData) (y0 t z r : ℝ) : ℝ :=
   backwardStress (fun u => physicalSource C d y0 (radiusPoint t u z)) r
 
-theorem physicalStress_scaled_radial (C : ℝ) (d : TailData) (y0 : ℝ)
-    {t r z : ℝ} (ht : t < 1) (hr : 0 < r) :
-    physicalStress C d y0 t z r =
-      physicalScale d t z ^ (-CoordinateAlgebra.A d.h - 1 / 2 + 2 * d.h) *
-        radialStress C d y0 (physicalEta d t z) (r / Real.sqrt (physicalScale d t z)) := by
-  have hi : physicalStress C d y0 t z r =
-      backwardStress (fun u => physicalScale d t z ^ (-CoordinateAlgebra.A d.h - 1 + 2 * d.h) *
-        radialSource C d y0 (physicalEta d t z) (u / Real.sqrt (physicalScale d t z))) r := by
-    unfold physicalStress backwardStress
-    congr 1
-    apply setIntegral_congr_fun measurableSet_Ioi
-    intro u hu
-    dsimp only
-    rw [physicalSource_radial_scaled C d y0 ht (hr.trans hu)]
-  rw [hi, backwardStress_scale _ (physicalScale_pos d ht) hr]
-  rw [show -CoordinateAlgebra.A d.h - 1 + 2 * d.h + 1 / 2 =
-    -CoordinateAlgebra.A d.h - 1 / 2 + 2 * d.h by ring]
-  rfl
 
-/-- Identification of the actual physical backward primitive with the first-order
-profile coefficient, using the manuscript's exact tensor power. -/
-theorem physicalStress_scaled (C : ℝ) (d : TailData) (y0 : ℝ)
-    {t r z : ℝ} (ht : t < 1) (hr : 0 < r) :
-    physicalStress C d y0 t z r =
-      physicalScale d t z ^ (-CoordinateAlgebra.A d.h - 1 / 2 + 2 * d.h) *
-        stressX C d y0 ((r ^ 2 / 2) / physicalScale d t z, physicalEta d t z) := by
-  have hX : 0 < (r ^ 2 / 2) / physicalScale d t z :=
-    div_pos (by positivity) (physicalScale_pos d ht)
-  rw [physicalStress_scaled_radial C d y0 ht hr,
-    stressX_eq_radialStress C d y0 hX]
-  have he : Real.sqrt (2 * ((r ^ 2 / 2) / physicalScale d t z)) =
-      r / Real.sqrt (physicalScale d t z) := by
-    rw [← scaledRadius_identity (physicalScale_pos d ht)]
-    rw [show 2 * ((r / Real.sqrt (physicalScale d t z)) ^ 2 / 2) =
-      (r / Real.sqrt (physicalScale d t z)) ^ 2 by ring]
-    exact Real.sqrt_sq (div_pos hr (Real.sqrt_pos.mpr (physicalScale_pos d ht))).le
-  rw [he]
 
 
 

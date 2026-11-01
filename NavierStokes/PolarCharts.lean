@@ -240,10 +240,6 @@ theorem chart_eq_localChart {a : ℝ} (ha : 0 < a) (j : Index) {p : Plane}
     (hp : p ∈ chartDomain a j) : chart a j p = localChart j p := by
   simp only [chart, extendedBase_eq ha hp, localChart]
 
-theorem chart_eventuallyEq_localChart {a : ℝ} (ha : 0 < a) (j : Index) {p : Plane}
-    (hp : p ∈ chartDomain a j) : chart a j =ᶠ[𝓝 p] localChart j := by
-  filter_upwards [(chartDomain_open a j).mem_nhds hp] with q hq
-  exact chart_eq_localChart ha j hq
 
 theorem polar_chart {a : ℝ} (ha : 0 < a) (j : Index) {p : Plane}
     (hp : p ∈ chartDomain a j) : polar (chart a j p) = p := by
@@ -257,15 +253,6 @@ theorem chart_polar {a : ℝ} (ha : 0 < a) (j : Index) {r θ : ℝ}
     (hp : polar (r, θ) ∈ chartDomain a j) : chart a j (polar (r, θ)) = (r, θ) := by
   rw [chart_eq_localChart ha j hp, localChart_polar j hr hθ]
 
-/-- On the compact sectors every actual derivative of the global extension
-equals the derivative of the genuine local polar inverse. -/
-theorem chart_jet_eq_localChart {a : ℝ} (ha : 0 < a) (j : Index) {p : Plane}
-    (hp : p ∈ chartDomain a j) (k : ℕ) :
-    iteratedFDeriv ℝ k (chart a j) p = iteratedFDeriv ℝ k (localChart j) p := by
-  have he := chart_eventuallyEq_localChart ha j hp
-  have he' : chart a j =ᶠ[𝓝[univ] p] localChart j := by simpa using he
-  simpa only [iteratedFDerivWithin_univ] using
-    he'.iteratedFDerivWithin_eq he.eq_of_nhds k
 
 /-- A single constant bounds all actual jets up to the given order for all
 four explicit chart extensions on the fixed closed ball. -/
@@ -299,15 +286,6 @@ theorem norm_jet_comp_linear {f : Plane → Plane} (hf : ContDiff ℝ ∞ f)
   rw [L.iteratedFDeriv_comp_right hf p (nat_le_smooth k)]
   simpa using (iteratedFDeriv ℝ k f (L p)).norm_compContinuousLinearMap_le (fun _ => L)
 
-theorem chart_comp_linear_finiteJets {a : ℝ} (ha : 0 < a) (b : ℝ) (m : ℕ) :
-    ∃ C : ℝ, 1 ≤ C ∧ ∀ j : Index, ∀ k ≤ m, ∀ (L : E →L[ℝ] Plane) (p : E),
-      L p ∈ Metric.closedBall (0 : Plane) b →
-      ‖iteratedFDeriv ℝ k (chart a j ∘ L) p‖ ≤ C * ‖L‖ ^ k := by
-  obtain ⟨C, hC, hB⟩ := chart_finiteJets_uniform ha b m
-  refine ⟨C, hC, ?_⟩
-  intro j k hk L p hp
-  exact (norm_jet_comp_linear (chart_contDiff ha j) L p k).trans
-    (mul_le_mul_of_nonneg_right (hB j k hk (L p) hp) (pow_nonneg (norm_nonneg _) _))
 
 end Scaling
 
@@ -317,11 +295,6 @@ noncomputable def scalePlane (Q : ℝ) : Plane →L[ℝ] Plane :=
 @[simp] theorem scalePlane_apply (Q : ℝ) (p : Plane) :
     scalePlane Q p = Q ^ (-(1 / 2 : ℝ)) • p := rfl
 
-theorem norm_scalePlane_le {Q : ℝ} (hQ : 0 < Q) :
-    ‖scalePlane Q‖ ≤ Q ^ (-(1 / 2 : ℝ)) := by
-  apply ContinuousLinearMap.opNorm_le_bound _ (Real.rpow_nonneg hQ.le _)
-  intro p
-  rw [scalePlane_apply, norm_smul, Real.norm_of_nonneg (Real.rpow_nonneg hQ.le _)]
 
 /-- The physical input is scaled by `1 / sqrt Q` before taking the polar chart. -/
 noncomputable def physicalChart (a : ℝ) (j : Index) (Q : ℝ) : Plane → Plane :=
@@ -401,13 +374,6 @@ theorem chart_periodic_agree {V : Type*} {a : ℝ} (ha : 0 < a) (f : Plane → V
   · have h : a / 4 < (rotate j p).1 := hj
     linarith
 
-theorem chart_periodic_eventuallyEq {V : Type*} {a : ℝ} (ha : 0 < a) (f : Plane → V)
-    (hf : ∀ r : ℝ, Periodic (fun θ => f (r, θ)) (2 * Real.pi))
-    (i j : Index) {p : Plane} (hi : p ∈ chartDomain a i) (hj : p ∈ chartDomain a j) :
-    f ∘ chart a i =ᶠ[𝓝 p] f ∘ chart a j := by
-  filter_upwards [(chartDomain_open a i).mem_nhds hi, (chartDomain_open a j).mem_nhds hj]
-    with q hqi hqj
-  exact chart_periodic_agree ha f hf i j hqi hqj
 
 
 end NavierStokes.PolarCharts

@@ -390,17 +390,6 @@ theorem normalized_mass_prefix (c : Parameters) (amp : ℝ → ℝ) (eta : ℝ) 
   have hp : 0 < 1 + eta ^ 2 := by positivity
   field_simp
 
-theorem normalized_mass_prefix_small (c : Parameters)
-    (hwait : c.wait = 60 * Real.log (1 / c.lam)) (hsmall : c.lam ≤ 1 / 120)
-    (amp : ℝ → ℝ) {eta : ℝ} (heta : |eta| ≤ 1) :
-    |massMoment c amp eta c.pulseStart /
-        (Real.exp c.pulseStart * angular c.P c.dropLength c.lam (c.pulseStart, eta))| ≤
-      (2 * prefixBound c.P c.m 0) * c.lam ^ 29 := by
-  rw [normalized_mass_prefix, abs_mul]
-  have h := mul_le_mul (prefixCoefficient_small c hwait hsmall 0)
-    (parameterPolynomial_bound heta) (abs_nonneg _)
-    (mul_nonneg (prefixBound_pos c.P_pos c.m 0).le (pow_nonneg c.lam_pos.le 29))
-  nlinarith
 
 /-! ## The actual bump is one fixed template in log coordinates -/
 
@@ -593,8 +582,6 @@ theorem rowMoment_lower (c : Parameters) (i : Fin 2) : rowFloor ≤ rowMoment (c
   apply (rowMoment_bounds ?_ ?_).1
   all_goals fin_cases i <;> norm_num [Parameters.exponents] <;> linarith [c.lam_pos, c.lam_lt]
 
-theorem rowMoment_pos (c : Parameters) (i : Fin 2) : 0 < rowMoment (c.exponents i) :=
-  rowFloor_pos.trans_le (rowMoment_lower c i)
 
 theorem separation_exponential_bounds (c : Parameters) (i : Fin 2) :
     1 ≤ Real.exp (2 * beta c i) ∧ Real.exp (2 * beta c i) ≤ Real.exp 1 := by
@@ -613,17 +600,6 @@ theorem separation_exponential_gap (c : Parameters) :
   nlinarith [mul_nonneg (by linarith : 0 ≤ Real.exp (2 * beta c 1) - 1)
     (by linarith [c.lam_pos] : 0 ≤ Real.exp (2 * c.lam) - 1)]
 
-theorem normalizedMatrix_det_ne_zero (c : Parameters) : (normalizedMatrix c).det ≠ 0 := by
-  rw [Matrix.det_fin_two]
-  simp only [normalizedMatrix_entry]
-  norm_num
-  have h0 := rowMoment_pos c 0
-  have h1 := rowMoment_pos c 1
-  have hg := separation_exponential_gap c
-  have hgap : Real.exp (2 * beta c 1) - Real.exp (2 * beta c 0) < 0 := by
-    linarith [c.lam_pos]
-  have hprod := mul_neg_of_pos_of_neg (mul_pos h0 h1) hgap
-  nlinarith
 
 /-- A uniform inverse estimate from the actual exponential column separation. -/
 noncomputable def inverseBound : ℝ := (1 + Real.exp 1) / rowFloor
@@ -695,18 +671,6 @@ theorem normalized_solution_bound (c : Parameters) (x d : Fin 2 → ℝ)
   · exact hb.1
   · exact hb.2
 
-theorem normalized_inverse_entry_bound (c : Parameters) (i j : Fin 2) :
-    c.lam * |(normalizedMatrix c)⁻¹ i j| ≤ inverseBound := by
-  let e : Fin 2 → ℝ := Pi.single j 1
-  have h := MomentRepair.matrix_mul_coefficients (normalizedMatrix c)
-    (normalizedMatrix_det_ne_zero c) e
-  have hb := normalized_solution_bound c _ e h i
-  have he : |e 0| + |e 1| = 1 := by fin_cases j <;> norm_num [e, Pi.single_apply]
-  rw [he, mul_one] at hb
-  have hc : MomentRepair.coefficients (normalizedMatrix c) e i = (normalizedMatrix c)⁻¹ i j := by
-    fin_cases j <;> simp [MomentRepair.coefficients, Matrix.mulVec, dotProduct,
-      e, Pi.single_apply]
-  simpa only [hc] using hb
 
 
 noncomputable def normalizedDebt (c : Parameters) (d : Fin 2 → ℝ) (i : Fin 2) : ℝ :=
@@ -966,27 +930,6 @@ theorem affineCoefficients_exp_bound (c : Parameters) (hsmall : c.lam ≤ 1 / 12
         (by positivity)
     _ = _ := by unfold coefficientBound; ring
 
-theorem pulse_coefficients_exp_bound (c : Parameters) (hsmall : c.lam ≤ 1 / 120)
-    (amp : ℝ → ℝ) {eta : ℝ} (heta : |eta| ≤ 1) (j : Fin 2) :
-    |LocalizedMomentRepair.coefficients c.exponents c.lower c.upper (debt c amp eta) j| ≤
-      (2 * coefficientBound c.P c.m) * Real.exp (-(1 / (4 * c.lam))) * (1 + |amp eta|) := by
-  have heq : debt c amp eta = affineDebt c (parameterPolynomial eta) (amp eta) := by
-    ext i
-    unfold debt affineDebt parameterPolynomial
-    ring
-  rw [heq]
-  have h := affineCoefficients_exp_bound c hsmall (parameterPolynomial eta) (amp eta) j
-  have hq := parameterPolynomial_bound heta
-  have he := Real.exp_pos (-(1 / (4 * c.lam)))
-  have hC := coefficientBound_pos c.P_pos c.m
-  change |affineCoefficients c (parameterPolynomial eta) (amp eta) j| ≤ _
-  refine h.trans ?_
-  calc
-    _ ≤ (coefficientBound c.P c.m * Real.exp (-(1 / (4 * c.lam)))) *
-        (2 * (1 + |amp eta|)) :=
-      mul_le_mul_of_nonneg_left (by linarith [abs_nonneg (amp eta)])
-        (mul_nonneg hC.le he.le)
-    _ = _ := by ring
 
 /-! ## Fixed radial jets and first parameter derivatives -/
 
@@ -1003,18 +946,6 @@ theorem debt_eq_affine (c : Parameters) (amp : ℝ → ℝ) (eta : ℝ) :
   unfold debt affineDebt parameterPolynomial
   ring
 
-theorem pulse_coefficients_hasDerivAt (c : Parameters) {amp : ℝ → ℝ}
-    {eta amp' : ℝ} (ha : HasDerivAt amp amp' eta) (j : Fin 2) :
-    HasDerivAt (fun t => LocalizedMomentRepair.coefficients c.exponents c.lower c.upper
-      (debt c amp t) j) (affineCoefficients c (1 + 3 * eta ^ 2) amp' j) eta := by
-  have heq : (fun t => LocalizedMomentRepair.coefficients c.exponents c.lower c.upper
-      (debt c amp t) j) = (fun t => parameterPolynomial t * affineCoefficients c 1 0 j +
-      amp t * affineCoefficients c 0 1 j) := by
-    funext t
-    rw [debt_eq_affine]
-    exact affineCoefficients_decomposition c _ _ j
-  rw [heq, affineCoefficients_decomposition c (1 + 3 * eta ^ 2) amp' j]
-  exact ((parameterPolynomial_hasDerivAt eta).mul_const _).add (ha.mul_const _)
 
 noncomputable def affineProfile (c : Parameters) (q A y : ℝ) : ℝ :=
   ∑ j : Fin 2, affineCoefficients c q A j * logTemplate (y - center c j)
@@ -1130,82 +1061,10 @@ theorem correctionJet_bound (c : Parameters) (hsmall : c.lam ≤ 1 / 120)
         (mul_nonneg (correctionJetBound_pos c.P_pos c.m k).le (Real.exp_pos _).le)
     _ = _ := by ring
 
-theorem correctionJet_eta_hasDerivAt (c : Parameters) {amp : ℝ → ℝ}
-    {eta amp' : ℝ} (ha : HasDerivAt amp amp' eta) (k : ℕ) (y : ℝ) :
-    HasDerivAt (fun t => correctionJet c amp k t y)
-      (iteratedDeriv k (affineProfile c (1 + 3 * eta ^ 2) amp') y) eta := by
-  have heq : (fun t => correctionJet c amp k t y) =
-      (fun t => parameterPolynomial t * iteratedDeriv k (affineProfile c 1 0) y +
-        amp t * iteratedDeriv k (affineProfile c 0 1) y) := by
-    funext t
-    rw [correctionJet_eq, affineProfile_jet_decomposition]
-  rw [heq, affineProfile_jet_decomposition c (1 + 3 * eta ^ 2) amp' k y]
-  exact ((parameterPolynomial_hasDerivAt eta).mul_const _).add (ha.mul_const _)
 
-theorem correctionJet_eta_bound (c : Parameters) (hsmall : c.lam ≤ 1 / 120)
-    {amp : ℝ → ℝ} {eta amp' : ℝ} (ha : HasDerivAt amp amp' eta)
-    (heta : |eta| ≤ 1) (k : ℕ) (y : ℝ) :
-    |deriv (fun t => correctionJet c amp k t y) eta| ≤
-      (4 * correctionJetBound c.P c.m k) * Real.exp (-(1 / (4 * c.lam))) * (1 + |amp'|) := by
-  rw [(correctionJet_eta_hasDerivAt c ha k y).deriv]
-  refine (affineProfile_jet_bound c hsmall _ _ k y).trans ?_
-  have hq : |1 + 3 * eta ^ 2| ≤ 4 := by
-    simpa only [(parameterPolynomial_hasDerivAt eta).deriv] using parameterPolynomial_derivative_bound heta
-  calc
-    _ ≤ (correctionJetBound c.P c.m k * Real.exp (-(1 / (4 * c.lam)))) *
-        (4 * (1 + |amp'|)) :=
-      mul_le_mul_of_nonneg_left (by linarith [abs_nonneg amp'])
-        (mul_nonneg (correctionJetBound_pos c.P_pos c.m k).le (Real.exp_pos _).le)
-    _ = _ := by ring
 
-theorem normalized_mass_prefix_hasDerivAt (c : Parameters) (amp : ℝ → ℝ) (eta : ℝ) :
-    HasDerivAt (fun t => massMoment c amp t c.pulseStart /
-      (Real.exp c.pulseStart * angular c.P c.dropLength c.lam (c.pulseStart, t)))
-      (prefixCoefficient c 0 * (1 + 3 * eta ^ 2)) eta := by
-  have heq : (fun t => massMoment c amp t c.pulseStart /
-      (Real.exp c.pulseStart * angular c.P c.dropLength c.lam (c.pulseStart, t))) =
-      (fun t => prefixCoefficient c 0 * parameterPolynomial t) := by
-    funext t
-    exact normalized_mass_prefix c amp t
-  rw [heq]
-  exact (parameterPolynomial_hasDerivAt eta).const_mul _
 
-theorem normalized_mass_prefix_derivative_small (c : Parameters)
-    (hwait : c.wait = 60 * Real.log (1 / c.lam)) (hsmall : c.lam ≤ 1 / 120)
-    (amp : ℝ → ℝ) {eta : ℝ} (heta : |eta| ≤ 1) :
-    |deriv (fun t => massMoment c amp t c.pulseStart /
-        (Real.exp c.pulseStart * angular c.P c.dropLength c.lam (c.pulseStart, t))) eta| ≤
-      (4 * prefixBound c.P c.m 0) * c.lam ^ 29 := by
-  rw [(normalized_mass_prefix_hasDerivAt c amp eta).deriv, abs_mul]
-  have hq : |1 + 3 * eta ^ 2| ≤ 4 := by
-    simpa only [(parameterPolynomial_hasDerivAt eta).deriv] using parameterPolynomial_derivative_bound heta
-  have hb := mul_le_mul (prefixCoefficient_small c hwait hsmall 0) hq
-    (abs_nonneg _) (mul_nonneg (prefixBound_pos c.P_pos c.m 0).le (pow_nonneg c.lam_pos.le _))
-  nlinarith
 
-theorem individual_correction_jet_formula (c : Parameters) (amp : ℝ → ℝ)
-    (eta : ℝ) (j : Fin 2) (k : ℕ) (y : ℝ) :
-    iteratedDeriv k (fun t =>
-      LocalizedMomentRepair.coefficients c.exponents c.lower c.upper (debt c amp eta) j *
-        LocalizedMomentRepair.bump (c.lower j) (c.upper j) (Real.exp t)) y =
-      affineCoefficients c (parameterPolynomial eta) (amp eta) j *
-        iteratedDeriv k logTemplate (y - center c j) := by
-  have heq : (fun t =>
-      LocalizedMomentRepair.coefficients c.exponents c.lower c.upper (debt c amp eta) j *
-        LocalizedMomentRepair.bump (c.lower j) (c.upper j) (Real.exp t)) =
-      (fun t => affineCoefficients c (parameterPolynomial eta) (amp eta) j *
-        logTemplate (t - center c j)) := by
-    funext t
-    rw [bump_log_translate, debt_eq_affine]
-    rfl
-  rw [heq]
-  have hj : ContDiffAt ℝ k (fun t => logTemplate (t - center c j)) y :=
-    ((logTemplate_contDiff.comp (contDiff_id.sub contDiff_const)).of_le
-      (by exact_mod_cast (le_top : (k : ℕ∞) ≤ ⊤))).contDiffAt
-  rw [iteratedDeriv_const_mul _ hj]
-  congr 1
-  simpa only [sub_eq_add_neg] using
-    congrFun (iteratedDeriv_comp_add_const k logTemplate (-center c j)) y
 
 
 

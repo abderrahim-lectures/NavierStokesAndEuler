@@ -1518,7 +1518,6 @@ theorem profiles_mem {p : Point} (hp : p.2 ∈ Icc (-1 : ℝ) 1) (hX : 0 ≤ p.1
     p ∈ r.reference.domain.carrier :=
   ReferenceJetBounds.reference_mem _ hX hp
 
-theorem bigTime_pos : 0 < r.reference.bigTime := r.refTime_pos.trans_le r.before_big
 
 
 theorem startRadius_pos : 0 < r.startRadius :=

@@ -219,33 +219,6 @@ theorem exactAlias_sourceJet_bound {a b : ℝ} {χ : ℝ → ℝ}
     rw [heq, norm_zero]
     positivity
 
-theorem totalIntegral_uniform_of_inverse {a b : ℝ} {v : E}
-    (G : (ℝ × E → F) → Prop) (J : (ℝ × E → F) → ℝ × E → F) (loss : ℕ)
-    (hab : a ≤ b)
-    (hregular : ∀ f, G f → ContDiff ℝ ∞ f ∧ RadialAlias.RadiallySupported a b f)
-    (hsmooth : ∀ f, G f → ContDiff ℝ ∞ (J f))
-    (hsupport : ∀ f, G f → RadialAlias.RadiallySupported a b (J f))
-    (hsolve : ∀ f, G f → RadialAlias.directionalDeriv v (J f) = f)
-    (hclosed : ∀ f, G f → G (RadialAlias.slowDeriv (J f)))
-    (htame : ∀ m : ℕ, ∃ K : ℝ, 0 ≤ K ∧ ∀ f, G f → ∀ C : ℝ, 0 ≤ C →
-      FiniteJetBound (m + loss) f (Prod.fst ⁻¹' Icc a b) C →
-        FiniteJetBound m (J f) (Prod.fst ⁻¹' Icc a b) (K * C)) (m p : ℕ) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ f, G f → ∀ C : ℝ, 0 ≤ C →
-      FiniteJetBound (m + (loss + 1) * p) f (Prod.fst ⁻¹' Icc a b) C →
-      ∀ M : ℝ, M ≠ 0 → ∀ j ≤ m, ∀ z : ℝ × E,
-        ‖iteratedFDeriv ℝ j (TransportPrimitive.totalIntegral M v f) z‖ ≤
-          K * C * (|M|⁻¹) ^ p := by
-  obtain ⟨B, hB, hbound⟩ := sourceJet_uniform_finiteJets G J (Prod.fst ⁻¹' Icc a b)
-    loss hclosed hsmooth htame p m
-  refine ⟨B * (b - a), mul_nonneg hB (sub_nonneg.mpr hab), ?_⟩
-  intro f hf C hC hb M hM j hj z
-  have h := totalIntegral_sourceJet_bound J f p m hab hM (hregular f hf).1 (hregular f hf).2
-    (fun n _ => hsmooth _ (sourceJet_mem G J hclosed n hf))
-    (fun n _ => hsupport _ (sourceJet_mem G J hclosed n hf))
-    (fun n _ => hsolve _ (sourceJet_mem G J hclosed n hf))
-    (hbound f hf C hC hb) j hj z
-  convert! h using 1
-  ring
 
 theorem exactAlias_uniform_of_inverse {a b : ℝ} {v : E} {χ : ℝ → ℝ}
     (G : (ℝ × E → F) → Prop) (J : (ℝ × E → F) → ℝ × E → F) (loss : ℕ)
@@ -383,35 +356,9 @@ noncomputable def SourcePeriodic (f : ℝ × (S × Plane) → F) : Prop :=
 noncomputable def radialSlice (f : ℝ × (S × Plane) → F) (s : S) (z : ℝ × Plane) : F :=
   f (z.1, (s, z.2))
 
-theorem radialSlice_smooth {f : ℝ × (S × Plane) → F} (hf : ContDiff ℝ ∞ f) (s : S) :
-    ContDiff ℝ ∞ (radialSlice f s) :=
-  hf.comp (contDiff_fst.prodMk (contDiff_const.prodMk contDiff_snd))
 
-omit [NormedAddCommGroup S] [NormedSpace ℝ S] [NormedSpace ℝ F] in
-theorem radialSlice_supported {a b : ℝ} {f : ℝ × (S × Plane) → F}
-    (hs : RadialAlias.RadiallySupported a b f) (s : S) :
-    RadialAlias.RadiallySupported a b (radialSlice f s) :=
-  fun z hz => @hs (z.1, (s, z.2)) hz
 
-theorem totalIntegral_radialSlice (M : ℝ) (v : Plane) (f : ℝ × (S × Plane) → F)
-    (U : ℝ) (s : S) (Y : Plane) :
-    TransportPrimitive.totalIntegral M ((0 : S), v) f (U, (s, Y)) =
-      TransportPrimitive.totalIntegral M v (radialSlice f s) (U, Y) := by
-  apply integral_congr_ae
-  filter_upwards [] with u
-  simp only [TransportPrimitive.shift, radialSlice, Prod.mk_add_mk, Prod.smul_mk,
-    smul_zero, add_zero]
 
-theorem sourceMean_totalIntegral {a b M : ℝ} {v : Plane} {f : ℝ × (S × Plane) → F}
-    (hab : a ≤ b) (hf : ContDiff ℝ ∞ f) (hp : SourcePeriodic f)
-    (hs : RadialAlias.RadiallySupported a b f) (U : ℝ) (s : S) :
-    sourceMean (TransportPrimitive.totalIntegral M ((0 : S), v) f) (U, s) =
-      ∫ u in a..b, sourceMean f (u, s) := by
-  change FourierAlias.torusMean (fun Y => TransportPrimitive.totalIntegral M ((0 : S), v) f
-    (U, (s, Y))) = _
-  simp_rw [totalIntegral_radialSlice]
-  exact FourierAlias.torusMean_totalIntegral hab (radialSlice_smooth hf s).continuous
-    (fun u => hp u s) (radialSlice_supported hs s) U
 
 
 omit [NormedAddCommGroup S] [NormedSpace ℝ S] in
@@ -447,20 +394,6 @@ theorem familyMean_eq_parameterMean (f : P × Plane → ℂ) (p : P) :
     SmoothFamilyTorusInverse.mean f p = parameterMean f p :=
   SmoothFamilyTorusInverse.mean_eq_integral f p
 
-theorem torusMean_map {F H : Type} [NormedAddCommGroup F] [NormedSpace ℝ F]
-    [NormedAddCommGroup H] [NormedSpace ℝ H] [CompleteSpace F] [CompleteSpace H]
-    (L : F →L[ℝ] H) {f : Plane → F} (hf : Continuous f) :
-    FourierAlias.torusMean (fun Y => L (f Y)) = L (FourierAlias.torusMean f) := by
-  have hx (y : ℝ) : (∫ x in (0 : ℝ)..1, L (f (x, y))) =
-      L (∫ x in (0 : ℝ)..1, f (x, y)) :=
-    L.intervalIntegral_comp_comm
-      ((hf.comp (continuous_id.prodMk continuous_const)).intervalIntegrable _ _)
-  have hc : Continuous (fun y => ∫ x in (0 : ℝ)..1, f (x, y)) :=
-    FourierAlias.continuous_parameter_interval (g := fun p : ℝ × ℝ => f (p.2, p.1))
-      (hf.comp (continuous_snd.prodMk continuous_fst)) (by norm_num)
-  unfold FourierAlias.torusMean
-  simp_rw [hx]
-  exact L.intervalIntegral_comp_comm (hc.intervalIntegrable _ _)
 
 /-- A genuine real directional inverse, obtained from the actual complex
 Fourier inverse by real part. -/
@@ -650,14 +583,6 @@ theorem totalIntegral_realCenterSource {a b M : ℝ} {v : Plane}
     (g := fun U => sourceMean f (U, z.2.1)) (hc.intervalIntegrable _ _) (hmc.intervalIntegrable _ _),
     hm z.2.1, sub_zero]
 
-theorem exactAlias_eq_realCenterSource {a b M : ℝ} {v : Plane}
-    {f : ℝ × (S × Plane) → ℝ} (χ : ℝ → ℝ)
-    (hf : ContDiff ℝ ∞ f) (hp : SourcePeriodic f) (hs : RadialAlias.RadiallySupported a b f)
-    (hm : ∀ s, (∫ U in a..b, sourceMean f (U, s)) = 0) :
-    exactAlias χ M ((0 : S), v) f = exactAlias χ M ((0 : S), v) (realCenterSource f) := by
-  funext z
-  unfold exactAlias
-  rw [totalIntegral_realCenterSource hf hp hs hm]
 
 
 theorem familyInverse_smooth (d : Direction) {f : ℝ × (S × Plane) → ℂ}
@@ -750,44 +675,7 @@ theorem familyInverse_finiteJets (d : Direction) (a b : ℝ) (m : ℕ) :
   rw [norm_iteratedFDeriv_fromProduct]
   exact hout j hj (z.1, z.2.1) hz z.2.2
 
-theorem realCenterSource_finiteJets (a b : ℝ) (m : ℕ) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (f : ℝ × (S × Plane) → ℝ) (C : ℝ),
-      ContDiff ℝ ∞ f → SourcePeriodic f → 0 ≤ C →
-      FiniteJetBound (m + 4) f (Prod.fst ⁻¹' Icc a b) C →
-      FiniteJetBound m (realCenterSource f) (Prod.fst ⁻¹' Icc a b) (K * C) := by
-  obtain ⟨K, hK, hb⟩ := realCentered_finiteJets (P := ℝ × S) m
-  refine ⟨K, hK, ?_⟩
-  intro f C hf hp hC hsource
-  have hin : ∀ j ≤ m + 4, ∀ p ∈ (Prod.fst ⁻¹' Icc a b : Set (ℝ × S)), ∀ Y,
-      ‖iteratedFDeriv ℝ j (toProduct f) (p, Y)‖ ≤ C := by
-    intro j hj p hpA Y
-    rw [norm_iteratedFDeriv_toProduct]
-    exact hsource j hj (p.1, (p.2, Y)) hpA
-  have hout := hb (toProduct f) (Prod.fst ⁻¹' Icc a b) C (toProduct_smooth hf)
-    (fun p => hp p.1 p.2) hC hin
-  intro j hj z hz
-  change ‖iteratedFDeriv ℝ j (fromProduct (realCentered (toProduct f))) z‖ ≤ _
-  rw [norm_iteratedFDeriv_fromProduct]
-  exact hout j hj (z.1, z.2.1) hz z.2.2
 
-/-- Actual, source-uniform finite-seminorm estimate for the translated total
-integral. Every integration by parts consumes one radial derivative and five
-orders for the genuine torus inverse. -/
-theorem totalIntegral_finiteJets (d : Direction) {a b : ℝ} (hab : a ≤ b) (m p : ℕ) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (f : ℝ × (S × Plane) → ℂ), Admissible a b f →
-      ∀ C : ℝ, 0 ≤ C → FiniteJetBound (m + 6 * p) f (Prod.fst ⁻¹' Icc a b) C →
-      ∀ M : ℝ, M ≠ 0 → ∀ j ≤ m, ∀ z : ℝ × (S × Plane),
-        ‖iteratedFDeriv ℝ j (TransportPrimitive.totalIntegral M ((0 : S), vector d) f) z‖ ≤
-          K * C * (|M|⁻¹) ^ p := by
-  apply totalIntegral_uniform_of_inverse (Admissible a b) (familyInverse d) 5 hab
-    (fun _ hf => ⟨hf.1, hf.2.2.2⟩)
-    (fun _ hf => familyInverse_smooth d hf.1 hf.2.1)
-    (fun _ hf => familyInverse_supported d hf.2.2.2)
-    (fun _ hf => familyInverse_solves d hf.1 hf.2.1 hf.2.2.1)
-    (fun _ hf => admissible_step d hf) _ m p
-  intro k
-  obtain ⟨K, hK, hb⟩ := familyInverse_finiteJets (S := S) d a b k
-  exact ⟨K, hK, fun f hf C hC hsource => hb f C hf.1 hf.2.1 hC hsource⟩
 
 /-- The retained alias has the same arbitrary inverse-frequency gain, with
 all source dependence confined to a finite actual derivative bound. -/
@@ -988,59 +876,7 @@ noncomputable def bandSlow (n : ℕ) : ℝ := max 1 (ChartScales.S n)
 
 theorem one_le_bandSlow (n : ℕ) : 1 ≤ bandSlow n := le_max_left _ _
 
-theorem bandSlow_eventually_eq : ∀ᶠ n : ℕ in atTop, bandSlow n = ChartScales.S n := by
-  filter_upwards [eventually_ge_atTop 1] with n hn
-  apply max_eq_right
-  have hn' : (1 : ℝ) ≤ n := by exact_mod_cast hn
-  change 1 ≤ (n : ℝ) ^ 2
-  nlinarith
 
-/-- Choose the number of integrations by parts before learning the finite
-polynomial slow-scale loss of the required source seminorm. -/
-theorem frequency_gain_absorbs_family_growth {M : ℕ → ℝ} {h κ A growth α : ℝ}
-    (hh : 0 < h) (hκ : 0 < κ)
-    (hbound : ∀ᶠ n in atTop, |M n|⁻¹ ≤
-      A * ChartScales.epsilon h n ^ κ * ChartScales.S n ^ growth) (N : ℕ) :
-    ∃ p : ℕ, ∀ q : ℕ, ∀ C : ℝ, 0 ≤ C →
-      ∀ᶠ n in atTop,
-        C * ChartScales.epsilon h n ^ α * bandSlow n ^ q * (|M n|⁻¹) ^ p ≤
-          C * ChartScales.epsilon h n ^ N := by
-  obtain ⟨p, hp⟩ := exists_nat_gt (((N : ℝ) + 1 - α) / (κ / 2))
-  have hNp : (N : ℝ) + 1 ≤ α + (κ / 2) * (p : ℝ) := by
-    have hp' := (div_lt_iff₀ (half_pos hκ)).mp hp
-    nlinarith
-  refine ⟨p, ?_⟩
-  intro q C hC
-  have hslow := ChartScales.eventually_slow_power_epsilon_lt h hh (q : ℝ) 1 1
-    zero_lt_one zero_lt_one
-  simp only [Real.rpow_natCast, Real.rpow_one] at hslow
-  filter_upwards [FourierAlias.inverse_frequency_eventually_small hh hκ hbound,
-    hslow, bandSlow_eventually_eq] with n hn hsn hband
-  rw [hband]
-  have hε := ChartScales.epsilon_pos h n
-  have hS : 0 ≤ ChartScales.S n := sq_nonneg (n : ℝ)
-  have hpower : (|M n|⁻¹) ^ p ≤ ChartScales.epsilon h n ^ ((κ / 2) * (p : ℝ)) := by
-    rw [Real.rpow_mul_natCast hε.le]
-    exact pow_le_pow_left₀ (inv_nonneg.mpr (abs_nonneg _)) hn p
-  have hεα : 0 ≤ ChartScales.epsilon h n ^ α := (Real.rpow_pos_of_pos hε α).le
-  calc
-    _ ≤ C * ChartScales.epsilon h n ^ α * ChartScales.S n ^ q *
-        ChartScales.epsilon h n ^ ((κ / 2) * (p : ℝ)) :=
-      mul_le_mul_of_nonneg_left hpower (by positivity)
-    _ = C * ChartScales.epsilon h n ^ (α + (κ / 2) * (p : ℝ)) * ChartScales.S n ^ q := by
-      rw [Real.rpow_add hε]
-      ring
-    _ ≤ C * ChartScales.epsilon h n ^ ((N : ℝ) + 1) * ChartScales.S n ^ q :=
-      mul_le_mul_of_nonneg_right
-        (mul_le_mul_of_nonneg_left (Real.rpow_le_rpow_of_exponent_ge hε
-          (ChartScales.epsilon_le_one h hh.le n) hNp) hC) (pow_nonneg hS q)
-    _ = (C * ChartScales.epsilon h n ^ N) *
-        (ChartScales.S n ^ q * ChartScales.epsilon h n) := by
-      rw [Real.rpow_add hε, Real.rpow_natCast, Real.rpow_one]
-      ring
-    _ ≤ (C * ChartScales.epsilon h n ^ N) * 1 :=
-      mul_le_mul_of_nonneg_left hsn.le (by positivity)
-    _ = C * ChartScales.epsilon h n ^ N := mul_one _
 
 end BandScales
 
@@ -1058,41 +894,6 @@ noncomputable def chartStrip (a b cL cR : ℝ) (ha : 0 < a) (hcL : 0 < cL) (hcR 
 
 variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S] [FiniteDimensional ℝ S]
 
-/-- Band-dependent sources in the actual all-order mean class have uniformly
-superflat aliases. The proof chooses one finite IBP order before extracting
-the required source seminorm and its polynomial growth degree. -/
-theorem meanClass_alias_superflat (d : Direction) {a b cL cR h α : ℝ}
-    (ha : 0 < a) (hab : a ≤ b) (hcL : 0 < cL) (hcR : 0 < cR) (hh : 0 < h)
-    {χ : ℝ → ℝ} (hχ : ContDiff ℝ ∞ χ)
-    (hleft : ∀ u ≤ a, χ u = 0) (hright : ∀ u, b ≤ u → χ u = 1)
-    {f : ℕ → ℝ × (S × Plane) → ℂ}
-    (hf : MeanClass (chartStrip a b cL cR ha hcL hcR h hh) α f)
-    (hgood : ∀ n, Admissible a b (f n))
-    {M : ℕ → ℝ} {κ A growth : ℝ} (hκ : 0 < κ)
-    (hM : ∀ᶠ n in atTop, M n ≠ 0)
-    (hfrequency : ∀ᶠ n in atTop, |M n|⁻¹ ≤
-      A * ChartScales.epsilon h n ^ κ * ChartScales.S n ^ growth) (m N : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ᶠ n in atTop, ∀ j ≤ m, ∀ z : ℝ × (S × Plane),
-      ‖iteratedFDeriv ℝ j (exactAlias χ (M n) ((0 : S), vector d) (f n)) z‖ ≤
-        C * ChartScales.epsilon h n ^ N := by
-  obtain ⟨p, hp⟩ := frequency_gain_absorbs_family_growth (α := α) hh hκ hfrequency N
-  obtain ⟨K, hK, hbound⟩ := exactAlias_finiteJets (S := S) d hab hχ hleft hright m p
-  obtain ⟨C, hC, q, hsource⟩ := meanClass_global_finiteJets ha hcL hcR
-    (ChartScales.epsilon h) bandSlow (ChartScales.epsilon_pos h)
-    (ChartScales.epsilon_le_one h hh.le) one_le_bandSlow hf
-    (fun n => (hgood n).2.2.2) (fun n => (hgood n).1) (m + 6 * p)
-  refine ⟨K * C, mul_nonneg hK hC, ?_⟩
-  filter_upwards [hM, hp q (K * C) (mul_nonneg hK hC)] with n hn hgain
-  intro j hj z
-  have hεα : 0 < ChartScales.epsilon h n ^ α :=
-    Real.rpow_pos_of_pos (ChartScales.epsilon_pos h n) α
-  have hslow : 0 ≤ bandSlow n := zero_le_one.trans (one_le_bandSlow n)
-  have hb := hbound (f n) (hgood n) (C * ChartScales.epsilon h n ^ α * bandSlow n ^ q)
-    (by positivity) (fun i hi x _ => hsource n i hi x (Set.mem_univ x)) (M n) hn j hj z
-  calc
-    _ ≤ K * (C * ChartScales.epsilon h n ^ α * bandSlow n ^ q) * (|M n|⁻¹) ^ p := hb
-    _ = (K * C) * ChartScales.epsilon h n ^ α * bandSlow n ^ q * (|M n|⁻¹) ^ p := by ring
-    _ ≤ (K * C) * ChartScales.epsilon h n ^ N := hgain
 
 omit [FiniteDimensional ℝ S] in
 theorem admissible_complexify {a b : ℝ} {f : ℝ × (S × Plane) → ℝ}
@@ -1123,84 +924,8 @@ theorem real_exactAlias_finiteJets (d : Direction) {a b : ℝ} {χ : ℝ → ℝ
   exact hsource i hi x hx
 
 
-theorem realMeanClass_alias_superflat (d : Direction) {a b cL cR h α : ℝ}
-    (ha : 0 < a) (hab : a ≤ b) (hcL : 0 < cL) (hcR : 0 < cR) (hh : 0 < h)
-    {χ : ℝ → ℝ} (hχ : ContDiff ℝ ∞ χ)
-    (hleft : ∀ u ≤ a, χ u = 0) (hright : ∀ u, b ≤ u → χ u = 1)
-    {f : ℕ → ℝ × (S × Plane) → ℝ}
-    (hf : MeanClass (chartStrip a b cL cR ha hcL hcR h hh) α f)
-    (hfc : ∀ n, ContDiff ℝ ∞ (f n)) (hp : ∀ n, SourcePeriodic (f n))
-    (hm : ∀ n p, sourceMean (f n) p = 0)
-    (hs : ∀ n, RadialAlias.RadiallySupported a b (f n))
-    {M : ℕ → ℝ} {κ A growth : ℝ} (hκ : 0 < κ)
-    (hM : ∀ᶠ n in atTop, M n ≠ 0)
-    (hfrequency : ∀ᶠ n in atTop, |M n|⁻¹ ≤
-      A * ChartScales.epsilon h n ^ κ * ChartScales.S n ^ growth) (m N : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ᶠ n in atTop, ∀ j ≤ m, ∀ z : ℝ × (S × Plane),
-      ‖iteratedFDeriv ℝ j (exactAlias χ (M n) ((0 : S), vector d) (f n)) z‖ ≤
-        C * ChartScales.epsilon h n ^ N := by
-  have hcomplex : MeanClass (chartStrip a b cL cR ha hcL hcR h hh) α
-      (fun n => complexify (f n)) := hf.map Complex.ofRealCLM
-  obtain ⟨C, hC, hb⟩ := meanClass_alias_superflat d ha hab hcL hcR hh hχ hleft hright hcomplex
-    (fun n => admissible_complexify (hfc n) (hp n) (hm n) (hs n)) hκ hM hfrequency m N
-  refine ⟨C, hC, ?_⟩
-  filter_upwards [hb] with n hn
-  intro j hj z
-  rw [← norm_iteratedFDeriv_exactAlias_complexify hχ (hfc n) (hs n)]
-  exact hn j hj z
 
-theorem radial_realMeanClass_alias_superflat {a b cL cR h α : ℝ}
-    (ha : 0 < a) (hab : a ≤ b) (hcL : 0 < cL) (hcR : 0 < cR) (hh : 0 < h)
-    {χ : ℝ → ℝ} (hχ : ContDiff ℝ ∞ χ)
-    (hleft : ∀ u ≤ a, χ u = 0) (hright : ∀ u, b ≤ u → χ u = 1)
-    {f : ℕ → ℝ × (S × Plane) → ℝ}
-    (hf : MeanClass (chartStrip a b cL cR ha hcL hcR h hh) α f)
-    (hfc : ∀ n, ContDiff ℝ ∞ (f n)) (hp : ∀ n, SourcePeriodic (f n))
-    (hm : ∀ n p, sourceMean (f n) p = 0)
-    (hs : ∀ n, RadialAlias.RadiallySupported a b (f n)) (m N : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ᶠ n in atTop, ∀ j ≤ m, ∀ z : ℝ × (S × Plane),
-      ‖iteratedFDeriv ℝ j
-        (exactAlias χ (ChartScales.radialCoefficient h n) ((0 : S), vector .radial) (f n)) z‖ ≤
-        C * ChartScales.epsilon h n ^ N := by
-  apply realMeanClass_alias_superflat .radial (A := ChartScales.Lambda) (growth := ChartScales.rho)
-    ha hab hcL hcR hh hχ hleft hright hf hfc hp hm hs
-    (show 0 < ChartScales.kappa by norm_num [ChartScales.kappa])
-    (Filter.Eventually.of_forall (fun n => ne_of_gt (ChartScales.radialCoefficient_pos h n)))
-    _ m N
-  filter_upwards [eventually_ge_atTop 4] with n hn
-  simpa only [abs_of_pos (ChartScales.radialCoefficient_pos h n)] using
-    ChartScales.radialCoefficient_inv_upper h hh.le hn
 
-theorem realMeanClass_alias_superflat_of_integratedMean_zero (d : Direction)
-    {a b cL cR h α : ℝ}
-    (ha : 0 < a) (hab : a ≤ b) (hcL : 0 < cL) (hcR : 0 < cR) (hh : 0 < h)
-    {χ : ℝ → ℝ} (hχ : ContDiff ℝ ∞ χ)
-    (hleft : ∀ u ≤ a, χ u = 0) (hright : ∀ u, b ≤ u → χ u = 1)
-    {f : ℕ → ℝ × (S × Plane) → ℝ}
-    (hf : MeanClass (chartStrip a b cL cR ha hcL hcR h hh) α f)
-    (hfc : ∀ n, ContDiff ℝ ∞ (f n)) (hp : ∀ n, SourcePeriodic (f n))
-    (hm : ∀ n s, (∫ U in a..b, sourceMean (f n) (U, s)) = 0)
-    (hs : ∀ n, RadialAlias.RadiallySupported a b (f n))
-    {M : ℕ → ℝ} {κ A growth : ℝ} (hκ : 0 < κ)
-    (hM : ∀ᶠ n in atTop, M n ≠ 0)
-    (hfrequency : ∀ᶠ n in atTop, |M n|⁻¹ ≤
-      A * ChartScales.epsilon h n ^ κ * ChartScales.S n ^ growth) (m N : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ᶠ n in atTop, ∀ j ≤ m, ∀ z : ℝ × (S × Plane),
-      ‖iteratedFDeriv ℝ j (exactAlias χ (M n) ((0 : S), vector d) (f n)) z‖ ≤
-        C * ChartScales.epsilon h n ^ N := by
-  have hcenter : MeanClass (chartStrip a b cL cR ha hcL hcR h hh) α
-      (fun n => realCenterSource (f n)) :=
-    meanClass_realCenterSource ha hcL hcR (ChartScales.epsilon h) bandSlow
-      (ChartScales.epsilon_pos h) (ChartScales.epsilon_le_one h hh.le) one_le_bandSlow hf hfc hp
-  obtain ⟨C, hC, hb⟩ := realMeanClass_alias_superflat d ha hab hcL hcR hh hχ hleft hright hcenter
-    (fun n => realCenterSource_smooth (hfc n) (hp n)) (fun n => realCenterSource_periodic (hp n))
-    (fun n => realCenterSource_zeroMean (hfc n) (hp n)) (fun n => realCenterSource_supported (hs n))
-    hκ hM hfrequency m N
-  refine ⟨C, hC, ?_⟩
-  filter_upwards [hb] with n hn
-  intro j hj z
-  rw [exactAlias_eq_realCenterSource χ (hfc n) (hp n) (hs n) (hm n)]
-  exact hn j hj z
 
 
 end UniformFamilies

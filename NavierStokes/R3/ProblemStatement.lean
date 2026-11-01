@@ -175,34 +175,6 @@ theorem UniformFiniteEnergy.mono {times shorter : Set ℝ} {u : VelocityField}
   obtain ⟨E, hE, hu⟩ := hu
   exact ⟨E, hE, fun t ht => hu t (hsub ht)⟩
 
-/-- Zero velocity and pressure solve the equation for zero force at any
-viscosity. This checks that the competing-solution class is inhabited. -/
-theorem zero_force_has_global_solution (ν : ℝ) :
-    Nonempty (GlobalFiniteEnergySolution ν (fun _ => 0)) := by
-  refine ⟨{
-    velocity := fun _ => 0
-    pressure := fun _ => 0
-    velocity_smooth := contDiff_const.contDiffOn
-    pressure_smooth := contDiff_const.contDiffOn
-    zero_initial_velocity := fun _ => rfl
-    divergence_free := ?_
-    navier_stokes := ?_
-    energy_bounded := ?_
-  }⟩
-  · intro t ht x
-    simp [NavierStokes.ProblemStatement.spatialDivergence,
-      NavierStokes.ProblemStatement.spatialDerivative]
-  · intro t ht x
-    simp [navierStokesResidual, NavierStokes.ProblemStatement.temporalDerivative,
-      NavierStokes.ProblemStatement.advection,
-      NavierStokes.ProblemStatement.spatialLaplacian,
-      NavierStokes.ProblemStatement.spatialDerivative,
-      NavierStokes.ProblemStatement.pressureGradient]
-  · refine ⟨0, le_refl 0, ?_⟩
-    intro t ht
-    constructor
-    · simp [SquareIntegrableAtTime]
-    · simp [kineticEnergy]
 
 
 end NavierStokesR3.ProblemStatement

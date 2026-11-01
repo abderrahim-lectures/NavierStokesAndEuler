@@ -146,65 +146,10 @@ theorem laplaceWeighted_radialB {V : Profile} {p : ProfilePoint}
   unfold radialB
   field_simp [hs] ; ring
 
-theorem divergence_coefficient {V : Profile} (U : Profile) {p : ProfilePoint}
-    (hV : DifferentiableAt ℝ V p) (hs : p.2.1 ≠ 0) :
-    partialZ U p - 2 * radialB V p - 2 * p.2.1 * partialS (radialB V) p =
-      partialS V p + partialZ U p := by
-  rw [partialS_radialB_explicit hV hs]
-  unfold radialB
-  field_simp [hs] ; ring
 
-private theorem hasFDerivAt_velocity_at {B F U : Profile} {t : ℝ} {x : Space}
-    (hB : DifferentiableAt ℝ B (profilePoint t x))
-    (hF : DifferentiableAt ℝ F (profilePoint t x))
-    (hU : DifferentiableAt ℝ U (profilePoint t x)) :
-    HasFDerivAt (fun y => AxisymmetricResidual.velocity B F U (t, y))
-      (velocityJacobian B F U t x) x := by
-  have hb := hasFDerivAt_profile_composition B t x hB
-  have hf := hasFDerivAt_profile_composition F t x hF
-  have hu := hasFDerivAt_profile_composition U t x hU
-  exact hasFDerivAt_pack
-    ((((projection 0).hasFDerivAt.mul hb).add ((projection 1).hasFDerivAt.mul hf)).neg)
-    (((projection 0).hasFDerivAt.mul hf).sub ((projection 1).hasFDerivAt.mul hb)) hu
 
-theorem divergence_velocity_at {B F U : Profile} {t : ℝ} {x : Space}
-    (hB : DifferentiableAt ℝ B (profilePoint t x))
-    (hF : DifferentiableAt ℝ F (profilePoint t x))
-    (hU : DifferentiableAt ℝ U (profilePoint t x)) :
-    spatialDivergence (AxisymmetricResidual.velocity B F U) t x =
-      partialZ U (profilePoint t x) - 2 * B (profilePoint t x) -
-        2 * radialEnergy x * partialS B (profilePoint t x) := by
-  unfold spatialDivergence spatialDerivative
-  rw [(hasFDerivAt_velocity_at hB hF hU).fderiv, Fin.sum_univ_three]
-  simp [velocityJacobian, packDerivative_apply, profileDerivative_apply,
-    coordinateVector, profilePoint, radialEnergy, lift]
-  ring
 
-/-- Actual Cartesian divergence, needing regularity only at the evaluated
-profile point. No smooth extension of the quotient across the axis is assumed. -/
-theorem divergence_radialB {V F U : Profile} {t : ℝ} {x : Space}
-    (hV : DifferentiableAt ℝ V (profilePoint t x))
-    (hF : DifferentiableAt ℝ F (profilePoint t x))
-    (hU : DifferentiableAt ℝ U (profilePoint t x)) (hs : 0 < radialEnergy x) :
-    spatialDivergence (AxisymmetricResidual.velocity (radialB V) F U) t x =
-      partialS V (profilePoint t x) + partialZ U (profilePoint t x) := by
-  have hne : (profilePoint t x).2.1 ≠ 0 := ne_of_gt hs
-  rw [divergence_velocity_at (differentiableAt_radialB hV hne) hF hU]
-  exact divergence_coefficient U hV hne
 
-/-- The substitution has exactly the intended physical radial flux. -/
-theorem radial_flux_velocity (V F U : Profile) (t : ℝ) (x : Space)
-    (hs : 0 < radialEnergy x) :
-    x 0 * AxisymmetricResidual.velocity (radialB V) F U (t, x) 0 +
-      x 1 * AxisymmetricResidual.velocity (radialB V) F U (t, x) 1 =
-        V (profilePoint t x) := by
-  calc
-    _ = -2 * radialEnergy x * radialB V (profilePoint t x) := by
-      simp [AxisymmetricResidual.velocity, componentX, componentY, lift, radialEnergy]
-      ring
-    _ = _ := by
-      change -2 * radialEnergy x * (-V (profilePoint t x) / (2 * radialEnergy x)) = _
-      field_simp [ne_of_gt hs]
 
 noncomputable def fluxResidual (V F U P : Profile) (p : ProfilePoint) : ℝ :=
   partialT V p + V p * (partialS V p - V p / (2 * p.2.1)) + U p * partialZ V p -

@@ -45,21 +45,6 @@ theorem compact_bound_of_local_rates {K S : Set D} (hK : IsCompact K)
   exact (hyU hy.2).trans (mul_le_mul_of_nonneg_right hCy
     (Real.rpow_nonneg (hq y hy.2).le r))
 
-/-- A globally supported family needs compactness only on the support.
-This keeps the bound uniform over the unbounded ambient domain. -/
-theorem bound_of_local_rates_and_zero {K S : Set D} (hK : IsCompact K)
-    {q : D → ℝ} {f : D → V} {m : ℕ} {r : ℝ}
-    (hq : ∀ x ∈ S, 0 < q x)
-    (hloc : ∀ x ∈ K, DiagonalResidual.JetRate (𝓝[S] x) q f m r)
-    (hz : ∀ x ∈ S, x ∉ K → iteratedFDeriv ℝ m f x = 0) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ x ∈ S,
-      ‖iteratedFDeriv ℝ m f x‖ ≤ C * q x ^ r := by
-  obtain ⟨C, hC, hb⟩ := compact_bound_of_local_rates hK hq hloc
-  refine ⟨C, hC, fun x hx => ?_⟩
-  by_cases hKx : x ∈ K
-  · exact hb x ⟨hKx, hx⟩
-  · rw [hz x hx hKx, norm_zero]
-    exact mul_nonneg hC (Real.rpow_nonneg (hq x hx).le r)
 
 end CompactBounds
 

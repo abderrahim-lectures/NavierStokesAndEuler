@@ -52,13 +52,6 @@ theorem exists_spatial_plateau (x : X) : ∃ m : ℕ, ‖x‖ < (m : ℝ) + 1 :=
   obtain ⟨m, hm⟩ := exists_nat_gt ‖x‖
   exact ⟨m, by linarith⟩
 
-omit [NormedSpace ℝ X] [FiniteDimensional ℝ X] in
-theorem exists_compact_spatial_plateau {K : Set X} (hK : IsCompact K) :
-    ∃ m : ℕ, ∀ x ∈ K, ‖x‖ < (m : ℝ) + 1 := by
-  obtain ⟨C, hC⟩ := hK.exists_bound_of_continuousOn (continuous_id.continuousOn :
-    ContinuousOn (fun x : X => x) K)
-  obtain ⟨m, hm⟩ := exists_nat_gt C
-  exact ⟨m, fun x hx => lt_of_le_of_lt (hC x hx) (by linarith)⟩
 
 def term (b : ℝ) (j : ℕ) (a : X → V) (z : ℝ × X) : V :=
   BorelExtension.term b j (a z.2) z.1
@@ -282,17 +275,6 @@ private theorem iteratedFDeriv_eq_of_eventuallyEq {f g : (ℝ × X) → V} {z : 
   simpa only [iteratedFDerivWithin_univ] using
     h'.iteratedFDerivWithin_eq (𝕜 := ℝ) h.eq_of_nhds k
 
-/-- On any fixed compact spatial set, every joint derivative has a uniform
-geometric tail bound. Time is unrestricted in this estimate. -/
-theorem derivative_tail_bound_on_compact {K : Set X} (hK : IsCompact K) (k : ℕ) :
-    ∀ᶠ j in atTop, ∀ z : ℝ × X, z.2 ∈ K →
-      ‖iteratedFDeriv ℝ k (term (scale a ha j) j (a j)) z‖ ≤ (1 / 2 : ℝ) ^ j := by
-  obtain ⟨m, hm⟩ := exists_compact_spatial_plateau hK
-  filter_upwards [eventually_gt_atTop (max m k)] with j hj z hz
-  rw [iteratedFDeriv_eq_of_eventuallyEq
-    (term_eventuallyEq_localized m (hm z.2 hz) (scale a ha j) j (a j)) k]
-  exact localized_derivative_tail_bound a ha
-    (lt_of_le_of_lt (le_max_left _ _) hj) (lt_of_le_of_lt (le_max_right _ _) hj) z
 
 section Complete
 

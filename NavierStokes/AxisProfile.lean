@@ -42,16 +42,6 @@ def profileCoeff (χ : ℝ) (n : ℕ) : ℝ :=
 @[simp] theorem profileCoeff_zero (χ : ℝ) : profileCoeff χ 0 = 1 := by
   norm_num [profileCoeff]
 
-/-- Exact recurrence for the displayed regular series. -/
-theorem profileCoeff_recurrence (χ : ℝ) (n : ℕ) :
-    2 * ((n : ℝ) + 1) * ((n : ℝ) + 2) * profileCoeff χ (n + 1) =
-      -χ * profileCoeff χ n := by
-  have hf : (n.factorial : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero n)
-  have hn1 : (n : ℝ) + 1 ≠ 0 := by positivity
-  have hn2 : (n : ℝ) + 1 + 1 ≠ 0 := by positivity
-  simp only [profileCoeff, Nat.factorial_succ, Nat.cast_mul, Nat.cast_add,
-    Nat.cast_one, pow_succ]
-  field_simp; ring
 
 
 
@@ -101,21 +91,8 @@ theorem quarticUpper_lt_neg_eighteen_hundredths
 def leadingAxial (Z L Y : ℝ) : ℝ := -Y * Z / (2 * L)
 
 
-theorem hasDerivAt_leadingAxial (Z L Y : ℝ) :
-    HasDerivAt (leadingAxial Z L) (-Z / (2 * L)) Y := by
-  have hfun : leadingAxial Z L = fun x : ℝ => (-Z / (2 * L)) * x := by
-    funext x
-    unfold leadingAxial
-    ring
-  rw [hfun]
-  simpa only [id_eq, mul_one] using (hasDerivAt_id Y).const_mul (-Z / (2 * L))
 
 
-/-- The derivative as a function, permitting a second differentiation. -/
-theorem deriv_leadingAxial (Z L : ℝ) :
-    deriv (leadingAxial Z L) = fun _ : ℝ => -Z / (2 * L) := by
-  funext Y
-  exact (hasDerivAt_leadingAxial Z L Y).deriv
 
 
 end

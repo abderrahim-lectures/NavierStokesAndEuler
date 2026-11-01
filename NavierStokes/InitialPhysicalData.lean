@@ -2441,25 +2441,7 @@ theorem periodized_sum_eq_active (f : PhysicalCopyBounds.CopyFamily 1 Frequency)
       exact ActualPrimary.activeLabels_cover n hx l.1 l.2 hm
     _ = _ := Finset.sum_image (fun l _ l' _ he => primaryIndex_injective he)
 
-theorem potential_sum_eq_active (i : Fin 3) (n d : ℕ) (w : ProblemStatement.SpaceTime)
-    (hw : w ∈ PhysicalWaveSum.preterminal)
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d w ∈ strip.domain) :
-    (potentialFamily B N0 i).sum innerRadius ActualPrimary.h ActualPrimary.slots.radius w =
-      ∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-        (potentialFamily B N0 i).periodized innerRadius ActualPrimary.h ActualPrimary.slots.radius
-          (primaryIndex l) w :=
-  periodized_sum_eq_active _ (potential_periodized_index i)
-    (potential_support B N0 i).periodized_support n d w hw hx
 
-theorem pressure_sum_eq_active (n d : ℕ) (w : ProblemStatement.SpaceTime)
-    (hw : w ∈ PhysicalWaveSum.preterminal)
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d w ∈ strip.domain) :
-    (pressureFamily B N0).sum innerRadius ActualPrimary.h ActualPrimary.slots.radius w =
-      ∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-        (pressureFamily B N0).periodized innerRadius ActualPrimary.h ActualPrimary.slots.radius
-          (primaryIndex l) w :=
-  periodized_sum_eq_active _ pressure_periodized_index
-    (pressure_support B N0).periodized_support n d w hw hx
 
 theorem vectorSum_apply {H : ℕ} {K : Type*} (f : Fin 3 → PhysicalCopyBounds.CopyFamily H K)
     (a h r0 : ℝ) (w : ProblemStatement.SpaceTime) (i : Fin 3) :
@@ -2469,23 +2451,6 @@ theorem vectorSum_apply {H : ℕ} {K : Type*} (f : Fin 3 → PhysicalCopyBounds.
   fin_cases i <;> simp [PhysicalWaveSum.realCoordinate_apply,
     ProblemStatement.coordinateVector]
 
-theorem graph_smooth_of_strip (n d : ℕ) {w : ProblemStatement.SpaceTime}
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d w ∈ strip.domain) :
-    ContDiffAt ℝ ∞ (PhysicalMeanJetBounds.graph ActualPrimary.h n d) w := by
-  have hr := BaseContextAssembly.nativeStrip_radius ActualPrimary.nominal region hx
-  have hne : PhysicalGraphBounds.scaledRadial n w ≠ 0 := by
-    intro he
-    rw [PhysicalMeanJetBounds.graph_radius, he] at hr
-    simp [PolarCharts.radius] at hr
-  let a := ‖PhysicalGraphBounds.scaledRadial n w‖
-  have ha : 0 < a := norm_pos_iff.mpr hne
-  have hann : PhysicalGraphBounds.scaledRadial n w ∈ PhysicalGraphBounds.annulus a a := by
-    constructor
-    · change dist (PhysicalGraphBounds.scaledRadial n w) 0 ≤ a
-      rw [dist_zero_right]
-    · change a ≤ ‖PhysicalGraphBounds.scaledRadial n w‖
-      exact le_rfl
-  exact PhysicalMeanJetBounds.graph_smoothAt ha ActualPrimary.h n d hann
 
 theorem spatialCurl_finset_sum {I : Type*} (s : Finset I)
     (A : I → ProblemStatement.VelocityField) {w : ProblemStatement.SpaceTime}
@@ -2508,62 +2473,9 @@ theorem primary_cartesianCurl_sum (s : Finset (ActualPrimary.Label B N0 × Fin 2
   exact ((ActualPrimaryCoherence.cartesianPotential_smooth l.2 l.1).contDiffAt
     (PhysicalWaveSum.preterminal_open.mem_nhds hw)).differentiableAt (by simp)
 
-/-- The constructed global potential is the literal finite primary sum on
-every valid current-band chart. -/
-theorem potential_eq_active (n d : ℕ) (w : ProblemStatement.SpaceTime)
-    (hw : w ∈ PhysicalWaveSum.preterminal)
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d w ∈ strip.domain) :
-    potential B N0 w =
-      ∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-        ActualPrimaryCoherence.cartesianPotential l.2 l.1 w := by
-  ext i
-  change PhysicalCopyBounds.vectorSum (potentialFamily B N0) innerRadius ActualPrimary.h
-    ActualPrimary.slots.radius w i = _
-  rw [vectorSum_apply, potential_sum_eq_active i n d w hw hx]
-  change Complex.reCLM (∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-    (potentialFamily B N0 i).periodized innerRadius ActualPrimary.h ActualPrimary.slots.radius
-      (primaryIndex l) w) =
-    AxisymmetricFields.projection i (∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-      ActualPrimaryCoherence.cartesianPotential l.2 l.1 w)
-  rw [map_sum, map_sum]
-  apply Finset.sum_congr rfl
-  intro l hl
-  exact potential_periodized_eq (l.2, l.1) i w hw
 
-/-- The same fixed finite family represents the potential on a full
-spacetime neighborhood; hence its spatial curl may be taken termwise. -/
-theorem potential_germ_eq_active (n d : ℕ) {w : ProblemStatement.SpaceTime}
-    (hw : w ∈ PhysicalWaveSum.preterminal)
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d w ∈ strip.domain) :
-    potential B N0 =ᶠ[𝓝 w] fun z =>
-      ∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-        ActualPrimaryCoherence.cartesianPotential l.2 l.1 z := by
-  have hn := (graph_smooth_of_strip n d hx).continuousAt (strip.isOpen_domain.mem_nhds hx)
-  filter_upwards [PhysicalWaveSum.preterminal_open.mem_nhds hw, hn] with z hzt hzx
-  exact potential_eq_active n d z hzt hzx
 
-theorem curl_eq_active (n d : ℕ) {w : ProblemStatement.SpaceTime}
-    (hw : w ∈ PhysicalWaveSum.preterminal)
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d w ∈ strip.domain) :
-    SpatialCurl.spatialCurl (potential B N0) w =
-      ∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-        ActualPrimaryCoherence.cartesianVelocity l.2 l.1 w := by
-  rw [PhysicalCurlCovariance.spatialCurl_congr (potential_germ_eq_active n d hw hx)]
-  exact primary_cartesianCurl_sum _ hw
 
-theorem pressure_eq_active (n d : ℕ) (z : ProblemStatement.SpaceTime)
-    (ht : z.1 < 1) (hr : 0 < z.2 0)
-    (hx : PhysicalMeanJetBounds.graph ActualPrimary.h n d
-      (z.1, CylindricalResidual.chart z.2) ∈ strip.domain) :
-    pressure B N0 (z.1, CylindricalResidual.chart z.2) =
-      ∑ l ∈ ActualPrimary.activeLabels ActualPrimary.standardRegion B N0 n,
-        ActualPrimaryCoherence.physicalPressure l.2 l.1 z := by
-  change Complex.reCLM ((pressureFamily B N0).sum innerRadius ActualPrimary.h
-    ActualPrimary.slots.radius (z.1, CylindricalResidual.chart z.2)) = _
-  rw [pressure_sum_eq_active n d (z.1, CylindricalResidual.chart z.2) ht hx, map_sum]
-  apply Finset.sum_congr rfl
-  intro l hl
-  exact pressure_periodized_eq (l.2, l.1) z ht hr
 
 
 

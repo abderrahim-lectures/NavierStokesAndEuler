@@ -59,20 +59,7 @@ theorem sqrt_edge (c x : ℝ) : Real.sqrt (edge c x) = edge (c / 2) x := by
     congr 1
     ring
 
-theorem edge_mul (c d x : ℝ) : edge c x * edge d x = edge (c + d) x := by
-  by_cases hx : x ≤ 0
-  · simp [FlatCutoff.edge_of_nonpos c hx, FlatCutoff.edge_of_nonpos d hx,
-      FlatCutoff.edge_of_nonpos (c + d) hx]
-  · have hp : 0 < x := lt_of_not_ge hx
-    rw [FlatCutoff.edge_of_pos c hp, FlatCutoff.edge_of_pos d hp,
-      FlatCutoff.edge_of_pos (c + d) hp, ← Real.exp_add]
-    congr 1
-    ring
 
-theorem edge_sq (c x : ℝ) : edge c x ^ 2 = edge (2 * c) x := by
-  rw [pow_two, edge_mul]
-  congr 1
-  ring
 
 
 theorem determinant_columns (G : Mat2) (c : Vec2) :
@@ -115,10 +102,6 @@ theorem primaryAmplitude_of_nonpos (σ : ℝ) (κ : Vec2)
     primaryAmplitude σ κ G T x i = 0 := by
   simp [primaryAmplitude, inverseCoefficients_of_nonpos σ κ G T hx]
 
-theorem signedAmplitude_of_nonpos (σ τ : ℝ) (κ : Vec2)
-    (G : ℝ → Mat2) (T R : ℝ → Vec2) {x : ℝ} (hx : x ≤ 0) (i : Fin 2) :
-    signedAmplitude σ τ κ G T R x i = 0 := by
-  simp [signedAmplitude, inverseCoefficients_of_nonpos τ κ G R hx]
 
 /-- Exact cancellation of the column exponential in the actual inverse.
 This identity includes the edge and the full zero half-line. -/
@@ -139,53 +122,9 @@ theorem inverseCoefficients_factor (σ : ℝ) (κ : Vec2)
       (fun j => ne_of_gt (FlatCutoff.edge_pos (κ j) hp)) i]
     rw [congrFun (FlatCutoff.edge_div_edge σ (κ i)) x]
 
-/-- Taking the square root halves the *remaining* exponential exponent. -/
-theorem primaryAmplitude_factor (σ : ℝ) (κ : Vec2)
-    (G : ℝ → Mat2) (T : ℝ → Vec2) {x : ℝ} (hG : (G x).det ≠ 0) (i : Fin 2) :
-    primaryAmplitude σ κ G T x i = edge ((σ - κ i) / 2) x *
-      SmoothCovariance.amplitudes (G x) (T x) i := by
-  unfold primaryAmplitude
-  rw [inverseCoefficients_factor σ κ G T hG i,
-    Real.sqrt_mul (FlatCutoff.edge_nonneg (σ - κ i) x), sqrt_edge]
-  rfl
 
-/-- The signed update retains the explicitly computed exponential margin;
-the target `R` may have either sign. -/
-theorem signedAmplitude_factor (σ τ : ℝ) (κ : Vec2)
-    (G : ℝ → Mat2) (T R : ℝ → Vec2) {x : ℝ} (hG : (G x).det ≠ 0) (i : Fin 2) :
-    signedAmplitude σ τ κ G T R x i = edge (τ - (σ + κ i) / 2) x *
-      (SmoothCovariance.weights (G x) (R x) i /
-        (2 * SmoothCovariance.amplitudes (G x) (T x) i)) := by
-  unfold signedAmplitude
-  rw [inverseCoefficients_factor τ κ G R hG i, primaryAmplitude_factor σ κ G T hG i]
-  calc
-    _ = (edge (τ - κ i) x / edge ((σ - κ i) / 2) x) *
-        (SmoothCovariance.weights (G x) (R x) i /
-          (2 * SmoothCovariance.amplitudes (G x) (T x) i)) := by
-      simp only [div_eq_mul_inv, _root_.mul_inv_rev]
-      ring
-    _ = _ := by
-      rw [congrFun (FlatCutoff.edge_div_edge (τ - κ i) ((σ - κ i) / 2)) x]
-      congr 2
-      ring
 
-/-- Exact linearity in a scalar target factor, with no regularity or
-nonvanishing assumption on that factor. -/
-theorem inverseCoefficients_target_factor (σ : ℝ) (κ : Vec2)
-    (G : ℝ → Mat2) (T : ℝ → Vec2) (f : ℝ → ℝ) (x : ℝ) (i : Fin 2) :
-    inverseCoefficients σ κ G (fun y j => f y * T y j) x i =
-      f x * inverseCoefficients σ κ G T x i := by
-  simp only [inverseCoefficients, edgeTarget, scaledTarget, Matrix.mulVec,
-    dotProduct, Fin.sum_univ_two]
-  ring
 
-theorem signedAmplitude_target_factor (σ τ : ℝ) (κ : Vec2)
-    (G : ℝ → Mat2) (T R : ℝ → Vec2) (f : ℝ → ℝ) (x : ℝ) (i : Fin 2) :
-    signedAmplitude σ τ κ G T (fun y j => f y * R y j) x i =
-      f x * signedAmplitude σ τ κ G T R x i := by
-  unfold signedAmplitude
-  rw [inverseCoefficients_target_factor]
-  ring
 
 theorem inverseCoefficients_pos {σ : ℝ} {κ : Vec2}
     {G : ℝ → Mat2} {T : ℝ → Vec2} {x : ℝ}
@@ -246,49 +185,9 @@ variable {G : ℝ → Mat2} {T R : ℝ → Vec2}
 
 
 
-/-- Every fixed inverse-power loss is absorbed by the concrete primary
-exponential, including at zero. -/
-theorem primaryAmplitude_div_pow_contDiffOn
-    (hG : ∀ i j, ContDiffOn ℝ ∞ (fun x => G x i j) s)
-    (hT : ∀ i, ContDiffOn ℝ ∞ (fun x => T x i) s)
-    (hcone : ∀ x ∈ s, SmoothCovariance.StrictCone (G x) (T x))
-    (hgap : ∀ i, κ i < σ) (i : Fin 2) (loss : ℕ) :
-    ContDiffOn ℝ ∞ (fun x => primaryAmplitude σ κ G T x i / x ^ loss) s := by
-  have hp : 0 < (σ - κ i) / 2 := by linarith [hgap i]
-  apply ((FlatCutoff.edge_div_pow_contDiff hp loss (n := ⊤)).contDiffOn.mul
-    (SmoothCovariance.contDiffOn_amplitudes hG hT hcone i)).congr
-  intro x hx
-  rw [primaryAmplitude_factor σ κ G T (hcone x hx).det_ne_zero i]
-  ring
-
-/-- The normalized signed quotient is smooth because its denominator is
-proved strictly positive from the explicit normalized cone. -/
-theorem signed_normal_contDiffOn
-    (hG : ∀ i j, ContDiffOn ℝ ∞ (fun x => G x i j) s)
-    (hT : ∀ i, ContDiffOn ℝ ∞ (fun x => T x i) s)
-    (hR : ∀ i, ContDiffOn ℝ ∞ (fun x => R x i) s)
-    (hcone : ∀ x ∈ s, SmoothCovariance.StrictCone (G x) (T x)) (i : Fin 2) :
-    ContDiffOn ℝ ∞ (fun x => SmoothCovariance.weights (G x) (R x) i /
-      (2 * SmoothCovariance.amplitudes (G x) (T x) i)) s := by
-  apply (SmoothCovariance.contDiffOn_weights hG hR
-    (fun x hx => (hcone x hx).det_ne_zero) i).div
-      (contDiffOn_const.mul (SmoothCovariance.contDiffOn_amplitudes hG hT hcone i))
-  intro x hx
-  exact mul_ne_zero (by norm_num) (ne_of_gt ((hcone x hx).amplitudes_pos i))
 
 
-theorem signedAmplitude_div_pow_contDiffOn
-    (hG : ∀ i j, ContDiffOn ℝ ∞ (fun x => G x i j) s)
-    (hT : ∀ i, ContDiffOn ℝ ∞ (fun x => T x i) s)
-    (hR : ∀ i, ContDiffOn ℝ ∞ (fun x => R x i) s)
-    (hcone : ∀ x ∈ s, SmoothCovariance.StrictCone (G x) (T x))
-    (hgap : ∀ i, (σ + κ i) / 2 < τ) (i : Fin 2) (loss : ℕ) :
-    ContDiffOn ℝ ∞ (fun x => signedAmplitude σ τ κ G T R x i / x ^ loss) s := by
-  apply ((FlatCutoff.edge_div_pow_contDiff (sub_pos.mpr (hgap i)) loss (n := ⊤)).contDiffOn.mul
-    (signed_normal_contDiffOn hG hT hR hcone i)).congr
-  intro x hx
-  rw [signedAmplitude_factor σ τ κ G T R (hcone x hx).det_ne_zero i]
-  ring
+
 
 
 
@@ -296,52 +195,12 @@ theorem signedAmplitude_div_pow_contDiffOn
 end Smooth
 
 
-/-- A smooth function that is zero on the nonpositive half-line has every
-derivative zero at the joining point. -/
-theorem iteratedDeriv_zero_of_nonpos_zero {f : ℝ → ℝ}
-    (hf : ContDiff ℝ ∞ f) (hzero : ∀ x ≤ 0, f x = 0) (n : ℕ) :
-    iteratedDeriv n f 0 = 0 := by
-  have hz : iteratedDeriv n (fun _ : ℝ => (0 : ℝ)) = fun _ => 0 := by
-    induction n with
-    | zero => rw [iteratedDeriv_zero]
-    | succ n ih =>
-      rw [iteratedDeriv_succ, ih]
-      funext x
-      exact deriv_const x 0
-  have heq : EqOn f (fun _ : ℝ => (0 : ℝ)) (Iio 0) :=
-    fun x hx => hzero x hx.le
-  have hd := heq.iteratedDeriv_of_isOpen isOpen_Iio n
-  rw [hz] at hd
-  have hc : Continuous (iteratedDeriv n f) := hf.continuous_iteratedDeriv n
-    (WithTop.coe_le_coe.mpr (le_top : (n : ℕ∞) ≤ ⊤))
-  have hcl := hd.closure hc continuous_const
-  apply hcl
-  simp
 
 section GlobalFlatness
 
 variable {σ τ : ℝ} {κ : Vec2} {G : ℝ → Mat2} {T R : ℝ → Vec2}
 
-theorem primaryAmplitude_div_pow_contDiff
-    (hG : ∀ i j, ContDiff ℝ ∞ (fun x => G x i j))
-    (hT : ∀ i, ContDiff ℝ ∞ (fun x => T x i))
-    (hcone : ∀ x, SmoothCovariance.StrictCone (G x) (T x))
-    (hgap : ∀ i, κ i < σ) (i : Fin 2) (loss : ℕ) :
-    ContDiff ℝ ∞ (fun x => primaryAmplitude σ κ G T x i / x ^ loss) :=
-  contDiffOn_univ.mp (primaryAmplitude_div_pow_contDiffOn
-    (fun i j => (hG i j).contDiffOn) (fun i => (hT i).contDiffOn)
-    (fun x _ => hcone x) hgap i loss)
 
-theorem signedAmplitude_div_pow_contDiff
-    (hG : ∀ i j, ContDiff ℝ ∞ (fun x => G x i j))
-    (hT : ∀ i, ContDiff ℝ ∞ (fun x => T x i))
-    (hR : ∀ i, ContDiff ℝ ∞ (fun x => R x i))
-    (hcone : ∀ x, SmoothCovariance.StrictCone (G x) (T x))
-    (hgap : ∀ i, (σ + κ i) / 2 < τ) (i : Fin 2) (loss : ℕ) :
-    ContDiff ℝ ∞ (fun x => signedAmplitude σ τ κ G T R x i / x ^ loss) :=
-  contDiffOn_univ.mp (signedAmplitude_div_pow_contDiffOn
-    (fun i j => (hG i j).contDiffOn) (fun i => (hT i).contDiffOn)
-    (fun i => (hR i).contDiffOn) (fun x _ => hcone x) hgap i loss)
 
 
 

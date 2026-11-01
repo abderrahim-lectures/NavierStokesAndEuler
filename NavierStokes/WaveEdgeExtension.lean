@@ -639,10 +639,6 @@ theorem pulseEnvelope_continuousOn {ι : Type*} {U : PhaseJetBounds.Domain ι Ph
     continuous_iff_continuousAt.mpr (fun t => (PrimaryPulseBounds.referenceP_hasDerivAt _ _ _ t).continuousAt)
   exact hc.comp_continuousOn (continuousOn_const.mul (hχ i))
 
-theorem pulseEnvelope_nonneg {ι : Type*} {U : PhaseJetBounds.Domain ι PhaseCalculus.Slow}
-    (F : Fin 2 → PrimaryPulseBounds.PhaseConstruction U)
-    (χ : ι → NativePoint → PhaseCalculus.Slow × ℝ) (j : Fin 2) (i : ι) (x : NativePoint) :
-    0 ≤ pulseEnvelope F χ j i x := (PrimaryPulseBounds.referenceP_pos _ _ _ _).le
 
 
 /-! ## Localization before radial extension -/

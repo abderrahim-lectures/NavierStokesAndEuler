@@ -17,38 +17,7 @@ noncomputable section
 open Set Filter Function ProblemStatement PhysicalWaveSum SolenoidalDiagonal
 open scoped Topology BigOperators
 
-theorem wave_sum_zero_near_axis {H : ℕ} {f : WaveFamily H}
-    {a b h r0 Z : ℝ} {gap : ℕ}
-    (hf : RegularFamily f a b h r0 Z gap) (ha : 0 < a)
-    (hh : 0 < h) (hh1 : h < 1 / 2) {w : SpaceTime}
-    (hw : w ∈ preterminal) (haxis : PhysicalGraphBounds.radialProjection w = 0) :
-    f.sum a h r0 =ᶠ[𝓝 w] fun _ => 0 := by
-  classical
-  obtain ⟨s, _, hsum⟩ := hf.sum_locally_finite hh hh1 hw
-  have hz (I : WaveIndex H) : f.term a h r0 I =ᶠ[𝓝 w] fun _ => 0 := by
-    apply globalWave_eventually_zero_off_annulus (b := b) (f.carrier I.1)
-      (f.amplitude I) I.2.val (fun y hy => (hf.geometry_support I y hy).1)
-    intro hm
-    have hn := PhysicalGraphBounds.annulus_axisFree ha hm
-    apply hn
-    simp only [PhysicalGraphBounds.scaledRadial, _root_.smul_apply,
-      haxis, smul_zero]
-  have hfinite : ∀ᶠ y in 𝓝 w, ∀ I ∈ s, f.term a h r0 I y = 0 :=
-    (eventually_all_finset s).2 (fun I _ => hz I)
-  filter_upwards [hsum, hfinite] with y hy hz
-  rw [hy]
-  exact Finset.sum_eq_zero hz
 
-theorem vector_sum_zero_near_axis {H : ℕ} {f : Fin 3 → WaveFamily H}
-    {a b h r0 Z : ℝ} {gap : ℕ}
-    (hf : ∀ i, RegularFamily (f i) a b h r0 Z gap) (ha : 0 < a)
-    (hh : 0 < h) (hh1 : h < 1 / 2) {w : SpaceTime}
-    (hw : w ∈ preterminal) (haxis : PhysicalGraphBounds.radialProjection w = 0) :
-    vectorSum f a h r0 =ᶠ[𝓝 w] fun _ => 0 := by
-  have hz : ∀ᶠ y in 𝓝 w, ∀ i : Fin 3, (f i).sum a h r0 y = 0 :=
-    (Filter.eventually_all).2 (fun i => wave_sum_zero_near_axis (hf i) ha hh hh1 hw haxis)
-  filter_upwards [hz] with y hy
-  simp only [vectorSum, hy, map_zero, Finset.sum_const_zero]
 
 
 /-- Only finitely many zero germs are intersected at each positive-scale

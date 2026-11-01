@@ -50,7 +50,6 @@ def bump : ContDiffBump (0 : ℝ) where
 
 def translatedBump (k : ℤ) (x : ℝ) : ℝ := bump (x - k)
 
-theorem translatedBump_nonneg (k : ℤ) (x : ℝ) : 0 ≤ translatedBump k x := bump.nonneg
 
 theorem translatedBump_smooth (k : ℤ) : ContDiff ℝ ∞ (translatedBump k) :=
   bump.contDiff.comp (contDiff_id.sub contDiff_const)
@@ -112,8 +111,6 @@ theorem denominatorSquared_smooth : ContDiff ℝ ∞ denominatorSquared :=
 def lineMask (k : ℤ) (x : ℝ) : ℝ :=
   translatedBump k x / Real.sqrt (denominatorSquared x)
 
-theorem lineMask_nonneg (k : ℤ) (x : ℝ) : 0 ≤ lineMask k x :=
-  div_nonneg (translatedBump_nonneg k x) (Real.sqrt_nonneg _)
 
 theorem lineMask_smooth (k : ℤ) : ContDiff ℝ ∞ (lineMask k) :=
   (translatedBump_smooth k).div
@@ -133,9 +130,6 @@ theorem lineMask_tsupport (k : ℤ) :
     tsupport (lineMask k) = Icc ((k : ℝ) - 1) ((k : ℝ) + 1) := by
   rw [tsupport, lineMask_support, closure_Ioo (by linarith : (k : ℝ) - 1 ≠ k + 1)]
 
-theorem lineMask_compactSupport (k : ℤ) : HasCompactSupport (lineMask k) := by
-  rw [HasCompactSupport, lineMask_tsupport]
-  exact isCompact_Icc
 
 theorem lineMask_locallyFinite : LocallyFinite fun k => tsupport (lineMask k) := by
   simpa only [lineMask_tsupport] using integer_intervals_locallyFinite
@@ -173,8 +167,6 @@ theorem lineMask_eq_translate (k : ℤ) (x : ℝ) :
 
 def gridMask (δ : ℝ) (k : ℤ) (x : ℝ) : ℝ := lineMask k (x / δ)
 
-theorem gridMask_nonneg (δ : ℝ) (k : ℤ) (x : ℝ) : 0 ≤ gridMask δ k x :=
-  lineMask_nonneg _ _
 
 theorem gridMask_smooth (δ : ℝ) (k : ℤ) : ContDiff ℝ ∞ (gridMask δ k) :=
   (lineMask_smooth k).comp (contDiff_id.div_const δ)
@@ -222,9 +214,6 @@ theorem locallyFinite_iInter {ι κ X : Type*} [Fintype ι] [TopologicalSpace X]
 def productMask {d : ℕ} (δ : ℝ) (k : Fin d → ℤ) (x : Fin d → ℝ) : ℝ :=
   ∏ j, gridMask δ (k j) (x j)
 
-theorem productMask_nonneg {d : ℕ} (δ : ℝ) (k : Fin d → ℤ) (x : Fin d → ℝ) :
-    0 ≤ productMask δ k x :=
-  Finset.prod_nonneg fun _ _ => gridMask_nonneg _ _ _
 
 theorem productMask_smooth {d : ℕ} (δ : ℝ) (k : Fin d → ℤ) :
     ContDiff ℝ ∞ (productMask δ k) := by
@@ -374,9 +363,6 @@ theorem logCoordinate_window {q : ℝ} (hq : 0 < q) :
 /-- A single compact annular profile; its zero extension is smooth at zero. -/
 def dyadicProfile (q : ℝ) : ℝ := if 0 < q then lineMask 0 (logCoordinate q) else 0
 
-theorem dyadicProfile_nonneg (q : ℝ) : 0 ≤ dyadicProfile q := by
-  unfold dyadicProfile
-  split_ifs <;> first | exact lineMask_nonneg _ _ | exact le_rfl
 
 theorem dyadicProfile_support : support dyadicProfile = Ioo (1 / 2 : ℝ) 2 := by
   ext q
@@ -412,9 +398,6 @@ theorem dyadicProfile_smooth : ContDiff ℝ ∞ dyadicProfile := by
 theorem dyadicProfile_tsupport : tsupport dyadicProfile = Icc (1 / 2 : ℝ) 2 := by
   rw [tsupport, dyadicProfile_support, closure_Ioo (by norm_num : (1 / 2 : ℝ) ≠ 2)]
 
-theorem dyadicProfile_compactSupport : HasCompactSupport dyadicProfile := by
-  rw [HasCompactSupport, dyadicProfile_tsupport]
-  exact isCompact_Icc
 
 def integerQ (n : ℤ) : ℝ := (2 : ℝ) ^ (-(n : ℝ))
 
@@ -428,7 +411,6 @@ theorem integerQ_nat (n : ℕ) : integerQ (n : ℤ) = ChartScales.Q n := by
 
 def dyadicMask (n : ℤ) (q : ℝ) : ℝ := dyadicProfile (q / integerQ n)
 
-theorem dyadicMask_nonneg (n : ℤ) (q : ℝ) : 0 ≤ dyadicMask n q := dyadicProfile_nonneg _
 
 theorem dyadicMask_smooth (n : ℤ) : ContDiff ℝ ∞ (dyadicMask n) :=
   dyadicProfile_smooth.comp (contDiff_id.div_const _)
@@ -545,8 +527,6 @@ theorem nativeSpacing_pos {n : ℕ} (hn : 1 ≤ n) : 0 < nativeSpacing n :=
 def slowMask (n : ℕ) (k : SlotColoring.Grid) (x : SlotColoring.Position) : ℝ :=
   productMask (nativeSpacing n) k x
 
-theorem slowMask_nonneg (n : ℕ) (k : SlotColoring.Grid) (x : SlotColoring.Position) :
-    0 ≤ slowMask n k x := productMask_nonneg _ _ _
 
 theorem slowMask_smooth (n : ℕ) (k : SlotColoring.Grid) : ContDiff ℝ ∞ (slowMask n k) :=
   productMask_smooth _ _
@@ -558,8 +538,6 @@ theorem slowMask_locallyFinite (n : ℕ) :
     LocallyFinite fun k : SlotColoring.Grid => tsupport (slowMask n k) :=
   (productMask_locallyFinite _).closure
 
-theorem slowMask_compactSupport {n : ℕ} (hn : 1 ≤ n) (k : SlotColoring.Grid) :
-    HasCompactSupport (slowMask n k) := productMask_compactSupport _ (nativeSpacing_pos hn) _
 
 theorem slowMask_tsupport_subset {n : ℕ} (hn : 1 ≤ n) (k : SlotColoring.Grid) :
     tsupport (slowMask n k) ⊆ Set.pi univ (fun j =>
@@ -589,9 +567,6 @@ theorem slowCoordinates_smooth (D : ℝ) (n : ℕ) : ContDiff ℝ ∞ (slowCoord
 def physicalSlowMask (D : ℝ) (n : ℕ) (k : SlotColoring.Grid) (x : SlotColoring.Position) : ℝ :=
   slowMask n k (slowCoordinates D n x)
 
-theorem physicalSlowMask_smooth (D : ℝ) (n : ℕ) (k : SlotColoring.Grid) :
-    ContDiff ℝ ∞ (physicalSlowMask D n k) :=
-  (slowMask_smooth n k).comp (slowCoordinates_smooth D n)
 
 theorem physicalSlowMask_sum_sq (D : ℝ) (n : ℕ) (x : SlotColoring.Position) :
     (∑ᶠ k : SlotColoring.Grid, physicalSlowMask D n k x ^ 2) = 1 :=
@@ -631,10 +606,6 @@ theorem physicalSlowMask_tsupport_smallBox (D : ℝ) {n : ℕ} (hn : 1 ≤ n)
     constructor <;> nlinarith
   · exact (isCompact_univ_pi fun _ => isCompact_Icc).isClosed
 
-theorem physicalSlowMask_compactSupport (D : ℝ) {n : ℕ} (hn : 1 ≤ n)
-    (k : SlotColoring.Grid) : HasCompactSupport (physicalSlowMask D n k) :=
-  (isCompact_univ_pi fun _ => isCompact_Icc).of_isClosed_subset isClosed_closure
-    (physicalSlowMask_tsupport_smallBox D hn k)
 
 /-- The constructed masks fit inside the exact enlarged boxes already colored
 in `SlotColoring`, for either pulse sign. -/
@@ -673,23 +644,6 @@ theorem locallyFinite_pair_inter {ι κ X : Type*} [TopologicalSpace X]
   refine ⟨i, hi, Finset.mem_image.mpr ⟨k, ?_, rfl⟩⟩
   exact (hfW i).mem_toFinset.mpr ⟨y, hyV, mem_iInter₂.mp hyW i hi⟩
 
-theorem labelMask_locallyFinite :
-    LocallyFinite fun p : ℕ × SlotColoring.Grid =>
-      support (fun z : Ioi (0 : ℝ) × SlotColoring.Position => labelMask p.1 p.2 (z.1, z.2)) := by
-  have hnat : LocallyFinite fun n : ℕ =>
-      support (fun q : Ioi (0 : ℝ) => dyadicMask (n : ℤ) q) :=
-    dyadicMask_locallyFinite.comp_injective Int.ofNat_injective
-  have houter := hnat.preimage_continuous
-    (continuous_fst : Continuous (Prod.fst : Ioi (0 : ℝ) × SlotColoring.Position → Ioi (0 : ℝ)))
-  have hinner (n : ℕ) : LocallyFinite fun k : SlotColoring.Grid =>
-      (Prod.snd : Ioi (0 : ℝ) × SlotColoring.Position → SlotColoring.Position) ⁻¹'
-        support (slowMask n k) :=
-    ((slowMask_locallyFinite n).subset fun _ => subset_closure).preimage_continuous continuous_snd
-  have h := locallyFinite_pair_inter houter hinner
-  convert! h using 1
-  funext p
-  ext z
-  simp only [mem_support, labelMask, mul_ne_zero_iff, mem_inter_iff, mem_preimage]
 
 /-- Finite support makes an ordinary sum over pairs equal its iterated sum. -/
 theorem finsum_pair_eq {ι κ : Type*} {f : ι × κ → ℝ} (hf : (support f).Finite) :
@@ -719,20 +673,6 @@ theorem finsum_pair_eq {ι κ : Type*} {f : ι × κ → ℝ} (hf : (support f).
   intro i _
   exact (finsum_eq_sum_of_support_subset _ (fun k hk => hB hk)).symm
 
-/-- The exact normalized squared partition obtained by multiplying dyadic and
-slow-grid masks; any lower band cutoff can be imposed by shrinking `q`. -/
-theorem labelMask_tail_sum_sq (N : ℕ) {p : ℝ × SlotColoring.Position}
-    (hq : 0 < p.1) (hqN : p.1 ≤ ChartScales.Q N) :
-    (∑ᶠ n : ℕ, ∑ᶠ k : SlotColoring.Grid, labelMask (n + N) k p ^ 2) = 1 := by
-  have hs (n : ℕ) : (∑ᶠ k : SlotColoring.Grid, labelMask n k p ^ 2) = dyadicMask (n : ℤ) p.1 ^ 2 := by
-    have hfinite : (support (fun k : SlotColoring.Grid => slowMask n k p.2 ^ 2)).Finite := by
-      apply ((productMask_locallyFinite (nativeSpacing n)).point_finite p.2).subset
-      intro k hk hz
-      exact hk (by simp [slowMask, hz])
-    simp only [labelMask, mul_pow]
-    rw [← mul_finsum _ _, slowMask_sum_sq, mul_one]
-  simp_rw [hs]
-  exact dyadicMask_tail_sum_sq N hq hqN
 
 
 end NavierStokes.SquaredPartition

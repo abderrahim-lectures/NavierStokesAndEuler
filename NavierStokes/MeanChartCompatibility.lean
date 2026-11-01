@@ -212,15 +212,6 @@ theorem fderiv_pull_apply (l : ℝ) (C : E →L[ℝ] F) (u : ℝ) {f : ℝ × F 
   rw [show pull l C u f = fun x => u * f (chartLinear l C x) from rfl, hd.fderiv]
   rfl
 
-theorem divideRadius_pull {l : ℝ} (hl : l ≠ 0) (C : E →L[ℝ] F)
-    (u : ℝ) (f : ℝ × F → ℝ) (z : ℝ × E) :
-    PressureStream.divideRadius (pull l C u f) z =
-      (u * l) * PressureStream.divideRadius f (chartLinear l C z) := by
-  change (u * f (chartLinear l C z)) / z.1 =
-    (u * l) * (f (chartLinear l C z) / (l * z.1))
-  by_cases hz : z.1 = 0
-  · simp [hz]
-  · field_simp
 
 theorem graphDr_pull (l : ℝ) (C : E →L[ℝ] F) (u : ℝ)
     (knew kold : ℝ → ℝ) (v : E) (w : F) {f : ℝ × F → ℝ} {z : ℝ × E}
@@ -238,19 +229,6 @@ theorem graphDr_pull (l : ℝ) (C : E →L[ℝ] F) (u : ℝ)
   simp only [smul_eq_mul, PressureStream.graphDr]
   ring
 
-theorem graphDz_pull (l : ℝ) (C : E →L[ℝ] F) (u k : ℝ) (v : E) (w : F)
-    {f : ℝ × F → ℝ} {z : ℝ × E}
-    (hf : DifferentiableAt ℝ f (chartLinear l C z)) (hvector : C v = k • w) :
-    PressureStream.graphDz v (pull l C u f) z =
-      (u * k) * PressureStream.graphDz w f (chartLinear l C z) := by
-  rw [PressureStream.graphDz, fderiv_pull_apply l C u hf]
-  have he : chartLinear l C (0, v) = k • ((0 : ℝ), w) := by
-    apply Prod.ext
-    · simp
-    · exact hvector
-  rw [he, map_smul]
-  simp only [smul_eq_mul, PressureStream.graphDz]
-  ring
 
 theorem physicalSpeed_vector {l R : ℝ} (hl : 0 < l) (hR : 0 ≤ R)
     (C : E →L[ℝ] F) (d M N : ℝ) (v : E) (w : F)
@@ -274,25 +252,7 @@ theorem physicalSpeed_vector {l R : ℝ} (hl : 0 < l) (hR : 0 ≤ R)
         d * R ^ (d - 1) * N * (l * l ^ (d - 1)) by ring, hpow]
       ring
 
-theorem streamGamma_pull {l : ℝ} (hl : l ≠ 0) (C : E →L[ℝ] F) (u : ℝ)
-    (knew kold : ℝ → ℝ) (v : E) (w : F) {f : ℝ × F → ℝ} {z : ℝ × E}
-    (hf : DifferentiableAt ℝ f (chartLinear l C z))
-    (hvector : C (knew z.1 • v) = l • (kold (l * z.1) • w)) :
-    PressureStream.streamGamma knew v (pull l C u f) z =
-      (u * l) * PressureStream.streamGamma kold w f (chartLinear l C z) := by
-  rw [PressureStream.streamGamma, graphDr_pull l C u knew kold v w hf hvector,
-    divideRadius_pull hl]
-  simp only [PressureStream.streamGamma]
-  ring
 
-theorem streamBeta_pull (l : ℝ) (C : E →L[ℝ] F) (u k : ℝ) (v : E) (w : F)
-    {f : ℝ × F → ℝ} {z : ℝ × E}
-    (hf : DifferentiableAt ℝ f (chartLinear l C z)) (hvector : C v = k • w) :
-    PressureStream.streamBeta v (pull l C u f) z =
-      (u * k) * PressureStream.streamBeta w f (chartLinear l C z) := by
-  rw [PressureStream.streamBeta, graphDz_pull l C u k v w hf hvector]
-  simp only [PressureStream.streamBeta]
-  ring
 
 end Pullback
 
@@ -330,10 +290,6 @@ theorem coverPull_smooth (l : ℝ) (P : S →L[ℝ] T) (k : ℕ) (u : ℝ)
     {f : PressureStream.Lift T → ℝ} (hf : ContDiff ℝ ∞ f) :
     ContDiff ℝ ∞ (coverPull l P k u f) := pull_smooth _ _ _ hf
 
-theorem coverPull_periodic (l : ℝ) (P : S →L[ℝ] T) (k : ℕ) (u : ℝ)
-    {f : PressureStream.Lift T → ℝ} (hp : PressureStream.TorusPeriodicLift f) :
-    PressureStream.TorusPeriodicLift (coverPull l P k u f) :=
-  TemporalMeanUpdate.pullbackCover_periodic k (parameterPull_periodic l P u hp)
 
 theorem torusAverage_parameterPull (l : ℝ) (P : S →L[ℝ] T) (u : ℝ)
     (f : PressureStream.Lift T → ℝ) (p : ℝ × S) :
@@ -473,35 +429,6 @@ noncomputable def physicalTemporal (f : PressureStream.Lift S → ℝ)
     (z : PressureStream.Lift S) : ℝ :=
   -TemporalMeanUpdate.temporalInverse (TemporalMeanUpdate.centered f) z
 
-/-- All common indices give the same physical temporal operator after
-the actual velocity and momentum normalizations. -/
-theorem temporalAtIndex_physical_pull (h : ℝ) (n i : ℕ) (l : ℝ) (P : S →L[ℝ] T)
-    {f : PressureStream.Lift T → ℝ} (hf : ContDiff ℝ ∞ f)
-    (hp : PressureStream.TorusPeriodicLift f) (z : PressureStream.Lift S) :
-    coverPull l P i (ChartScales.Q n ^ (-CoordinateAlgebra.A h)) (temporalAtIndex h n i f) z =
-      physicalTemporal (coverPull l P i (ChartScales.Q n ^ (-(2 * CoordinateAlgebra.A h + 1 / 2))) f) z := by
-  unfold physicalTemporal
-  rw [temporalInverse_centered_coverPull l P i _ hf hp]
-  change ChartScales.Q n ^ (-CoordinateAlgebra.A h) *
-      (-((ChartScales.Tg ^ i * ChartScales.Q n ^ (1 + h))⁻¹) *
-        TemporalMeanUpdate.temporalInverse (TemporalMeanUpdate.centered f)
-          (l * z.1, (P z.2.1, TemporalMeanUpdate.coverMap i z.2.2))) =
-    -((ChartScales.Tg ^ i)⁻¹ *
-      (ChartScales.Q n ^ (-(2 * CoordinateAlgebra.A h + 1 / 2)) *
-        TemporalMeanUpdate.temporalInverse (TemporalMeanUpdate.centered f)
-          (l * z.1, (P z.2.1, TemporalMeanUpdate.coverMap i z.2.2))))
-  rw [mul_inv_rev, ← Real.rpow_neg (ChartScales.Q_pos n).le]
-  have hpow : ChartScales.Q n ^ (-CoordinateAlgebra.A h) * ChartScales.Q n ^ (-(1 + h)) =
-      ChartScales.Q n ^ (-(2 * CoordinateAlgebra.A h + 1 / 2)) := by
-    rw [← Real.rpow_add (ChartScales.Q_pos n)]
-    congr 1
-    unfold CoordinateAlgebra.A
-    ring
-  calc
-    _ = -(ChartScales.Q n ^ (-CoordinateAlgebra.A h) * ChartScales.Q n ^ (-(1 + h))) *
-      (ChartScales.Tg ^ i)⁻¹ * TemporalMeanUpdate.temporalInverse (TemporalMeanUpdate.centered f)
-        (l * z.1, (P z.2.1, TemporalMeanUpdate.coverMap i z.2.2)) := by ring
-    _ = _ := by rw [hpow]; ring
 
 end TorusPullback
 
@@ -691,9 +618,6 @@ noncomputable def fieldOnPhysical (h : ℝ) (n i : ℕ) (a : ℝ)
     (f : PressureStream.Lift Plane → ℝ) : PressureStream.Lift Plane → ℝ :=
   coverPull (chartScale n) (slowToChart h n) i (ChartScales.Q n ^ (-a)) f
 
-theorem fieldOnPhysical_apply (h : ℝ) (n i : ℕ) (a : ℝ)
-    (f : PressureStream.Lift Plane → ℝ) (z : PressureStream.Lift Plane) :
-    fieldOnPhysical h n i a f z = ChartScales.Q n ^ (-a) * f (physicalToChart h n i z) := rfl
 
 theorem pressure_unit_factor (h : ℝ) (n : ℕ) :
     ChartScales.Q n ^ (-(2 * CoordinateAlgebra.A h + 1 / 2)) / chartScale n =
@@ -714,24 +638,6 @@ noncomputable def bandReconstruction (h : ℝ) (n i : ℕ) (d a b M : ℝ) (hab 
   frequency _ := radialFrequency h n i d M
   radialDirection := vector .radial
 
-/-- The normalized chart pressure is exactly one physical pressure
-operator applied to the normalized radial source. -/
-theorem physicalPressure_naturality {d a b : ℝ} (ha : 0 < a) (hab : a < b) (hd : 0 < d)
-    (h : ℝ) (n i : ℕ) (M : ℝ) {f : PressureStream.Lift Plane → ℝ}
-    (hf : ContDiff ℝ ∞ f) (hp : PressureStream.TorusPeriodicLift f)
-    (hs : RadialAlias.RadiallySupported (chartScale n * a) (chartScale n * b) f) :
-    PressureStream.meanPressure d a b M hab (vector .radial)
-      (fieldOnPhysical h n i (2 * CoordinateAlgebra.A h + 1 / 2) f) =
-        fieldOnPhysical h n i (2 * CoordinateAlgebra.A h)
-          (PressureStream.meanPressure d (chartScale n * a) (chartScale n * b)
-            (radialFrequency h n i d M) (mul_lt_mul_of_pos_left hab (chartScale_pos n))
-            (vector .radial) f) := by
-  funext z
-  have ht := meanPressure_coverPull (chartScale_pos n) ha hab hd (slowToChart h n) i M
-    (radialFrequency h n i d M) (ChartScales.Q n ^ (-(2 * CoordinateAlgebra.A h + 1 / 2)))
-    (vector .radial) (vector .radial) (radialFrequency_shift h n i d M) hf hp hs z
-  rw [pressure_unit_factor] at ht
-  exact ht
 
 noncomputable def reconstructPressureFamily (r : ℕ → CorrectionState.ReconstructionData)
     (c : CorrectionState.Context (PressureStream.Lift Plane))
@@ -740,20 +646,6 @@ noncomputable def reconstructPressureFamily (r : ℕ → CorrectionState.Reconst
   { u with pressure := fun n => (CorrectionState.reconstructPressure (r n) c u).pressure n }
 
 
-theorem temporalFamily_represents (h : ℝ) (index : ℕ → ℕ)
-    (f : ℕ → PressureStream.Lift Plane → ℝ) (F : PressureStream.Lift Plane → ℝ)
-    (hf : ∀ n, ContDiff ℝ ∞ (f n)) (hp : ∀ n, PressureStream.TorusPeriodicLift (f n))
-    (hsource : ∀ n, fieldOnPhysical h n (index n) (2 * CoordinateAlgebra.A h + 1 / 2) (f n) = F) :
-    ∀ n, fieldOnPhysical h n (index n) (CoordinateAlgebra.A h)
-      (temporalAtIndex h n (index n) (f n)) = physicalTemporal F := by
-  intro n
-  have ht : fieldOnPhysical h n (index n) (CoordinateAlgebra.A h)
-      (temporalAtIndex h n (index n) (f n)) = physicalTemporal
-        (fieldOnPhysical h n (index n) (2 * CoordinateAlgebra.A h + 1 / 2) (f n)) := by
-    funext z
-    exact temporalAtIndex_physical_pull h n (index n) (chartScale n) (slowToChart h n) (hf n) (hp n) z
-  rw [hsource n] at ht
-  exact ht
 
 end PhysicalFamilies
 
@@ -762,35 +654,7 @@ section ReconstructedStream
 variable {E F : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F]
 
-theorem reconstructedGamma_pull {l a b d : ℝ} (hl : 0 < l) (ha : 0 < a)
-    (hab : a < b) (hd : 0 < d) (C : E →L[ℝ] F) (M N u : ℝ) (v : E) (w : F)
-    (hshift : M • C v = (N * l ^ d) • w) {f : ℝ × F → ℝ}
-    (hf : ContDiff ℝ ∞ f) (hs : RadialAlias.RadiallySupported (l * a) (l * b) f)
-    (z : ℝ × E) (hz : 0 ≤ z.1) :
-    PressureStream.streamGamma (PressureStream.physicalSpeed d M) v
-      (PressureStream.streamPotential d a b M v (pull l C u f)) z =
-        u * PressureStream.streamGamma (PressureStream.physicalSpeed d N) w
-          (PressureStream.streamPotential d (l * a) (l * b) N w f) (chartLinear l C z) := by
-  rw [streamPotential_pull hl ha hab hd C M N u v w hshift hf hs,
-    streamGamma_pull hl.ne' C (u / l) _ _ v w
-      (((PressureStream.streamPotential_contDiff (mul_pos hl ha)
-        (mul_lt_mul_of_pos_left hab hl) hd w hf hs).differentiable (by simp)) _)
-      (physicalSpeed_vector hl hz C d M N v w hshift), div_mul_cancel₀ _ hl.ne']
 
-theorem reconstructedBeta_pull {l a b d : ℝ} (hl : 0 < l) (ha : 0 < a)
-    (hab : a < b) (hd : 0 < d) (C : E →L[ℝ] F) (M N u : ℝ) (v : E) (w : F)
-    (hshift : M • C v = (N * l ^ d) • w) (znew : E) (zold : F)
-    (haxial : C znew = l • zold) {f : ℝ × F → ℝ}
-    (hf : ContDiff ℝ ∞ f) (hs : RadialAlias.RadiallySupported (l * a) (l * b) f) (z : ℝ × E) :
-    PressureStream.streamBeta znew
-      (PressureStream.streamPotential d a b M v (pull l C u f)) z =
-        u * PressureStream.streamBeta zold
-          (PressureStream.streamPotential d (l * a) (l * b) N w f) (chartLinear l C z) := by
-  rw [streamPotential_pull hl ha hab hd C M N u v w hshift hf hs,
-    streamBeta_pull l C (u / l) l znew zold
-      (((PressureStream.streamPotential_contDiff (mul_pos hl ha)
-        (mul_lt_mul_of_pos_left hab hl) hd w hf hs).differentiable (by simp)) _) haxial,
-    div_mul_cancel₀ _ hl.ne']
 
 
 end ReconstructedStream
@@ -892,57 +756,8 @@ variable [FiniteDimensional ℝ S]
 
 
 
-theorem commonTemporalAlias_smooth (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (f : ℕ → PressureStream.Lift S → ℝ) (n : ℕ)
-    (ha : 0 < (r n).inner) (hd : 0 < (r n).exponent)
-    (hf : ContDiff ℝ ∞ (f n)) (hp : PressureStream.TorusPeriodicLift (f n))
-    (hs : RadialAlias.RadiallySupported (r n).inner (r n).outer (f n)) :
-    ContDiff ℝ ∞ (commonTemporalAlias r h index f n) :=
-  PressureStream.divideRadius_contDiff ha
-    (RadialPullback.physicalAlias_contDiff ha (r n).inner_lt_outer hd
-      (PressureStream.weightedSource_contDiff (temporalAtIndex_smooth h n (index n) hf hp))
-      (PressureStream.weightedSource_supported (temporalAtIndex_supported h n (index n) hs))
-      ((r n).frequency n) ((0 : S), (r n).radialDirection))
-    (RadialPullback.physicalAlias_supported ha (r n).inner_lt_outer hd _ _ _)
 
-theorem commonTemporalFields_axial_eq (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (epsilon : ℕ → ℝ) (axial : S × Plane)
-    (fθ fz : ℕ → PressureStream.Lift S → ℝ) (n : ℕ)
-    (ha : 0 < (r n).inner) (hd : 0 < (r n).exponent)
-    (hf : ContDiff ℝ ∞ (fz n)) (hp : PressureStream.TorusPeriodicLift (fz n))
-    (hs : RadialAlias.RadiallySupported (r n).inner (r n).outer (fz n)) :
-    (commonTemporalFields r h index epsilon axial fθ fz).axial n =
-      fun z => temporalAtIndex h n (index n) (fz n) z - commonTemporalAlias r h index fz n z := by
-  funext z
-  exact PressureStream.streamGamma_eq_desired_sub_alias_global ha (r n).inner_lt_outer hd _
-    (temporalAtIndex_smooth h n (index n) hf hp) (temporalAtIndex_supported h n (index n) hs) z
 
-theorem commonTemporalFields_fast_cancellation (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (epsilon : ℕ → ℝ) (axial : S × Plane)
-    (fθ fz : ℕ → PressureStream.Lift S → ℝ) (n : ℕ)
-    (ha : 0 < (r n).inner) (hd : 0 < (r n).exponent)
-    (hθ : ContDiff ℝ ∞ (fθ n)) (hz : ContDiff ℝ ∞ (fz n))
-    (hpθ : PressureStream.TorusPeriodicLift (fθ n)) (hpz : PressureStream.TorusPeriodicLift (fz n))
-    (hsz : RadialAlias.RadiallySupported (r n).inner (r n).outer (fz n))
-    (z : PressureStream.Lift S) :
-    fastAtIndex h n (index n) ((commonTemporalFields r h index epsilon axial fθ fz).angular n) z +
-        TemporalMeanUpdate.centered (fθ n) z = 0 ∧
-    fastAtIndex h n (index n) ((commonTemporalFields r h index epsilon axial fθ fz).axial n) z +
-        TemporalMeanUpdate.centered (fz n) z =
-      -fastAtIndex h n (index n) (commonTemporalAlias r h index fz n) z := by
-  constructor
-  · exact add_eq_zero_iff_eq_neg.mpr (temporalAtIndex_fast_cancellation h n (index n) hθ hpθ z)
-  · rw [commonTemporalFields_axial_eq r h index epsilon axial fθ fz n ha hd hz hpz hsz]
-    have hf := (temporalAtIndex_smooth h n (index n) hz hpz).differentiable (by simp)
-    have hg := (commonTemporalAlias_smooth r h index fz n ha hd hz hpz hsz).differentiable (by simp)
-    have he : fastAtIndex h n (index n)
-        (fun z => temporalAtIndex h n (index n) (fz n) z - commonTemporalAlias r h index fz n z) z =
-        fastAtIndex h n (index n) (temporalAtIndex h n (index n) (fz n)) z -
-          fastAtIndex h n (index n) (commonTemporalAlias r h index fz n) z := by
-      simp only [fastAtIndex, PressureStream.graphDz, fderiv_fun_sub (hf z) (hg z),
-        _root_.sub_apply, mul_sub]
-    rw [he, temporalAtIndex_fast_cancellation h n (index n) hz hpz z]
-    ring
 
 end CommonTemporalReconstruction
 
@@ -955,68 +770,11 @@ noncomputable def physicalAuxiliary (h : ℝ) (n i : ℕ) : Plane × Plane →L[
 
 noncomputable def axialUnit : Plane × Plane := ((1, 0), (0, 0))
 
-theorem physicalAuxiliary_radial (h : ℝ) (n i : ℕ) (d M : ℝ) :
-    M • physicalAuxiliary h n i ((0 : Plane), vector .radial) =
-      (radialFrequency h n i d M * chartScale n ^ d) • ((0 : Plane), vector .radial) := by
-  apply Prod.ext
-  · simp [physicalAuxiliary]
-  · exact radialFrequency_shift h n i d M
-
-theorem physicalAuxiliary_temporal (h : ℝ) (n i : ℕ) :
-    physicalAuxiliary h n i ((0 : Plane), vector .temporal) =
-      ChartScales.Tg ^ i • ((0 : Plane), vector .temporal) := by
-  apply Prod.ext
-  · simp [physicalAuxiliary]
-  · exact TemporalMeanUpdate.coverMap_temporal i
-
-theorem physicalAuxiliary_axial (h : ℝ) (n i : ℕ) :
-    physicalAuxiliary h n i axialUnit =
-      chartScale n • (ChartScales.epsilon h n • axialUnit) := by
-  have he : ChartScales.Q n ^ (-CoordinateAlgebra.D h) =
-      chartScale n * ChartScales.epsilon h n := by
-    rw [chartScale, ChartScales.epsilon, ← Real.rpow_add (ChartScales.Q_pos n)]
-    congr 1
-    unfold CoordinateAlgebra.D
-    ring
-  simp [physicalAuxiliary, axialUnit, slowToChart, he]
-  exact (TemporalMeanUpdate.coverMap i).map_zero
 
 
-theorem physicalGamma_naturality {d a b : ℝ} (ha : 0 < a) (hab : a < b) (hd : 0 < d)
-    (h : ℝ) (n i : ℕ) (M : ℝ) {f : PressureStream.Lift Plane → ℝ}
-    (hf : ContDiff ℝ ∞ f)
-    (hs : RadialAlias.RadiallySupported (chartScale n * a) (chartScale n * b) f)
-    (z : PressureStream.Lift Plane) (hz : 0 ≤ z.1) :
-    PressureStream.streamGamma (PressureStream.physicalSpeed d M) ((0 : Plane), vector .radial)
-      (PressureStream.streamPotential d a b M ((0 : Plane), vector .radial)
-        (fieldOnPhysical h n i (CoordinateAlgebra.A h) f)) z =
-      fieldOnPhysical h n i (CoordinateAlgebra.A h)
-        (PressureStream.streamGamma (PressureStream.physicalSpeed d (radialFrequency h n i d M))
-          ((0 : Plane), vector .radial)
-          (PressureStream.streamPotential d (chartScale n * a) (chartScale n * b)
-            (radialFrequency h n i d M) ((0 : Plane), vector .radial) f)) z :=
-  reconstructedGamma_pull (chartScale_pos n) ha hab hd (physicalAuxiliary h n i)
-    M (radialFrequency h n i d M) (ChartScales.Q n ^ (-CoordinateAlgebra.A h))
-    ((0 : Plane), vector .radial) ((0 : Plane), vector .radial)
-    (physicalAuxiliary_radial h n i d M) hf hs z hz
 
-theorem physicalBeta_naturality {d a b : ℝ} (ha : 0 < a) (hab : a < b) (hd : 0 < d)
-    (h : ℝ) (n i : ℕ) (M : ℝ) {f : PressureStream.Lift Plane → ℝ}
-    (hf : ContDiff ℝ ∞ f)
-    (hs : RadialAlias.RadiallySupported (chartScale n * a) (chartScale n * b) f)
-    (z : PressureStream.Lift Plane) :
-    PressureStream.streamBeta axialUnit
-      (PressureStream.streamPotential d a b M ((0 : Plane), vector .radial)
-        (fieldOnPhysical h n i (CoordinateAlgebra.A h) f)) z =
-      fieldOnPhysical h n i (CoordinateAlgebra.A h)
-        (PressureStream.streamBeta (ChartScales.epsilon h n • axialUnit)
-          (PressureStream.streamPotential d (chartScale n * a) (chartScale n * b)
-            (radialFrequency h n i d M) ((0 : Plane), vector .radial) f)) z :=
-  reconstructedBeta_pull (chartScale_pos n) ha hab hd (physicalAuxiliary h n i)
-    M (radialFrequency h n i d M) (ChartScales.Q n ^ (-CoordinateAlgebra.A h))
-    ((0 : Plane), vector .radial) ((0 : Plane), vector .radial)
-    (physicalAuxiliary_radial h n i d M) axialUnit (ChartScales.epsilon h n • axialUnit)
-    (physicalAuxiliary_axial h n i) hf hs z
+
+
 
 /-- One physical vector field, constructed from the two physical sources. -/
 noncomputable def physicalTemporalFields (d a b M : ℝ)
@@ -1089,19 +847,7 @@ open TorusInverse
 noncomputable def slowProjection (z : PressureStream.Lift Plane) : SimilarityHomogeneity.ChartPoint :=
   (z.1, z.2.1)
 
-theorem slowProjection_physicalToChart (h : ℝ) (n i : ℕ) (z : PressureStream.Lift Plane) :
-    slowProjection (physicalToChart h n i z) =
-      SimilarityHomogeneity.chartTransition h 1 (ChartScales.Q n) (slowProjection z) := by
-  simp [slowProjection, physicalToChart_apply, SimilarityHomogeneity.chartTransition,
-    chartScale, one_div, Real.inv_rpow (ChartScales.Q_pos n).le,
-    Real.rpow_neg (ChartScales.Q_pos n).le]
 
-theorem physicalProfile_inner {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (n i : ℕ) {z : PressureStream.Lift Plane} (hz : 0 < z.2.1.2) :
-    SimilarityHomogeneity.chartInner h (slowProjection (physicalToChart h n i z)) =
-      SimilarityHomogeneity.chartInner h (slowProjection z) := by
-  rw [slowProjection_physicalToChart]
-  exact SimilarityHomogeneity.chartInner_transition hh hh1 zero_lt_one (ChartScales.Q_pos n) hz
 
 
 

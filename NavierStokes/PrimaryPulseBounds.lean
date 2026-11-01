@@ -1333,23 +1333,6 @@ theorem EnvelopeJets.localize {D D' : PhaseJetBounds.Domain ι E}
       exact mul_nonneg (mul_nonneg (zero_le_one.trans hC)
         (pow_nonneg (zero_le_one.trans (D'.one_le_scale i)) m)) (hw i x hx)
 
-/-- All profile jets are obtained from the constructed compact smooth bump. -/
-theorem profile_linear_polynomial (D : PhaseJetBounds.Domain ι E) (L : E →L[ℝ] ℝ) :
-    PhaseJetBounds.PolynomialJets D (fun _ x => GaussianTailFlat.profile (L x)) := by
-  let R : PhaseJetBounds.Domain ι ℝ := {
-    scale := D.scale
-    carrier := fun _ => univ
-    isOpen := fun _ => isOpen_univ
-    one_le_scale := D.one_le_scale }
-  have hp : PhaseJetBounds.PolynomialJets R (fun _ => GaussianTailFlat.profile) := by
-    refine ⟨fun _ => GaussianTailFlat.profile_contDiff.contDiffOn, ?_⟩
-    intro N
-    obtain ⟨C, hC, hc⟩ := GaussianTailFlat.finite_jet_bounds GaussianTailFlat.profile_jet_bounded N
-    refine ⟨C + 1, by linarith, 0, ?_⟩
-    intro i j hj x hx
-    simpa only [pow_zero, mul_one] using (hc j hj x).trans (le_add_of_nonneg_right zero_le_one)
-  simpa only [add_zero] using hp.precomp_affine (D := D) L (fun _ => 0) (fun _ => rfl)
-    (fun _ _ _ => mem_univ _)
 
 end Localization
 
@@ -1361,49 +1344,7 @@ noncomputable def cutoffPulse (d : PrimaryODE.FrameData Q) (lam u L : ℝ)
     (z : Q × ℝ) : Space :=
   GaussianTailFlat.profile z.2 • normalizedPulse d lam u L z
 
-omit [NormedSpace ℝ Q] in
-theorem profile_tsupport_slot :
-    tsupport (fun z : Q × ℝ => GaussianTailFlat.profile z.2) ⊆
-      {z : Q × ℝ | z.2 ∈ Ioo (0 : ℝ) 1} := by
-  have hcl : tsupport (fun z : Q × ℝ => GaussianTailFlat.profile z.2) ⊆
-      {z : Q × ℝ | z.2 ∈ Icc (1 / 10 : ℝ) (9 / 10)} := by
-    apply closure_minimal _ (isClosed_Icc.preimage continuous_snd)
-    intro z hz
-    exact ⟨(profile_support_covariance_interval hz).1.le,
-      (profile_support_covariance_interval hz).2⟩
-  intro z hz
-  obtain ⟨hl, hr⟩ := hcl hz
-  constructor <;> linarith
 
-/-- The actual cutoff pulse has global slot-coordinate jets with the
-zero-extended Gaussian envelope. This is the form used in physical charts. -/
-theorem cutoffPulse_envelope_jets
-    (D : PhaseJetBounds.Domain ι Q) (d : ι → PrimaryODE.FrameData Q) (lam u L : ι → ℝ)
-    (hp : EnvelopeJets (productDomain D (fun _ => Ioo (0 : ℝ) 1) (fun _ => isOpen_Ioo))
-      (fun i z => referenceP (lam i) (u i) (L i) (L i * z.2))
-      (fun i => normalizedPulse (d i) (lam i) (u i) (L i))) :
-    EnvelopeJets (productDomain D (fun _ => (univ : Set ℝ)) (fun _ => isOpen_univ))
-      (fun i z => GaussianTailFlat.referenceSlotEnvelope (lam i) (u i) (L i) z.2)
-      (fun i => cutoffPulse (d i) (lam i) (u i) (L i)) := by
-  have hweight : ∀ i (z : Q × ℝ),
-      0 ≤ GaussianTailFlat.referenceSlotEnvelope (lam i) (u i) (L i) z.2 := by
-    intro i z
-    unfold GaussianTailFlat.referenceSlotEnvelope
-    split_ifs
-    · exact (GaussianEnvelope.envelope_pos _ _ _).le
-    · rfl
-  have hp' := hp.mono_weight (v := fun i z =>
-      GaussianTailFlat.referenceSlotEnvelope (lam i) (u i) (L i) z.2) (by
-    intro i z hz
-    rw [GaussianTailFlat.referenceSlotEnvelope, ite_eq_left ⟨hz.2.1.le, hz.2.2.le⟩]
-    rfl)
-  apply hp'.localize
-    (profile_linear_polynomial
-      (productDomain D (fun _ => (univ : Set ℝ)) (fun _ => isOpen_univ))
-      (ContinuousLinearMap.snd ℝ Q ℝ)) (fun _ => rfl)
-      (fun _ z hz => ⟨hz.1, mem_univ _⟩) (fun i z _ => hweight i z)
-  intro i z hz
-  exact ⟨hz.2.1, profile_tsupport_slot hz.1⟩
 
 end CutoffPulse
 
@@ -1484,48 +1425,6 @@ noncomputable def primaryWave (s : StripData E)
   primaryCoefficient s (chartCovariance pref d lam u L χ) T mask
     (fun n x => cutoffPulse (d c n) (lam c n) (u c n) (L c n) (χ n x)) c
 
-/-- Assembly with the actual phase-frame pulse, the actual integrated
-covariance matrix, the fixed slot cutoff, and a chart of polynomial scale.
-The remaining matrix hypotheses are strictly order zero. -/
-theorem primaryWave_waveClass
-    (s : StripData E) (D : PhaseJetBounds.Domain ℕ Q)
-    (pref : Fin 2 → ℕ → ℝ) (d : Fin 2 → ℕ → PrimaryODE.FrameData Q)
-    (lam u L : Fin 2 → ℕ → ℝ) (χ : ℕ → E → Q × ℝ)
-    (T : ℕ → E → SmoothCovariance.Vec2) (mask : ℕ → E → ℝ)
-    (hscale : ∀ n, D.scale n = s.slow n)
-    (hχ : PhaseJetBounds.PolynomialJets (phaseDomain s) χ)
-    (hmap : ∀ n x, x ∈ s.domain → (χ n x).1 ∈ D.carrier n)
-    (hpref : ∀ c, PhaseJetBounds.PolynomialJets D (fun n _ => pref c n))
-    (hpulse : ∀ c, EnvelopeJets
-      (productDomain D (fun _ => Ioo (0 : ℝ) 1) (fun _ => isOpen_Ioo))
-      (fun n z => referenceP (lam c n) (u c n) (L c n) (L c n * z.2))
-      (fun n => normalizedPulse (d c n) (lam c n) (u c n) (L c n)))
-    (hlam : ∀ c n, 0 < lam c n) (hu : ∀ c n, 0 < u c n) (hL : ∀ c n, 0 < L c n)
-    (hT : ∀ i, MeanClass s 0 (fun n x => T n x i))
-    (hmask : PhaseJetBounds.PolynomialJets (phaseDomain s) mask)
-    {b M a : ℝ} (hb : 0 < b) (hM : 1 ≤ M) (ha : 0 < a)
-    (hdet : ∀ n x, x ∈ s.domain →
-      b ≤ |(normalizedMatrix (Real.sqrt (s.slow n)) (chartCovariance pref d lam u L χ n x)).det|)
-    (hentry : ∀ n x, x ∈ s.domain → ∀ i j,
-      |Real.sqrt (s.slow n) * chartCovariance pref d lam u L χ n x i j| ≤ M)
-    (hζ : ∀ x, x ∈ s.domain → 0 < s.zeta x)
-    (hlower : ∀ n x, x ∈ s.domain → ∀ j,
-      a * s.zeta x ≤ SmoothCovariance.weights (chartCovariance pref d lam u L χ n x) (T n x) j)
-    (c : Fin 2) :
-    WaveClass s (fun n x => GaussianTailFlat.referenceSlotEnvelope
-      (lam c n) (u c n) (L c n) (χ n x).2) (1 / 2)
-      (primaryWave s pref d lam u L χ T mask c) := by
-  have hH (i j : Fin 2) : PhaseJetBounds.PolynomialJets (phaseDomain s)
-      (fun n x => chartCovariance pref d lam u L χ n x i j) := by
-    apply ((EnvelopeJets.of_polynomial
-      (primaryCovariance_entry_polynomial D pref d lam u L hpref hpulse hlam hu hL i j)).comp
-      (hχ.clm (ContinuousLinearMap.fst ℝ Q ℝ)) hscale hmap).to_polynomial
-    intro n x hx
-    rfl
-  have hp := cutoffPulse_envelope_jets D (d c) (lam c) (u c) (L c) (hpulse c)
-  have hpc := hp.comp hχ hscale (fun n x hx => ⟨hmap n x hx, mem_univ _⟩)
-  have hv := hpc.memClass s (fun _ => rfl) (fun _ => rfl)
-  exact primaryCoefficient_waveClass hH hT hmask hv hb hM ha hdet hentry hζ hlower c
 
 end ChartAssembly
 
@@ -1954,17 +1853,6 @@ noncomputable def uncutPrimaryWave (s : StripData E)
   primaryCoefficient s (chartCovariance pref d lam u L χ) T mask
     (fun n x => normalizedPulse (d c n) (lam c n) (u c n) (L c n) (χ n x)) c
 
-omit [NormedAddCommGroup Q] [NormedSpace ℝ Q] in
-/-- The slot cutoff occurs exactly once. This identity matches a linear-wave
-coefficient's external `withCutoff` operation to the physical primary. -/
-theorem primaryWave_eq_cutoff (s : StripData E)
-    (pref : Fin 2 → ℕ → ℝ) (d : Fin 2 → ℕ → PrimaryODE.FrameData Q)
-    (lam u L : Fin 2 → ℕ → ℝ) (χ : ℕ → E → Q × ℝ)
-    (T : ℕ → E → SmoothCovariance.Vec2) (mask : ℕ → E → ℝ) (c : Fin 2) (n : ℕ) (x : E) :
-    primaryWave s pref d lam u L χ T mask c n x =
-      GaussianTailFlat.profile (χ n x).2 • uncutPrimaryWave s pref d lam u L χ T mask c n x := by
-  simp only [primaryWave, uncutPrimaryWave, primaryCoefficient, cutoffPulse, map_smul,
-    smul_smul, mul_comm]
 
 
 end CutoffFactorization

@@ -60,11 +60,6 @@ theorem angularMean_div_const (f : ℝ → ℝ) (c : ℝ) :
     angularMean (fun θ => f θ / c) = angularMean f / c := by
   simp only [div_eq_mul_inv, mul_comm _ c⁻¹, angularMean_const_mul]
 
-theorem angularMean_nonneg (f : ℝ → ℝ) (hf : ∀ θ, 0 ≤ f θ) :
-    0 ≤ angularMean f := by
-  exact div_nonneg
-    (intervalIntegral.integral_nonneg_of_forall (le_of_lt period_pos) hf)
-    (le_of_lt period_pos)
 
 theorem angularMean_pos (f : ℝ → ℝ) (hf : Continuous f) (hpos : ∀ θ, 0 < f θ) :
     0 < angularMean f := by
@@ -108,35 +103,8 @@ theorem cosineTilt_variance (m amplitude : ℝ) :
   rw [heq, angularMean_const_mul, angularMean_cos_sq]
   ring
 
-/-- Actual smooth periodic functions realize every nonnegative variance. -/
-theorem exists_cosine_moments (m V : ℝ) (hV : 0 ≤ V) :
-    ∃ t : ℝ → ℝ, ContDiff ℝ (∞ : WithTop ℕ∞) t ∧
-      Function.Periodic t (2 * Real.pi) ∧ angularMean t = m ∧
-      angularMean (fun θ => (t θ - m) ^ 2) = V := by
-  refine ⟨cosineTilt m (Real.sqrt (2 * V)), cosineTilt_contDiff _ _,
-    cosineTilt_periodic _ _, cosineTilt_mean _ _, ?_⟩
-  rw [cosineTilt_variance, Real.sq_sqrt (mul_nonneg (by norm_num) hV)]
-  ring
 
-/-- The full range is controlled by the amplitude, uniformly in the angle. -/
-theorem cosineTilt_projection_bound (p₁ p₂ m amplitude θ : ℝ) :
-    p₁ + p₂ * m - |p₂ * amplitude| ≤ p₁ + p₂ * cosineTilt m amplitude θ := by
-  have habs : |(p₂ * amplitude) * Real.cos θ| ≤ |p₂ * amplitude| := by
-    calc
-      |(p₂ * amplitude) * Real.cos θ| = |p₂ * amplitude| * |Real.cos θ| := abs_mul _ _
-      _ ≤ |p₂ * amplitude| * 1 :=
-        mul_le_mul_of_nonneg_left (Real.abs_cos_le_one θ) (abs_nonneg _)
-      _ = |p₂ * amplitude| := mul_one _
-  have hlow := (abs_le.mp habs).1
-  dsimp [cosineTilt]
-  nlinarith
 
-theorem cosineTilt_stress_positive (p₁ p₂ m amplitude : ℝ)
-    (hmargin : 2 + |p₂ * amplitude| < p₁ + p₂ * m) :
-    ∀ θ, 2 < p₁ + p₂ * cosineTilt m amplitude θ := by
-  intro θ
-  have hbound := cosineTilt_projection_bound p₁ p₂ m amplitude θ
-  linarith
 
 
 
@@ -403,12 +371,6 @@ def phaseHomeomorph (d : CircleDensity) : ℝ ≃ₜ ℝ :=
 theorem phaseHomeomorph_apply (d : CircleDensity) (θ : ℝ) :
     phaseHomeomorph d θ = phaseMap d θ := rfl
 
-theorem phaseInverse_contDiff (d : CircleDensity) :
-    ContDiff ℝ (∞ : WithTop ℕ∞) (phaseHomeomorph d).symm := by
-  apply (phaseHomeomorph d).contDiff_symm_deriv
-    (fun θ => ne_of_gt (d.positive θ))
-  · exact phaseMap_hasDerivAt d
-  · exact phaseMap_contDiff d
 
 theorem phaseInverse_add_one (d : CircleDensity) (φ : ℝ) :
     (phaseHomeomorph d).symm (φ + 1) = (phaseHomeomorph d).symm φ + 2 * Real.pi := by
@@ -420,9 +382,6 @@ theorem phaseInverse_add_one (d : CircleDensity) (φ : ℝ) :
 def rephase (d : CircleDensity) (f : ℝ → ℝ) (φ : ℝ) : ℝ :=
   f ((phaseHomeomorph d).symm φ)
 
-theorem rephase_contDiff (d : CircleDensity) (f : ℝ → ℝ)
-    (hf : ContDiff ℝ (∞ : WithTop ℕ∞) f) :
-    ContDiff ℝ (∞ : WithTop ℕ∞) (rephase d f) := hf.comp (phaseInverse_contDiff d)
 
 theorem rephase_periodic (d : CircleDensity) (f : ℝ → ℝ)
     (hf : Function.Periodic f (2 * Real.pi)) : Function.Periodic (rephase d f) 1 := by
@@ -462,70 +421,12 @@ def densityOfTilt (t : ℝ → ℝ) (a m ρ v : ℝ)
     exact (angular_rephasing_moments t a m ρ v (ne_of_gt ha) (ne_of_gt hv)
       ht.continuous hmean hvar hspeed).1
 
-open LoopMoments in
-/-- A complete reparametrization theorem: ordinary mean/variance data produce
-actual smooth period-one shear functions with the prescribed unweighted
-integrals. The radial-speed identity is pointwise. No cone condition is
-included, since that requires further inequalities on the chosen tilts. -/
-theorem exists_rephased_shear_loop (t : ℝ → ℝ) (a m ρ v : ℝ)
-    (ha : 0 < a) (hv : 0 < v) (ht : ContDiff ℝ (∞ : WithTop ℕ∞) t)
-    (hperiodic : Function.Periodic t (2 * Real.pi))
-    (hmean : angularMean t = m)
-    (hvar : angularMean (fun θ => (t θ - m) ^ 2) = ρ / a)
-    (hspeed : v = a * (1 + m ^ 2) + ρ) :
-    ∃ A C : ℝ → ℝ,
-      ContDiff ℝ (∞ : WithTop ℕ∞) A ∧ ContDiff ℝ (∞ : WithTop ℕ∞) C ∧
-      Function.Periodic A 1 ∧ Function.Periodic C 1 ∧
-      (∫ φ in (0 : ℝ)..1, A φ) = a ∧ (∫ φ in (0 : ℝ)..1, C φ) = a * m ∧
-      ∀ φ, 0 < A φ ∧ A φ * (1 + (C φ / A φ) ^ 2) = v := by
-  let d := densityOfTilt t a m ρ v ha hv ht hperiodic hmean hvar hspeed
-  let fA := fun θ => loopA v (t θ)
-  let fC := fun θ => loopC v (t θ)
-  have hsm := smooth_loop_shears t v ht
-  have hper := periodic_loop_shears t v hperiodic
-  have hmom := angular_rephasing_moments t a m ρ v (ne_of_gt ha) (ne_of_gt hv)
-    ht.continuous hmean hvar hspeed
-  refine ⟨rephase d fA, rephase d fC, rephase_contDiff d fA hsm.1,
-    rephase_contDiff d fC hsm.2, rephase_periodic d fA hper.1,
-    rephase_periodic d fC hper.2, ?_, ?_, ?_⟩
-  · rw [integral_rephase d fA hsm.1.continuous]
-    change (∫ θ in (0 : ℝ)..(2 * Real.pi),
-      loopA v (t θ) * (phaseDensity a v (t θ) / (2 * Real.pi))) = a
-    simp_rw [← mul_div_assoc, mul_comm (loopA v (t _)) (phaseDensity a v (t _))]
-    rw [intervalIntegral.integral_div]
-    exact hmom.2.1
-  · rw [integral_rephase d fC hsm.2.continuous]
-    change (∫ θ in (0 : ℝ)..(2 * Real.pi),
-      loopC v (t θ) * (phaseDensity a v (t θ) / (2 * Real.pi))) = a * m
-    simp_rw [← mul_div_assoc, mul_comm (loopC v (t _)) (phaseDensity a v (t _))]
-    rw [intervalIntegral.integral_div]
-    exact hmom.2.2
-  · intro φ
-    dsimp [rephase, fA, fC]
-    refine ⟨loopA_pos _ _ hv, ?_⟩
-    rw [loop_slope _ _ (ne_of_gt hv), loop_speed]
-
-open LoopMoments in
-theorem rephase_slope (d : CircleDensity) (t : ℝ → ℝ) (v φ : ℝ) (hv : v ≠ 0) :
-    rephase d (fun θ => loopC v (t θ)) φ /
-      rephase d (fun θ => loopA v (t θ)) φ = t ((phaseHomeomorph d).symm φ) := by
-  exact loop_slope v (t ((phaseHomeomorph d).symm φ)) hv
-
-open LoopMoments in
-/-- Any verified slope condition survives the constructed phase change. -/
-theorem rephase_preserves_slope_condition (d : CircleDensity) (t : ℝ → ℝ) (v : ℝ)
-    (hv : v ≠ 0) (R : ℝ → Prop) (hR : ∀ θ, R (t θ)) :
-    ∀ φ, R (rephase d (fun θ => loopC v (t θ)) φ /
-      rephase d (fun θ => loopA v (t θ)) φ) := by
-  intro φ
-  rw [rephase_slope d t v φ hv]
-  exact hR _
-
-open LoopMoments in
 
 
 
-open LoopMoments in
+
+
+
 
 end
 

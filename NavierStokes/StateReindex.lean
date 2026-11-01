@@ -97,42 +97,11 @@ noncomputable def state (e : D ≃ₗᵢ[ℝ] E) (u : CorrectionState.State E) :
   oscillatoryPressure := fun n x => u.oscillatoryPressure n (cylinder e x)
   errors := errors e u.errors
 
-theorem fderiv_field (e : D ≃ₗᵢ[ℝ] E) (f : MeanIncrementBounds.Field E)
-    (n : ℕ) (x : D) (v : E) :
-    fderiv ℝ (field e f n) x (e.symm v) = fderiv ℝ (f n) (e x) v := by
-  change fderiv ℝ (fun y => f n (e y)) x (e.symm v) = _
-  rw [fderiv_pull, e.apply_symm_apply]
 
-theorem dr_pull (e : D ≃ₗᵢ[ℝ] E) (o : MeanIncrementBounds.Operators E)
-    (f : MeanIncrementBounds.Field E) : (operators e o).dr (field e f) = field e (o.dr f) := by
-  funext n x
-  simp only [MeanIncrementBounds.Operators.dr, WeightedClasses.graphDerivative,
-    operators, fderiv_field, field]
 
-theorem dz_pull (e : D ≃ₗᵢ[ℝ] E) (o : MeanIncrementBounds.Operators E)
-    (f : MeanIncrementBounds.Field E) : (operators e o).dz (field e f) = field e (o.dz f) := by
-  funext n x
-  simp only [MeanIncrementBounds.Operators.dz, operators, fderiv_field, field]
 
-theorem time_pull (e : D ≃ₗᵢ[ℝ] E) (o : MeanIncrementBounds.Operators E)
-    (f : MeanIncrementBounds.Field E) : (operators e o).time (field e f) = field e (o.time f) := by
-  funext n x
-  simp only [MeanIncrementBounds.Operators.time, MeanIncrementBounds.Operators.slowTime,
-    MeanIncrementBounds.Operators.fastTime, operators, fderiv_field, field, Pi.add_apply]
 
-theorem radialDiv_pull (e : D ≃ₗᵢ[ℝ] E) (o : MeanIncrementBounds.Operators E)
-    (k : ℝ) (f : MeanIncrementBounds.Field E) :
-    (operators e o).radialDiv k (field e f) = field e (o.radialDiv k f) := by
-  unfold MeanIncrementBounds.Operators.radialDiv
-  rw [dr_pull]
-  rfl
 
-theorem viscosity_pull (e : D ≃ₗᵢ[ℝ] E) (o : MeanIncrementBounds.Operators E)
-    (k : ℝ) (f : MeanIncrementBounds.Field E) :
-    (operators e o).viscosity k (field e f) = field e (o.viscosity k f) := by
-  unfold MeanIncrementBounds.Operators.viscosity
-  rw [dr_pull, dr_pull, dz_pull, dz_pull]
-  rfl
 
 
 
@@ -480,55 +449,10 @@ theorem angularDirection_pull (e : D ≃ₗᵢ[ℝ] E) :
   change (e.symm 0, 1) = (0, 1)
   rw [map_zero]
 
-theorem complexBase_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E) (n : ℕ) :
-    LiftedMeanResidual.complexBase (context e c) n =
-      fun x => LiftedMeanResidual.complexBase c n (cylinder e x) := rfl
 
-theorem complexPerturbation_pull (e : D ≃ₗᵢ[ℝ] E) (u : CorrectionState.State E) (n : ℕ) :
-    LiftedMeanResidual.complexPerturbation (state e u) n =
-      fun x => LiftedMeanResidual.complexPerturbation u n (cylinder e x) := rfl
 
-theorem complexPressure_pull (e : D ≃ₗᵢ[ℝ] E) (u : CorrectionState.State E) (n : ℕ) :
-    LiftedMeanResidual.complexPressure (state e u) n =
-      fun x => LiftedMeanResidual.complexPressure u n (cylinder e x) := rfl
 
-theorem virtualDivergence_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (n : ℕ) (x : D × ℝ) :
-    LiftedMeanResidual.virtualDivergence (context e c) n x =
-      LiftedMeanResidual.virtualDivergence c n (cylinder e x) := by
-  change ![0, -((operators e c.operators).radialDiv 2 (field e c.virtualTheta) n x.1),
-    -((operators e c.operators).radialDiv 1 (field e c.virtualAxial) n x.1)] = _
-  rw [radialDiv_pull, radialDiv_pull]
-  rfl
 
-theorem fullResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) (n : ℕ) (x : D × ℝ) (i : Fin 3) :
-    LiftedMeanResidual.fullResidual (context e c) (state e u) n x i =
-      LiftedMeanResidual.fullResidual c u n (cylinder e x) i := by
-  have hl := linearResidual_field_pull (cylinder e) (c.operators.epsilon n)
-    (fun y : E × ℝ => c.operators.radius y.1)
-    (LiftedMeanResidual.radialDirection c n) LiftedMeanResidual.angularDirection
-    (LiftedMeanResidual.axialDirection c n) (LiftedMeanResidual.timeDirection c n)
-    (LiftedMeanResidual.complexBase c n) (LiftedMeanResidual.complexPerturbation u n)
-    (LiftedMeanResidual.complexPressure u n) x
-  have hq := transport_field_pull (cylinder e) (fun y : E × ℝ => c.operators.radius y.1)
-    (LiftedMeanResidual.radialDirection c n) LiftedMeanResidual.angularDirection
-    (LiftedMeanResidual.axialDirection c n)
-    (LiftedMeanResidual.complexPerturbation u n) (LiftedMeanResidual.complexPerturbation u n) x
-  rw [angularDirection_pull] at hl hq
-  unfold LiftedMeanResidual.fullResidual LiftedMeanResidual.nonlinearResidual
-  rw [radialDirection_pull, axialDirection_pull, timeDirection_pull,
-    complexBase_pull, complexPerturbation_pull, complexPressure_pull]
-  rw [show (fun y : D × ℝ => (context e c).operators.radius y.1) =
-    (fun y : D × ℝ => c.operators.radius (cylinder e y).1) from rfl]
-  change ((LinearWaveResidual.linearResidual (c.operators.epsilon n)
-    (fun y : D × ℝ => c.operators.radius (cylinder e y).1)
-    (vector (cylinder e) (LiftedMeanResidual.radialDirection c n)) LiftedMeanResidual.angularDirection
-    (vector (cylinder e) (LiftedMeanResidual.axialDirection c n))
-    (vector (cylinder e) (LiftedMeanResidual.timeDirection c n))
-    _ _ _ x + LinearWaveResidual.transport _ _ _ _ _ _ x) i).re + _ + _ = _
-  rw [hl, hq, virtualDivergence_pull]
-  rfl
 
 
 /-! ## Exact return from the alternate layout -/
@@ -548,20 +472,7 @@ theorem field_roundtrip (e : D ≃ₗᵢ[ℝ] E) (f : MeanIncrementBounds.Field 
   funext n x
   exact congrArg (f n) (e.symm_apply_apply x)
 
-theorem oscillation_roundtrip (e : D ≃ₗᵢ[ℝ] E) (f : CorrectionState.Oscillation D) :
-    oscillation e (oscillation e.symm f) = f := by
-  funext n x
-  change f n (e.symm (e x.1), x.2) = f n x
-  rw [e.symm_apply_apply]
 
-theorem state_roundtrip (e : D ≃ₗᵢ[ℝ] E) (u : CorrectionState.State D) :
-    state e (state e.symm u) = u := by
-  cases u with
-  | mk m p a q r =>
-    cases m
-    cases r
-    simp only [state, triple, errors, cylinder_apply, e.symm_apply_apply,
-      field_roundtrip, oscillation_roundtrip]
 
 theorem context_roundtrip (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context D) :
     context e (context e.symm c) = c := by
@@ -582,93 +493,15 @@ noncomputable def strip (e : D ≃ₗᵢ[ℝ] E) (s : WeightedClasses.StripData 
 
 /-! ## Real linearization and the mean equations -/
 
-theorem realTransport_pull (e : D ≃ₗᵢ[ℝ] E) (R : E → ℝ)
-    (Vr Vt Vz : E → E) (u v : E → Fin 3 → ℝ) (x : D) :
-    LinearWaveResidual.realTransport (fun y => R (e y)) (vector e Vr) (vector e Vt) (vector e Vz)
-      (fun y => u (e y)) (fun y => v (e y)) x =
-      LinearWaveResidual.realTransport R Vr Vt Vz u v (e x) := by
-  funext i
-  simp only [LinearWaveResidual.realTransport, along_pull_component]
-
-theorem realFrameLaplacian_pull (e : D ≃ₗᵢ[ℝ] E) (R : E → ℝ)
-    (Vr Vt Vz : E → E) (a : E → Fin 3 → ℝ) (x : D) :
-    LinearWaveResidual.realFrameLaplacian (fun y => R (e y))
-      (vector e Vr) (vector e Vt) (vector e Vz) (fun y => a (e y)) x =
-      LinearWaveResidual.realFrameLaplacian R Vr Vt Vz a (e x) := by
-  funext i
-  simp only [LinearWaveResidual.realFrameLaplacian, scalarLaplacian_component_pull,
-    along_pull_component]
 
 
-theorem thetaResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) :
-    (state e u).thetaResidual (context e c) = field e (u.thetaResidual c) := by
-  change (operators e c.operators).time (field e u.mean.angular) +
-    (operators e c.operators).radialDiv 2
-      (field e (MeanIncrementBounds.thetaRadial c.base u.mean + u.covariance 0 1)) +
-    (operators e c.operators).dz
-      (field e (MeanIncrementBounds.thetaAxial c.base u.mean + u.covariance 2 1)) -
-    (operators e c.operators).viscosity 1 (field e u.mean.angular) -
-    (operators e c.operators).radialDiv 2 (field e c.virtualTheta) = _
-  rw [time_pull, radialDiv_pull, dz_pull, viscosity_pull, radialDiv_pull]
-  rfl
 
-theorem axialResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) :
-    (state e u).axialResidual (context e c) = field e (u.axialResidual c) := by
-  change (operators e c.operators).time (field e u.mean.axial) +
-    (operators e c.operators).radialDiv 1
-      (field e (MeanIncrementBounds.axialRadial c.base u.mean + u.covariance 0 2)) +
-    (operators e c.operators).dz
-      (field e (MeanIncrementBounds.axialAxial c.base u.mean + u.covariance 2 2 + u.pressure)) -
-    (operators e c.operators).viscosity 0 (field e u.mean.axial) -
-    (operators e c.operators).radialDiv 1 (field e c.virtualAxial) = _
-  rw [time_pull, radialDiv_pull, dz_pull, viscosity_pull, radialDiv_pull]
-  rfl
 
-theorem gr_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) :
-    (state e u).gr (context e c) = field e (u.gr c) := by
-  change -((operators e c.operators).time (field e u.mean.radial) +
-    (operators e c.operators).radialDiv 1
-      (field e (MeanIncrementBounds.radialRadial c.base u.mean + u.covariance 0 0)) +
-    (operators e c.operators).dz
-      (field e (MeanIncrementBounds.axialRadial c.base u.mean + u.covariance 2 0)) -
-    (operators e c.operators).invRadius *
-      field e (MeanIncrementBounds.radialAngular c.base u.mean + u.covariance 1 1) -
-    (operators e c.operators).viscosity 1 (field e u.mean.radial)) = _
-  rw [time_pull, radialDiv_pull, dz_pull, viscosity_pull]
-  rfl
 
-theorem radialResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) :
-    (state e u).radialResidual (context e c) = field e (u.radialResidual c) := by
-  unfold CorrectionState.State.radialResidual
-  rw [gr_pull]
-  change (operators e c.operators).dr (field e u.pressure) - field e (u.gr c) = _
-  rw [dr_pull]
-  rfl
 
-theorem reducedMeanResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) (n : ℕ) (x : D) :
-    (state e u).reducedMeanResidual (context e c) n x = u.reducedMeanResidual c n (e x) := by
-  unfold CorrectionState.State.reducedMeanResidual
-  rw [radialResidual_pull, thetaResidual_pull, axialResidual_pull]
-  rfl
 
-theorem meanResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) (n : ℕ) (x : D) (i : Fin 3) :
-    (state e u).meanResidual (context e c) n x i = u.meanResidual c n (e x) i := by
-  change (state e u).reducedMeanResidual (context e c) n x i + _ = _
-  rw [reducedMeanResidual_pull]
-  rfl
 
-theorem meanGoodResidual_pull (e : D ≃ₗᵢ[ℝ] E) (c : CorrectionState.Context E)
-    (u : CorrectionState.State E) (n : ℕ) (x : D) (i : Fin 3) :
-    (state e u).meanGoodResidual (context e c) n x i = u.meanGoodResidual c n (e x) i := by
-  change (state e u).meanResidual (context e c) n x i - _ = _
-  rw [meanResidual_pull]
-  rfl
+
 
 theorem block_bandLimited (e : D ≃ₗᵢ[ℝ] E) {b : CorrectionState.HarmonicBlock E} {N : ℕ}
     (hb : b.BandLimited N) : (block e b).BandLimited N :=

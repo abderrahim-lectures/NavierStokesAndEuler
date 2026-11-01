@@ -810,16 +810,6 @@ theorem pressureRecipe_moment (r : ReconstructionData) (ha : 0 < r.inner) (hd : 
     (IntegratedMeanBalances.constructed_pressure_moment (M := r.frequency n)
       ha r.inner_lt_outer hd r.radialDirection (hg.smooth n) (hg.supported n) (pg n) s)
 
-/-- The exact pressure alias has zero auxiliary mean because the constructed
-pressure source has zero total mass. -/
-theorem pressureAlias_average_zero (r : ReconstructionData) (ha : 0 < r.inner) (hd : 0 < r.exponent)
-    (c : Context (Lift S)) (u : State (Lift S))
-    (hg : DefectIncrementBounds.Shell r.inner r.outer (u.gr c))
-    (pg : ∀ n, PressureStream.TorusPeriodicLift (u.gr c n)) (n : ℕ) (x : ℝ × S) :
-    PressureStream.torusAverage (PressureStream.pressureAlias r.exponent r.inner r.outer
-      (r.frequency n) r.inner_lt_outer r.radialDirection (u.gr c n)) x = 0 :=
-  PressureStream.pressureAlias_mean_zero ha r.inner_lt_outer hd r.radialDirection
-    (hg.smooth n) (hg.supported n) (pg n) x
 
 theorem physicalCompact_periodic (d a b M : ℝ) (v : PressureStream.Plane)
     {f : Lift S → ℝ} (hp : PressureStream.TorusPeriodicLift f) :
@@ -844,40 +834,9 @@ theorem physicalCompact_periodic (d a b M : ℝ) (v : PressureStream.Plane)
     TransportPrimitive.compactIntegral, TransportPrimitive.pastIntegral, TransportPrimitive.totalIntegral,
     he]
 
-theorem physicalAlias_periodic (d a b M : ℝ) (v : PressureStream.Plane)
-    {f : Lift S → ℝ} (hp : PressureStream.TorusPeriodicLift f) :
-    PressureStream.TorusPeriodicLift (RadialPullback.physicalAlias d a b M (0, v) f) := by
-  intro R s Y k
-  have he : (fun q : ℝ => RadialPullback.normalizeSource d a f
-      (TransportPrimitive.shift M ((0 : S), v)
-        (RadialPullback.powerChart d a R, (s, Y + ((k.1 : ℝ), (k.2 : ℝ)))) q)) =
-      fun q : ℝ => RadialPullback.normalizeSource d a f
-      (TransportPrimitive.shift M ((0 : S), v)
-        (RadialPullback.powerChart d a R, (s, Y)) q) := by
-    funext q
-    simp only [RadialPullback.normalizeSource, RadialPullback.liftChart,
-      TransportPrimitive.shift, Prod.add_def, Prod.smul_def, smul_zero, add_zero]
-    simpa only [Prod.add_def, Prod.smul_def, add_right_comm] using
-      congrArg (fun u : ℝ => RadialPullback.sourceMultiplier d a
-        (RadialPullback.powerChart d a R + q) • u)
-        (hp (RadialPullback.inverseChart d a (RadialPullback.powerChart d a R + q)) s
-          (Y + (M * q) • v) k)
-  simp only [RadialPullback.physicalAlias, RadialPullback.liftChart,
-    TransportPrimitive.totalIntegral, he]
-
-omit [NormedAddCommGroup S] [NormedSpace ℝ S] in
-theorem average_neg (f : Lift S → ℝ) (x : ℝ × S) :
-    PressureStream.torusAverage (fun y => -f y) x = -PressureStream.torusAverage f x := by
-  simp only [PressureStream.torusAverage, PressureStream.torusInner, intervalIntegral.integral_neg]
 
 
-theorem axialAlias_periodic (d a b M : ℝ) (v : PressureStream.Plane) (h : ℝ) (n : ℕ)
-    (f : Lift S → ℝ) :
-    PressureStream.TorusPeriodicLift (TemporalMeanUpdate.axialAlias d a b M v h n f) := by
-  have hp := physicalAlias_periodic d a b M v
-    (PressureStream.weightedSource_periodic (TemporalMeanUpdate.desiredIncrement_periodic h n f))
-  intro R s Y k
-  exact congrArg (fun a : ℝ => a / R) (hp R s Y k)
+
 
 
 theorem pressureRecipe_periodic (r : ReconstructionData) (c : Context (Lift S))

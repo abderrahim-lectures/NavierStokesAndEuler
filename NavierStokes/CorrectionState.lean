@@ -322,24 +322,6 @@ theorem graphOperators_dz (r : ReconstructionData) (epsilon fast : ℕ → ℝ)
   rfl
 
 
-theorem reconstructed_radial_residual (r : ReconstructionData)
-    (ha : 0 < r.inner) (hd : 0 < r.exponent) (c : Context (Lift S))
-    (u : State (Lift S))
-    (hoperator : ∀ f : ScalarField (Lift S), ∀ n x, c.operators.dr f n x =
-      PressureStream.graphDr (PressureStream.physicalSpeed r.exponent (r.frequency n))
-        (0, r.radialDirection) (f n) x)
-    (hsmooth : ∀ n, ContDiff ℝ ∞ (u.gr c n))
-    (hsupport : ∀ n, RadialAlias.RadiallySupported r.inner r.outer (u.gr c n))
-    (n : ℕ) (x : Lift S) :
-    (reconstructPressure r c u).radialResidual c n x =
-      -PressureStream.rho r.inner r.outer r.inner_lt_outer x.1 * pressureDefect c u n x.2.1 +
-        pressureAlias r c u n (x, 0) 0 := by
-  rw [State.radialResidual, Pi.sub_apply, Pi.sub_apply, hoperator]
-  change PressureStream.graphDr _ _
-      (PressureStream.meanPressure _ _ _ _ _ _ (u.gr c n)) x - u.gr c n x = _
-  rw [PressureStream.meanPressure_radial_residual_global ha r.inner_lt_outer hd
-    r.radialDirection (hsmooth n) (hsupport n)]
-  simp [pressureDefect, radialMoment, pressureAlias, sub_eq_add_neg]
 
 end Fields
 
@@ -370,22 +352,6 @@ noncomputable def temporalStage (r : ReconstructionData) (h : ℝ)
   reconstructPressure r c (u.addIncrement (temporalIncrement r h axial c u) 0 0 0
     ⟨0, 0, temporalAlias r h c u⟩)
 
-theorem temporal_fast_cancellation (r : ReconstructionData) (h : ℝ)
-    (axial : S × PressureStream.Plane) (c : Context (Lift S)) (u : State (Lift S))
-    (ha : 0 < r.inner) (hd : 0 < r.exponent)
-    (hθ : ∀ n, ContDiff ℝ ∞ (u.thetaResidual c n))
-    (hz : ∀ n, ContDiff ℝ ∞ (u.axialResidual c n))
-    (hpθ : ∀ n, PressureStream.TorusPeriodicLift (u.thetaResidual c n))
-    (hpz : ∀ n, PressureStream.TorusPeriodicLift (u.axialResidual c n))
-    (hsz : ∀ n, RadialAlias.RadiallySupported r.inner r.outer (u.axialResidual c n))
-    (n : ℕ) (x : Lift S) :
-    TemporalMeanUpdate.fastDerivative h n ((temporalIncrement r h axial c u).angular n) x +
-        TemporalMeanUpdate.centered (u.thetaResidual c n) x = 0 ∧
-    TemporalMeanUpdate.fastDerivative h n ((temporalIncrement r h axial c u).axial n) x +
-        TemporalMeanUpdate.centered (u.axialResidual c n) x = temporalAlias r h c u n (x, 0) 2 := by
-  have hv := TemporalMeanUpdate.temporal_mean_update (M := r.frequency n) ha r.inner_lt_outer hd r.radialDirection
-    (c.operators.epsilon n • axial) h n (hθ n) (hz n) (hpθ n) (hpz n) (hsz n) x
-  exact ⟨hv.1, hv.2.1⟩
 
 end Temporal
 
@@ -476,17 +442,6 @@ theorem rank_axial_eq_desired (p : ReconstructionData) (r : RankData S)
   intro z
   exact (rank_model_rows r c u n z hlam (hC z) hra hrab (hell z) (hU z)).2.1
 
-theorem rank_divergence_zero (p : ReconstructionData) (r : RankData S)
-    (axial : S × PressureStream.Plane) (c : Context (Lift S)) (u : State (Lift S))
-    (ha : 0 < p.inner) (hd : 0 < p.exponent) (n : ℕ)
-    (hf : ContDiff ℝ ∞ (rankDesiredAxial r c u n))
-    (hs : RadialAlias.RadiallySupported p.inner p.outer (rankDesiredAxial r c u n))
-    (x : Lift S) :
-    PressureStream.graphDivergence (PressureStream.physicalSpeed p.exponent (p.frequency n))
-      ((0 : S), p.radialDirection) (c.operators.epsilon n • axial)
-      ((rankIncrement p r axial c u).radial n) ((rankIncrement p r axial c u).axial n) x = 0 :=
-  MeanRankUpdate.slow_stream_divergence_zero ha p.inner_lt_outer hd p.radialDirection
-    (c.operators.epsilon n • axial) hf hs x
 
 end Rank
 

@@ -45,148 +45,49 @@ def signedBarGain (σ κ : ℝ) : ℝ :=
   min (min (min (min (9 / 50 - 2 * κ) (1 / 2 - 3 * κ))
     (σ - 3 * κ)) (1 - κ)) (1 - 2 * κ)
 
-theorem mean_eq_wave_add_half (σ : ℝ) :
-    meanExponent σ = waveExponent σ + 1 / 2 := by
-  unfold meanExponent waveExponent
-  ring
-
-theorem wave_at_least_seven_tenths {σ : ℝ} (hσ : 1 / 5 ≤ σ) :
-    7 / 10 ≤ waveExponent σ := by
-  unfold waveExponent
-  linarith
 
 
-theorem wave_increment (σ : ℝ) :
-    waveExponent (σ + 1 / 10) = waveExponent σ + 1 / 10 := by
-  unfold waveExponent
-  ring
 
-theorem mean_increment (σ : ℝ) :
-    meanExponent (σ + 1 / 10) = meanExponent σ + 1 / 10 := by
-  unfold meanExponent
-  ring
+
 
 
 /-! ## Step 1: particular correction -/
 
-/-- The displayed lower bound is in fact equality for the stated parameter range. -/
-theorem particular_gain_eq {σ κ : ℝ} (hσ : 1 / 5 ≤ σ)
-    (hκ : κ ≤ 1 / 100000) :
-    particularGain σ κ = 2 / 5 := by
-  unfold particularGain waveExponent
-  apply le_antisymm (min_le_right _ _)
-  simp only [le_min_iff]
-  exact ⟨⟨⟨by linarith, by linarith⟩, by linarith⟩, le_refl _⟩
 
 
 
 
-theorem particular_gain_exceeds_tenth {σ κ : ℝ} (hσ : 1 / 5 ≤ σ)
-    (hκ : κ ≤ 1 / 100000) :
-    waveExponent (σ + 1 / 10) < waveExponent σ + particularGain σ κ := by
-  rw [particular_gain_eq hσ hκ, wave_increment]
-  linarith
 
 
 /-! ## Step 2: signed correction -/
 
-theorem signed_gain_eq {σ κ : ℝ} (hσ : 1 / 5 ≤ σ)
-    (hκ : κ ≤ 1 / 100000) :
-    signedGain σ κ = 2 / 5 - κ := by
-  unfold signedGain waveExponent
-  apply le_antisymm
-  · exact le_trans (min_le_left _ _) (le_trans (min_le_left _ _) (min_le_right _ _))
-  · simp only [le_min_iff]
-    exact ⟨⟨⟨by linarith, le_refl _⟩, by linarith⟩, by linarith⟩
-
-theorem signed_gain_exceeds_tenth {σ κ : ℝ} (hσ : 1 / 5 ≤ σ)
-    (hκ : κ ≤ 1 / 100000) :
-    waveExponent (σ + 1 / 10) < waveExponent σ + signedGain σ κ := by
-  rw [signed_gain_eq hσ hκ, wave_increment]
-  linarith
 
 
 
 
 
 
-theorem old_difference_bar_margin {κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    17 / 100 < 9 / 50 - 2 * κ := by
-  linarith
 
-theorem curl_bar_margin {κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    17 / 100 < 1 / 2 - 3 * κ := by
-  linarith
 
-theorem square_bar_margin {σ κ : ℝ} (hσ : 1 / 5 ≤ σ)
-    (hκ : κ ≤ 1 / 100000) :
-    17 / 100 < σ - 3 * κ := by
-  linarith
 
-theorem axial_bar_margin {κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    17 / 100 < 1 - κ := by
-  linarith
 
-theorem pressure_bar_margin {κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    17 / 100 < 1 - 2 * κ := by
-  linarith
+
 
 
 /-! ## Steps 3 and 4: mean and defect updates -/
 
-theorem mean_update_wave_identity (σ κ : ℝ) :
-    meanUpdateExponent σ κ = waveExponent σ + 1 / 2 - 2 * κ := by
-  unfold meanUpdateExponent
-  rw [mean_eq_wave_add_half]
-
-theorem mean_update_wave_margin {σ κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    waveExponent (σ + 1 / 10) < meanUpdateExponent σ κ := by
-  rw [mean_update_wave_identity, wave_increment]
-  linarith
 
 
-theorem completed_mean_gain_eq {κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    min (17 / 100) (1 - 4 * κ) = 17 / 100 := by
-  apply min_eq_left
-  linarith
-
-theorem completed_mean_margin {σ κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    meanExponent (σ + 1 / 10) <
-      meanExponent σ + min (17 / 100) (1 - 4 * κ) := by
-  rw [completed_mean_gain_eq hκ, mean_increment]
-  linarith
 
 
-theorem completed_defect_margin {σ κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    meanExponent (σ + 1 / 10) < meanExponent σ + 9 / 10 - 4 * κ := by
-  rw [mean_increment]
-  linarith
+
+
 
 /-! ## Cumulative exponent bounds -/
 
-theorem signed_increment_lower_bound {σ κ : ℝ} (hσ : 1 / 5 ≤ σ)
-    (hκ : κ ≤ 1 / 100000) :
-    69999 / 100000 ≤ waveExponent σ - κ := by
-  unfold waveExponent
-  linarith
 
-theorem signed_increment_above_cumulative_difference {σ κ : ℝ}
-    (hσ : 1 / 5 ≤ σ) (hκ : κ ≤ 1 / 100000) :
-    17 / 25 < waveExponent σ - κ := by
-  have h := signed_increment_lower_bound hσ hκ
-  linarith
 
-theorem particular_increment_above_cumulative_difference {σ : ℝ}
-    (hσ : 1 / 5 ≤ σ) :
-    17 / 25 < waveExponent σ := by
-  have h := wave_at_least_seven_tenths hσ
-  linarith
 
-theorem mean_increment_above_cumulative_mean {σ κ : ℝ}
-    (hσ : 1 / 5 ≤ σ) (hκ : κ ≤ 1 / 100000) :
-    9 / 10 < meanUpdateExponent σ κ := by
-  unfold meanUpdateExponent meanExponent
-  linarith
 
 
 
@@ -214,21 +115,6 @@ theorem stage_parameter_admissible (n : ℕ) :
   have hn : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
   linarith
 
-/-- The same fixed κ works for the numerical comparisons at every finite stage. -/
-theorem all_stage_arithmetic (n : ℕ) {κ : ℝ} (hκ : κ ≤ 1 / 100000) :
-    waveExponent (stageParameter (n + 1)) <
-        waveExponent (stageParameter n) + particularGain (stageParameter n) κ ∧
-    waveExponent (stageParameter (n + 1)) <
-        waveExponent (stageParameter n) + signedGain (stageParameter n) κ ∧
-    waveExponent (stageParameter (n + 1)) < meanUpdateExponent (stageParameter n) κ ∧
-    meanExponent (stageParameter (n + 1)) <
-        meanExponent (stageParameter n) + min (17 / 100) (1 - 4 * κ) ∧
-    meanExponent (stageParameter (n + 1)) <
-        meanExponent (stageParameter n) + 9 / 10 - 4 * κ := by
-  rw [stage_parameter_succ]
-  exact ⟨particular_gain_exceeds_tenth (stage_parameter_admissible n) hκ,
-    signed_gain_exceeds_tenth (stage_parameter_admissible n) hκ,
-    mean_update_wave_margin hκ, completed_mean_margin hκ, completed_defect_margin hκ⟩
 
 end
 

@@ -753,10 +753,6 @@ noncomputable def physicalRequestedStress (P : SignedStressPrimitive.Patch) (q :
   ![SignedStressPrimitive.physicalBarSigma P 2 q Fθ x,
     SignedStressPrimitive.physicalBarSigma P 1 q Fz x]
 
-theorem stress_unit_factor {Q : ℝ} (hQ : 0 < Q) (A : ℝ) :
-    Q ^ (2 * A) * (Q ^ (-(2 * A + 1 / 2)) / Q ^ (-(1 / 2 : ℝ))) = 1 := by
-  rw [← Real.rpow_sub hQ, ← Real.rpow_add hQ]
-  convert! Real.rpow_zero Q using 1 ; ring_nf
 
 
 theorem physicalSigma_fiber_congr (P : SignedStressPrimitive.Patch) (e : ℕ)

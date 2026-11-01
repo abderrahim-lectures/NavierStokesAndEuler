@@ -238,12 +238,6 @@ theorem radialFlatDensity_integral {c R r : ℝ} (hc : 0 < c) (hR : 0 < R) (hr :
   simpa only [sub_neg_eq_add, zero_add] using
     integral_Ioi_of_hasDerivAt_of_tendsto' hd (radialFlatDensity_integrable hc hR hr j ha) hz
 
-theorem chart_tau_identity (d : TailData) (p : EdgeParam) :
-    1 - timeOf p = chartQ d p * (1 - chartEta d p ^ 2) := by
-  exact SimilarityCoordinates.tau_coordinate_identity
-    (by linarith [d.h_pos] : 0 < 2 * d.h)
-    (by linarith [d.h_lt_half] : 2 * d.h < 1)
-    (p := (1 - timeOf p, p.2)) (sub_pos.mpr (timeOf_lt_one p))
 
 
 noncomputable def logTaper (d : TailData) (y0 : ℝ) (y : ℝ) : ℝ := tailShape d (y - y0)
@@ -305,11 +299,6 @@ noncomputable def correctionCoefficient (C : ℝ) (d : TailData) (y0 : ℝ)
   (radius d y0 y * carrier C d y0 y - radius d y0 y ^ 2 * carrierRadial C d y0 y) *
     taperSlopeFactor d y.2
 
-theorem boundaryCoefficient_contDiff (C : ℝ) (d : TailData) (y0 : ℝ) :
-    ContDiff ℝ ∞ (boundaryCoefficient C d y0) :=
-  (((contDiff_const.mul (carrier_contDiff C d y0)).div (radius_contDiff d y0)
-    (fun y => (radius_pos d y0 y).ne')).mul
-      ((taperSlopeFactor_contDiff d).comp contDiff_snd))
 
 theorem timeCoefficient_contDiff (C : ℝ) (d : TailData) (y0 : ℝ) :
     ContDiff ℝ ∞ (timeCoefficient C d y0) :=
@@ -454,15 +443,6 @@ noncomputable def angularFactor (C : ℝ) (d : TailData) (y0 : ℝ) (y : EdgePar
     (ParametricFlatFactor.factor 4 3 (timeCoefficient C d y0) y +
       ParametricFlatFactor.factor 4 3 (correctionCoefficient C d y0) y)
 
-theorem angularFactor_contDiff (C : ℝ) (d : TailData) (y0 : ℝ) :
-    ContDiff ℝ ∞ (angularFactor C d y0) :=
-  (boundaryCoefficient_contDiff C d y0).add
-    (((contDiff_snd.pow 3).div ((radius_contDiff d y0).pow 2)
-      (fun y => (sq_pos_of_pos (radius_pos d y0 y)).ne')).mul
-        ((ParametricFlatFactor.factor_contDiff (by norm_num : (0 : ℝ) < 4) 3
-          (timeCoefficient_contDiff C d y0)).add
-          (ParametricFlatFactor.factor_contDiff (by norm_num : (0 : ℝ) < 4) 3
-            (correctionCoefficient_contDiff C d y0))))
 
 /-- The leading angular stress itself, with all backward-integral hypotheses
 proved for the actual heat carrier and actual outgoing taper. -/
@@ -490,17 +470,7 @@ theorem angularStress_factorization (C : ℝ) (d : TailData) (y0 : ℝ) (y : Edg
   unfold angularFactor boundaryCoefficient FlatPrimitive.scale
   ring
 
-theorem angularFactor_zero (C : ℝ) (d : TailData) (y0 : ℝ) (p : EdgeParam) :
-    angularFactor C d y0 (p, 0) =
-      (2 * carrier C d y0 (p, 0) / radius d y0 (p, 0)) * taperSlopeFactor d 0 := by
-  simp only [angularFactor, zero_pow (by norm_num : 3 ≠ 0), zero_div, zero_mul,
-    add_zero, boundaryCoefficient]
 
-theorem angularFactor_zero_pos {C : ℝ} (hC : 0 < C) (d : TailData) (y0 : ℝ) (p : EdgeParam) :
-    0 < angularFactor C d y0 (p, 0) := by
-  rw [angularFactor_zero]
-  exact mul_pos (div_pos (mul_pos (by norm_num) (carrier_pos hC d y0 (p, 0)))
-    (radius_pos d y0 (p, 0))) (taperSlopeFactor_zero_pos d)
 
 
 
@@ -646,11 +616,6 @@ theorem axialCoefficient_contDiff (C : ℝ) (d : TailData) (y0 : ℝ) :
 noncomputable def axialFactor (C : ℝ) (d : TailData) (y0 : ℝ) (y : EdgeParam × ℝ) : ℝ :=
   ParametricFlatFactor.factor 4 0 (axialCoefficient C d y0) y / radius d y0 y
 
-theorem axialFactor_contDiff (C : ℝ) (d : TailData) (y0 : ℝ) :
-    ContDiff ℝ ∞ (axialFactor C d y0) :=
-  (ParametricFlatFactor.factor_contDiff (by norm_num : (0 : ℝ) < 4) 0
-    (axialCoefficient_contDiff C d y0)).div (radius_contDiff d y0)
-      (fun y => (radius_pos d y0 y).ne')
 
 /-- The actual canonical pressure gradient on the physical chart. -/
 noncomputable def pressureGradient (C : ℝ) (d : TailData) (y0 : ℝ)
@@ -1529,21 +1494,7 @@ noncomputable def physicalStress (C : ℝ) (d : TailData) (y0 : ℝ)
 noncomputable def physicalStressFactor (C : ℝ) (d : TailData) (y0 : ℝ)
     (y : EdgeParam × ℝ) : ℝ × ℝ := (angularFactor C d y0 y, y.2 ^ 6 * axialFactor C d y0 y)
 
-theorem physicalStressFactor_contDiff (C : ℝ) (d : TailData) (y0 : ℝ) :
-    ContDiff ℝ ∞ (physicalStressFactor C d y0) :=
-  (angularFactor_contDiff C d y0).prodMk ((contDiff_snd.pow 6).mul (axialFactor_contDiff C d y0))
 
-theorem physicalStress_factorization (C : ℝ) (d : TailData) (y0 : ℝ) (y : EdgeParam × ℝ) :
-    physicalStress C d y0 y =
-      (FlatCutoff.edge 4 y.2 / y.2 ^ 3) • physicalStressFactor C d y0 y := by
-  apply Prod.ext
-  · exact angularStress_factorization C d y0 y
-  · change axialStress C d y0 y =
-      (FlatCutoff.edge 4 y.2 / y.2 ^ 3) * (y.2 ^ 6 * axialFactor C d y0 y)
-    rw [axialStress_factorization]
-    by_cases hx : y.2 = 0
-    · simp [hx]
-    · field_simp [hx]
 
 
 

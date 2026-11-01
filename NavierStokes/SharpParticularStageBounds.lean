@@ -68,25 +68,7 @@ theorem curl_printed_bound (B N0 : ℕ)
     (particular_smooth B N0 hN j).1).weaken outgoing.data.h_pos outgoing.data.h_lt_half
     (common_loss j m (m+1) (by unfold CoordinateAlgebra.A; linarith [outgoing.data.h_pos]) le_rfl)
 
-/-- The full actual potential increment satisfies exactly the printed
-stage-independent loss, with all native and physical inputs discharged. -/
-theorem actual_potential_bound (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (j m : ℕ) :
-    LogBound h (ActualCandidateConstruction.qbig B N0) (potentialStages B N0 hN (j+1)) m
-      (ActualIterationLedger.gain h (j+1)-SharpPhysicalCarrier.physicalLoss h m) :=
-  SharpActualStageBounds.potential_of_particular B N0 hN j m (potential_printed_bound B N0 hN j m)
 
-theorem actual_pressure_bound (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (j m : ℕ) :
-    LogBound h (ActualCandidateConstruction.qbig B N0) (pressureStages B N0 hN (j+1)) m
-      (ActualIterationLedger.gain h (j+1)-SharpPhysicalCarrier.physicalLoss h m) :=
-  SharpActualStageBounds.pressure_of_particular B N0 hN j m (pressure_printed_bound B N0 hN j m)
 
-theorem actual_velocity_bound (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (j m : ℕ) :
-    LogBound h (ActualCandidateConstruction.qbig B N0)
-      (MixedFiniteBackground.stageVelocity (potentialStages B N0 hN) (directStages B N0 hN) (j+1)) m
-      (ActualIterationLedger.gain h (j+1)-SharpPhysicalCarrier.physicalLoss h m) :=
-  SharpActualStageBounds.velocity_of_particular B N0 hN j m (curl_printed_bound B N0 hN j m)
 
 end NavierStokes.SharpParticularStageBounds

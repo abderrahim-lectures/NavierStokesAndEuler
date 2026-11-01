@@ -50,10 +50,6 @@ theorem avg_const (s : Finset ι) (w : ι → ℝ) (c : ℝ)
     avg s w (fun _ => c) = c := by
   simp only [avg, ← Finset.sum_mul, hmass, one_mul]
 
-theorem avg_nonneg (s : Finset ι) (w f : ι → ℝ)
-    (hw : ∀ i ∈ s, 0 ≤ w i) (hf : ∀ i ∈ s, 0 ≤ f i) :
-    0 ≤ avg s w f := by
-  exact Finset.sum_nonneg (fun i hi => mul_nonneg (hw i hi) (hf i hi))
 
 /-- The standard variance expansion, with mass and first moment explicit. -/
 theorem variance_identity (s : Finset ι) (w t : ι → ℝ) (m : ℝ)
@@ -81,11 +77,6 @@ theorem energy_moment (s : Finset ι) (w t : ι → ℝ) (a m ρ : ℝ)
   rw [avg_add, avg_const s w 1 hmass, hsecond]
   field_simp; ring
 
-/-- A nonnegative weighted variance cannot decrease the nominal speed. -/
-theorem variance_nonneg (s : Finset ι) (w t : ι → ℝ) (m : ℝ)
-    (hw : ∀ i ∈ s, 0 ≤ w i) :
-    0 ≤ avg s w (fun i => (t i - m) ^ 2) := by
-  exact avg_nonneg s w _ hw (fun i _ => sq_nonneg (t i - m))
 
 
 /-- The rephasing density relative to the old averaging parameter. -/
@@ -208,18 +199,8 @@ def TwoPoint.IsProbability (q : TwoPoint) : Prop :=
 def symmetricPair (m V : ℝ) : TwoPoint :=
   ⟨1 / 2, 1 / 2, m - Real.sqrt V, m + Real.sqrt V⟩
 
-theorem symmetricPair_probability (m V : ℝ) : (symmetricPair m V).IsProbability := by
-  norm_num [TwoPoint.IsProbability, symmetricPair]
 
-theorem symmetricPair_mean (m V : ℝ) : (symmetricPair m V).mean = m := by
-  dsimp [TwoPoint.mean, symmetricPair]
-  ring
 
-theorem symmetricPair_variance (m V : ℝ) (hV : 0 ≤ V) :
-    (symmetricPair m V).centeredSecond m = V := by
-  dsimp [TwoPoint.centeredSecond, symmetricPair]
-  have hsq := Real.sq_sqrt hV
-  nlinarith
 
 /-- An asymmetric law preserves a lower bound on the projection `p*t`,
 while allowing any nonnegative variance. For `p = 0`, use `symmetricPair`.
@@ -228,68 +209,12 @@ def oneSidedPair (m p d V : ℝ) : TwoPoint :=
   ⟨V * p ^ 2 / (d ^ 2 + V * p ^ 2), d ^ 2 / (d ^ 2 + V * p ^ 2),
     m - d / p, m + V * p / d⟩
 
-theorem oneSidedPair_denom_pos (p d V : ℝ) (hd : 0 < d) (hV : 0 ≤ V) :
-    0 < d ^ 2 + V * p ^ 2 := by
-  have hprod := mul_nonneg hV (sq_nonneg p)
-  nlinarith
 
-theorem oneSidedPair_probability (m p d V : ℝ) (hd : 0 < d) (hV : 0 ≤ V) :
-    (oneSidedPair m p d V).IsProbability := by
-  have hden := oneSidedPair_denom_pos p d V hd hV
-  dsimp [TwoPoint.IsProbability, oneSidedPair]
-  refine ⟨div_nonneg (mul_nonneg hV (sq_nonneg p)) (le_of_lt hden),
-    div_nonneg (sq_nonneg d) (le_of_lt hden), ?_⟩
-  field_simp; ring
 
-theorem oneSidedPair_mean (m p d V : ℝ) (hp : p ≠ 0) (hd : 0 < d) (hV : 0 ≤ V) :
-    (oneSidedPair m p d V).mean = m := by
-  have hden := ne_of_gt (oneSidedPair_denom_pos p d V hd hV)
-  have hdne := ne_of_gt hd
-  dsimp [TwoPoint.mean, oneSidedPair]
-  field_simp; ring
 
-theorem oneSidedPair_variance (m p d V : ℝ)
-    (hp : p ≠ 0) (hd : 0 < d) (hV : 0 ≤ V) :
-    (oneSidedPair m p d V).centeredSecond m = V := by
-  have hden := ne_of_gt (oneSidedPair_denom_pos p d V hd hV)
-  have hdne := ne_of_gt hd
-  dsimp [TwoPoint.centeredSecond, oneSidedPair]
-  field_simp; ring
 
-theorem oneSidedPair_lower_projection (m p d V : ℝ) (hp : p ≠ 0) :
-    p * ((oneSidedPair m p d V).leftValue - m) = -d := by
-  dsimp [oneSidedPair]
-  field_simp; ring
 
-theorem oneSidedPair_upper_projection (m p d V : ℝ) :
-    p * ((oneSidedPair m p d V).rightValue - m) = V * p ^ 2 / d := by
-  dsimp [oneSidedPair]
-  ring
 
-/-- Every mean whose stress projection is strictly above `2` has a finite
-two-point distribution with any prescribed nonnegative variance, with both
-support points still strictly above that same projection threshold. This is
-a feasibility statement for the tilt moments, not the full true-cone test. -/
-theorem exists_projected_twoPoint (p₁ p₂ m V : ℝ)
-    (hP : 2 < p₁ + p₂ * m) (hV : 0 ≤ V) :
-    ∃ q : TwoPoint, q.IsProbability ∧ q.mean = m ∧ q.centeredSecond m = V ∧
-      2 < p₁ + p₂ * q.leftValue ∧ 2 < p₁ + p₂ * q.rightValue := by
-  by_cases hp : p₂ = 0
-  · refine ⟨symmetricPair m V, symmetricPair_probability m V,
-      symmetricPair_mean m V, symmetricPair_variance m V hV, ?_, ?_⟩ <;>
-      simpa only [hp, zero_mul, add_zero] using hP
-  · let d := (p₁ + p₂ * m - 2) / 2
-    have hd : 0 < d := by dsimp [d]; linarith
-    refine ⟨oneSidedPair m p₂ d V, oneSidedPair_probability m p₂ d V hd hV,
-      oneSidedPair_mean m p₂ d V hp hd hV,
-      oneSidedPair_variance m p₂ d V hp hd hV, ?_, ?_⟩
-    · have hleft := oneSidedPair_lower_projection m p₂ d V hp
-      dsimp [d] at hleft
-      linarith
-    · have hright := oneSidedPair_upper_projection m p₂ d V
-      have hinc : 0 ≤ V * p₂ ^ 2 / d :=
-        div_nonneg (mul_nonneg hV (sq_nonneg p₂)) (le_of_lt hd)
-      linarith
 
 
 end

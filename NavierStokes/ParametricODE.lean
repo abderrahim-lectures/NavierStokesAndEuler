@@ -297,106 +297,13 @@ theorem solution_hasDerivWithinAt (A : Coefficient a b E) (x₀ : E)
 
 variable {P : Type*} [NormedAddCommGroup P] [NormedSpace ℝ P]
 
-/-- Differentiating the actual inverse equation gives the first variation in
-every direction of an arbitrary normed parameter space. -/
-theorem fderiv_resolvent_family (A : P → Coefficient a b E) (g : P → Curve a b E)
-    {p : P} {A' : P →L[ℝ] Coefficient a b E} {g' : P →L[ℝ] Curve a b E}
-    (hA : HasFDerivAt A A' p) (hg : HasFDerivAt g g' p) (v : P) :
-    fderiv ℝ (fun q => resolvent hab (A q) (g q)) p v =
-      resolvent hab (A p) (g' v + volterra (E := E) hab (A' v)
-        (resolvent hab (A p) (g p))) := by
-  let u := fun q => resolvent hab (A q) (g q)
-  have hr : DifferentiableAt ℝ (fun q => resolvent hab (A q)) p :=
-    ((contDiff_resolvent hab).differentiable (by simp) (A p)).comp p hA.differentiableAt
-  have hu : DifferentiableAt ℝ u p := hr.clm_apply hg.differentiableAt
-  have hV : HasFDerivAt (fun q => volterra (E := E) hab (A q))
-      ((volterra (E := E) hab).comp A') p := by
-    have hlin : HasFDerivAt (fun B : Coefficient a b E => volterra (E := E) hab B)
-        (volterra (E := E) hab) (A p) :=
-      ContinuousLinearMap.hasFDerivAt (𝕜 := ℝ)
-        (E := Coefficient a b E) (F := Curve a b E →L[ℝ] Curve a b E)
-        (volterra (E := E) hab)
-    exact HasFDerivAt.comp (𝕜 := ℝ) (E := P) (F := Coefficient a b E)
-      (G := Curve a b E →L[ℝ] Curve a b E) p hlin hA
-  have hd := hu.hasFDerivAt.fun_sub (hV.clm_apply hu.hasFDerivAt)
-  have heq : (fun q => u q - volterra (E := E) hab (A q) (u q)) = g := by
-    funext q
-    exact resolvent_equation hab (A q) (g q)
-  rw [heq] at hd
-  have hdir := congrArg (fun D : P →L[ℝ] Curve a b E => D v) (hd.unique hg)
-  change fderiv ℝ u p v - (volterra (E := E) hab (A p) (fderiv ℝ u p v) +
-    volterra (E := E) hab (A' v) (u p)) = g' v at hdir
-  change fderiv ℝ u p v = (equationOperator hab (A p)).inverse
-    (g' v + volterra (E := E) hab (A' v) (u p))
-  symm
-  apply (equationOperator_isInvertible hab (A p)).inverse_apply_eq.mpr
-  change g' v + volterra (E := E) hab (A' v) (u p) =
-    fderiv ℝ u p v - volterra (E := E) hab (A p) (fderiv ℝ u p v)
-  rw [sub_add_eq_sub_sub] at hdir
-  exact (sub_eq_iff_eq_add.mp hdir).symm
-
-/-- The actual parameter derivative is the solution of the variational equation,
-with source `(∂A)u + ∂f` and initial value `∂x₀`. -/
-theorem parameter_derivative_eq_solution
-    (A : P → Coefficient a b E) (x₀ : P → E) (f : P → Curve a b E)
-    {p : P} {A' : P →L[ℝ] Coefficient a b E} {x₀' : P →L[ℝ] E}
-    {f' : P →L[ℝ] Curve a b E}
-    (hA : HasFDerivAt A A' p) (hx₀ : HasFDerivAt x₀ x₀' p)
-    (hf : HasFDerivAt f f' p) (v : P) :
-    fderiv ℝ (fun q => solution hab (A q) (x₀ q) (f q)) p v =
-      solution hab (A p) (x₀' v)
-        (applyCoefficient (A' v) (solution hab (A p) (x₀ p) (f p)) + f' v) := by
-  have hs : HasFDerivAt (fun q => source hab (x₀ q) (f q))
-      ((constantCurve (a := a) (b := b)).comp x₀' + (integrator hab).comp f') p := by
-    have hc : HasFDerivAt (constantCurve (E := E) (a := a) (b := b))
-        (constantCurve (a := a) (b := b)) (x₀ p) :=
-      ContinuousLinearMap.hasFDerivAt (𝕜 := ℝ) (E := E) (F := Curve a b E)
-        (constantCurve (a := a) (b := b))
-    have hi : HasFDerivAt (integrator (E := E) hab) (integrator hab) (f p) :=
-      ContinuousLinearMap.hasFDerivAt (𝕜 := ℝ) (E := Curve a b E) (F := Curve a b E)
-        (integrator hab)
-    exact (hc.comp p hx₀).add (hi.comp p hf)
-  have h := fderiv_resolvent_family hab A (fun q => source hab (x₀ q) (f q)) hA hs v
-  calc
-    _ = resolvent hab (A p) (constantCurve (x₀' v) + integrator hab (f' v) +
-        volterra (E := E) hab (A' v) (solution hab (A p) (x₀ p) (f p))) := h
-    _ = _ := by
-      unfold solution source
-      apply congrArg (resolvent hab (A p))
-      rw [(integrator hab).map_add]
-      change _ = constantCurve (x₀' v) +
-        (volterra (E := E) hab (A' v) (resolvent hab (A p)
-          (constantCurve (x₀ p) + integrator hab (f p))) + integrator hab (f' v))
-      abel
 
 
-omit [CompleteSpace E] in
-theorem norm_constantCurve_le (x : E) :
-    ‖constantCurve (a := a) (b := b) x‖ ≤ ‖x‖ :=
-  (ContinuousMap.norm_le _ (norm_nonneg x)).mpr (fun _ => le_rfl)
-
-theorem norm_source_le (x₀ : E) (f : Curve a b E) :
-    ‖source hab x₀ f‖ ≤ ‖x₀‖ + (b - a) * ‖f‖ :=
-  (norm_add_le _ _).trans (add_le_add (norm_constantCurve_le x₀) (norm_integralPath_le hab f))
-
-/-- A finite stability bound in terms of the norm of the actual inverse operator. -/
-theorem norm_solution_le (A : Coefficient a b E) (x₀ : E) (f : Curve a b E) :
-    ‖solution hab A x₀ f‖ ≤ ‖resolvent hab A‖ * (‖x₀‖ + (b - a) * ‖f‖) :=
-  ((resolvent hab A).le_opNorm _).trans
-    (mul_le_mul_of_nonneg_left (norm_source_le hab x₀ f) (norm_nonneg _))
 
 
-/-- Full smooth dependence in the supremum-norm spaces of coefficient and forcing
-paths. Smoothness of the solution map is a conclusion. -/
-theorem contDiff_solution_family (A : P → Coefficient a b E) (x₀ : P → E)
-    (f : P → Curve a b E) (hA : ContDiff ℝ ∞ A) (hx₀ : ContDiff ℝ ∞ x₀)
-    (hf : ContDiff ℝ ∞ f) :
-    ContDiff ℝ ∞ (fun p => solution hab (A p) (x₀ p) (f p)) := by
-  change ContDiff ℝ ∞ (fun p => resolvent hab (A p)
-    (constantCurve (a := a) (b := b) (x₀ p) + integrator hab (f p)))
-  exact ((contDiff_resolvent hab).comp hA).clm_apply
-    (((constantCurve (E := E) (a := a) (b := b)).contDiff.comp hx₀).add
-      ((integrator (E := E) hab).contDiff.comp hf))
+
+
+
 
 theorem contDiffOn_solution_family {s : Set P}
     (A : P → Coefficient a b E) (x₀ : P → E) (f : P → Curve a b E)

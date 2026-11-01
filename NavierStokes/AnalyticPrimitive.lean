@@ -176,45 +176,12 @@ def amplitude (g : ℂ → ℂ) (Λ C : ℂ) (z : ℂ) : ℂ :=
 @[simp] theorem amplitude_zero (g : ℂ → ℂ) (Λ C : ℂ) : amplitude g Λ C 0 = 1 / C := by
   simp [amplitude]
 
-theorem amplitude_ne_zero (g : ℂ → ℂ) (Λ : ℂ) {C : ℂ} (hC : C ≠ 0) (z : ℂ) :
-    amplitude g Λ C z ≠ 0 :=
-  div_ne_zero (Complex.exp_ne_zero _) hC
-
-/-- Normalization is constant in the spatial variable, so the differential
-equation is valid for any normalization scalar. -/
-theorem hasDerivAt_amplitude {U : Set ℂ} (ho : IsOpen U)
-    (hU : Convex ℝ U) (h0 : (0 : ℂ) ∈ U) {g : ℂ → ℂ}
-    (hg : DifferentiableOn ℂ g U) (Λ C : ℂ) {z : ℂ} (hz : z ∈ U) :
-    HasDerivAt (amplitude g Λ C) ((Λ * g z) * amplitude g Λ C z) z := by
-  have hd := (((hasDerivAt_primitive ho hU h0 hg hz).const_mul Λ).cexp).div_const C
-  convert! hd using 1
-  unfold amplitude
-  ring
 
 
 
-theorem amplitude_ofReal (g : ℂ → ℂ) (f : ℝ → ℝ)
-    (hreal : ∀ x : ℝ, g x = (f x : ℂ)) (Λ C x : ℝ) :
-    amplitude g Λ C x =
-      ((Real.exp (Λ * (x * ∫ t in (0 : ℝ)..1, f (t * x))) / C : ℝ) : ℂ) := by
-  rw [amplitude, primitive_ofReal g f hreal x, ← Complex.ofReal_mul,
-    ← Complex.ofReal_exp, ← Complex.ofReal_div]
 
-theorem amplitude_real_pos (g : ℂ → ℂ) (f : ℝ → ℝ)
-    (hreal : ∀ x : ℝ, g x = (f x : ℂ)) (Λ : ℝ) {C : ℝ} (hC : 0 < C) (x : ℝ) :
-    0 < (amplitude g Λ C x).re := by
-  rw [amplitude_ofReal g f hreal Λ C x, Complex.ofReal_re]
-  exact div_pos (Real.exp_pos _) hC
 
-theorem hasDerivAt_real_amplitude {U : Set ℂ} (ho : IsOpen U)
-    (hU : Convex ℝ U) (h0 : (0 : ℂ) ∈ U) {g : ℂ → ℂ}
-    (hg : DifferentiableOn ℂ g U) (f : ℝ → ℝ)
-    (hreal : ∀ x : ℝ, g x = (f x : ℂ)) (Λ C : ℝ) {x : ℝ} (hx : (x : ℂ) ∈ U) :
-    HasDerivAt (fun y : ℝ => (amplitude g Λ C y).re)
-      ((Λ * f x) * (amplitude g Λ C x).re) x := by
-  have hd := (hasDerivAt_amplitude ho hU h0 hg Λ C hx).real_of_complex
-  simpa only [hreal, Complex.mul_re, Complex.mul_im, Complex.ofReal_re,
-    Complex.ofReal_im, mul_zero, zero_mul, add_zero, sub_zero] using hd
+
 
 
 end NavierStokes.AnalyticPrimitive

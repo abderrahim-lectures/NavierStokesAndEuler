@@ -149,28 +149,6 @@ theorem previousOmega_ofBeta (h : ℝ) (phi axial beta pressure : ℕ → InnerP
     exact AxisSourceRegularity.omega_quotient_eq h axial beta n w
       (fun j hj => hb j (Nat.lt_succ_of_le hj)) hL hX
 
-theorem positiveOrder_pressure_coefficient (h C : ℝ)
-    (phi axial beta pressure : ℕ → InnerProfile) (k : InnerProfile) (n : ℕ)
-    {w : InnerPoint} (hX : w.1 ≠ 0) (hL : CoordinateAlgebra.L h w.2 ≠ 0)
-    (hb : ∀ j < n, ContDiffAt ℝ 2 (beta j) w)
-    (he : PositiveAxisSystem.PositiveOrderEquations h C w.2 w.1 n
-      (fun j => PositiveAxisSystem.actualJet (phi j) w)
-      (fun j => PositiveAxisSystem.actualJet (axial j) w) (fun j => beta j w)
-      (PositiveAxisSystem.actualJet k w) (PositiveAxisSystem.actualJet (pressure n) w)
-      (PositiveAxisSystem.precedingDiffusion h (PositiveAxisSystem.angularPower h) phi n w)
-      (PositiveAxisSystem.precedingDiffusion h (PositiveAxisSystem.axialPower h) axial n w)
-      (AxisSourceRegularity.previousOmegaDivX h axial beta n w)) :
-    pressureCoefficient h C (ofBeta phi axial beta pressure) n w = 0 := by
-  apply (pressureCoefficient_eq_zero_iff h C _ n w).2
-  have hp := previousOmega_ofBeta h phi axial beta pressure n w hX hL hb
-  have hd : previous (fun j => omegaCoefficient h (ofBeta phi axial beta pressure) j w) n /
-      (2 * w.1) = AxisSourceRegularity.previousOmegaDivX h axial beta n w / 2 := by
-    rw [← hp]
-    ring
-  rw [hd]
-  dsimp only [ofBeta]
-  rw [convolution_eq_positiveAxis]
-  simpa only [PositiveAxisSystem.actualJet, PositiveAxisSystem.inverseSquare, inv_pow] using he.2.1
 
 theorem partialX_congr_germ {f g : InnerProfile} {w : InnerPoint}
     (hfg : f =ᶠ[𝓝 w] g) : partialX f =ᶠ[𝓝 w] partialX g := by
@@ -264,27 +242,7 @@ theorem slowOrder_mono {h : ℝ} (hh : 0 ≤ h) : Monotone (slowOrder h) := by
 noncomputable def pairTailSize (N : ℕ) (K : ℕ → ℕ → ℝ) : ℝ :=
   ∑ ij ∈ (pairs N).filter (fun ij => N < ij.1 + ij.2), |K ij.1 ij.2|
 
-theorem pairTailSize_nonneg (N : ℕ) (K : ℕ → ℕ → ℝ) : 0 ≤ pairTailSize N K :=
-  Finset.sum_nonneg (fun _ _ => abs_nonneg _)
 
-theorem pairTail_bound {q h : ℝ} (hq : 0 < q) (hq1 : q ≤ 1) (hh : 0 ≤ h)
-    (N : ℕ) (b : ℝ) (K : ℕ → ℕ → ℝ) :
-    |pairTail N (fun n => q ^ (b + slowOrder h n)) K| ≤
-      pairTailSize N K * q ^ (b + slowOrder h (N + 1)) := by
-  unfold pairTail pairTailSize
-  calc
-    _ ≤ ∑ ij ∈ (pairs N).filter (fun ij => N < ij.1 + ij.2),
-        |q ^ (b + slowOrder h (ij.1 + ij.2)) * K ij.1 ij.2| :=
-      Finset.abs_sum_le_sum_abs _ _
-    _ ≤ ∑ ij ∈ (pairs N).filter (fun ij => N < ij.1 + ij.2),
-        |K ij.1 ij.2| * q ^ (b + slowOrder h (N + 1)) := by
-      apply Finset.sum_le_sum
-      intro ij hij
-      rw [abs_mul, abs_of_pos (Real.rpow_pos_of_pos hq _), mul_comm]
-      apply mul_le_mul_of_nonneg_left _ (abs_nonneg _)
-      apply Real.rpow_le_rpow_of_exponent_ge hq hq1
-      exact add_le_add_right (slowOrder_mono hh (Finset.mem_filter.mp hij).2) b
-    _ = _ := (Finset.sum_mul _ _ _).symm
 
 noncomputable def transportKernel (h e α : ℝ) (v u f : ℕ → InnerProfile)
     (w : InnerPoint) : ℕ → ℕ → ℝ :=
@@ -296,25 +254,7 @@ noncomputable def transportTailSize (N : ℕ) (h e α : ℝ)
   pairTailSize N (transportKernel h e α v u f w) +
     |Z2 h (e + slowOrder h N) (f N) w|
 
-theorem transportTailSize_nonneg (N : ℕ) (h e α : ℝ)
-    (v u f : ℕ → InnerProfile) (w : InnerPoint) :
-    0 ≤ transportTailSize N h e α v u f w :=
-  add_nonneg (pairTailSize_nonneg _ _) (abs_nonneg _)
 
-/-- Both the omitted quadratic interactions and the last axial viscosity
-are bounded, with their true next-order power. -/
-theorem transportTail_bound {q h : ℝ} (hq : 0 < q) (hq1 : q ≤ 1) (hh : 0 ≤ h)
-    (N : ℕ) (e α : ℝ) (v u f : ℕ → InnerProfile) (w : InnerPoint) :
-    |transportTail N q h e α v u f w| ≤
-      transportTailSize N h e α v u f w * q ^ (e - 1 + slowOrder h (N + 1)) := by
-  change |pairTail N (fun n => q ^ (e - 1 + slowOrder h n))
-      (transportKernel h e α v u f w) -
-      q ^ (e - 1 + slowOrder h (N + 1)) * Z2 h (e + slowOrder h N) (f N) w| ≤ _
-  refine (abs_sub _ _).trans ?_
-  rw [abs_mul, abs_of_pos (Real.rpow_pos_of_pos hq _)]
-  have hb := pairTail_bound hq hq1 hh N (e - 1) (transportKernel h e α v u f w)
-  dsimp only [transportTailSize]
-  nlinarith
 
 noncomputable def pressureTailSize (N : ℕ) (h C : ℝ) (f : SlowProfiles)
     (w : InnerPoint) : ℝ :=
@@ -850,32 +790,6 @@ theorem transportKernel_smoothAt (h e α : ℝ) (v u f : ℕ → InnerProfile)
     ((contDiffAt_const.mul hf).div contDiffAt_fst hX))).add
       (hu.mul (AxisSourceRegularity.Z_smooth h (e + slowOrder h j) hf hL))
 
-theorem transportTerm_smoothOn {O : Set InnerPoint} (hO : IsOpen O)
-    (N : ℕ) (h e α : ℝ) (v u f : ℕ → InnerProfile)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (v j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (u j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0)
-    {i : TailIndex} (hi : i ∈ transportIndices N) :
-    ContDiffOn ℝ ∞ (transportTerm N h e α v u f i) O := by
-  intro w hw
-  apply ContDiffAt.contDiffWithinAt
-  cases i with
-  | none =>
-    exact (AxisSourceRegularity.Z2_smooth h (e + slowOrder h N)
-      ((hf N le_rfl).contDiffAt (hO.mem_nhds hw)) (hL w hw)).neg
-  | some ij =>
-    have hij := (mem_transportIndices_some N ij).mp hi
-    have hj : ij.2 ≤ N := by
-      have := (Finset.mem_product.mp hij.1).2
-      exact Nat.le_of_lt_succ (Finset.mem_range.mp this)
-    have hi' : ij.1 ≤ N := by
-      have := (Finset.mem_product.mp hij.1).1
-      exact Nat.le_of_lt_succ (Finset.mem_range.mp this)
-    exact transportKernel_smoothAt h e α v u f ij.1 ij.2
-      ((hv ij.1 hi').contDiffAt (hO.mem_nhds hw))
-      ((hu ij.1 hi').contDiffAt (hO.mem_nhds hw))
-      ((hf ij.2 hj).contDiffAt (hO.mem_nhds hw)) (hX w hw) (hL w hw)
 
 theorem transportCoefficient_smoothAt (h e α m : ℝ)
     (v u f source : ℕ → InnerProfile) (n : ℕ) {w : InnerPoint}
@@ -977,34 +891,6 @@ theorem pressurePower_lower {h : ℝ} (hh : 0 ≤ h) (N : ℕ)
     | some ij =>
       exact add_le_add_right (slowOrder_mono hh ((mem_transportIndices_some N ij).mp hi').2) _
 
-theorem pressureTerm_smoothOn {O : Set InnerPoint} (hO : IsOpen O)
-    (N : ℕ) (h C : ℝ) (f : SlowProfiles)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.flux j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.axial j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.phi j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0)
-    {i : PressureIndex} (hi : i ∈ pressureIndices N) :
-    ContDiffOn ℝ ∞ (pressureTerm N h C f i) O := by
-  cases i with
-  | inl i =>
-    have hi' : i ∈ transportIndices N := by simpa [pressureIndices] using hi
-    exact transportTerm_smoothOn hO N h 0 (-(1/2)) f.flux f.axial f.flux hv hu hv hX hL hi'
-  | inr i =>
-    have hi' : i ∈ transportIndices N := by simpa [pressureIndices] using hi
-    cases i with
-    | none =>
-      intro w hw
-      exact (transportCoefficient_smoothAt h 0 (-(1/2)) 0 f.flux f.axial f.flux (fun _ _ => 0) N
-        (fun j hj => (hv j hj).contDiffAt (hO.mem_nhds hw))
-        (fun j hj => (hu j hj).contDiffAt (hO.mem_nhds hw))
-        (fun j hj => (hv j hj).contDiffAt (hO.mem_nhds hw))
-        contDiffAt_const (hX w hw) (hL w hw)).contDiffWithinAt
-    | some ij =>
-      have hij := (mem_transportIndices_some N ij).mp hi'
-      have hiN : ij.1 ≤ N := Nat.le_of_lt_succ (Finset.mem_range.mp (Finset.mem_product.mp hij.1).1)
-      have hjN : ij.2 ≤ N := Nat.le_of_lt_succ (Finset.mem_range.mp (Finset.mem_product.mp hij.1).2)
-      exact (((contDiffOn_const.mul contDiffOn_fst).mul contDiffOn_const).neg).mul
-        ((hf ij.1 hiN).mul (hf ij.2 hjN))
 
 /-- Division by the physical radial energy is converted to a single q
 power and an ordinary smooth inner coefficient away from X=0. -/
@@ -1036,58 +922,6 @@ theorem common_tail_power_lower {h : ℝ} (hh : 0 ≤ h) (N : ℕ) :
   · ring
   constructor <;> linarith
 
-/-- Compact coefficient jets give a uniform bound for every fixed inner
-derivative of a finite sum of actual powers. The exponent is unchanged by
-inner differentiation. -/
-theorem finite_monomial_inner_jet_bound {ι : Type*} (s : Finset ι)
-    (b : ι → ℝ) (F : ι → InnerProfile) (bmin : ℝ)
-    {O K : Set InnerPoint} (hO : IsOpen O) (hK : IsCompact K) (hKO : K ⊆ O)
-    (hF : ∀ i ∈ s, ContDiffOn ℝ ∞ (F i) O) (hb : ∀ i ∈ s, bmin ≤ b i) (m : ℕ) :
-    ∃ C : ℝ, 0 < C ∧ ∀ q : ℝ, 0 < q → q ≤ 1 → ∀ w ∈ K,
-      ‖iteratedFDeriv ℝ m (fun y => ∑ i ∈ s, q ^ b i * F i y) w‖ ≤ C * q ^ bmin := by
-  classical
-  have hex : ∀ i : ι, ∃ D : ℝ, 1 ≤ D ∧
-      ∀ w ∈ K, i ∈ s → ‖iteratedFDeriv ℝ m (F i) w‖ ≤ D := by
-    intro i
-    by_cases hi : i ∈ s
-    · obtain ⟨D, hD, hDb⟩ := SlowBorelBase.compact_jet_bound hO (hF i hi) hK hKO m
-      exact ⟨D, hD, fun w hw _ => hDb w hw⟩
-    · exact ⟨1, le_rfl, fun _ _ hi' => (hi hi').elim⟩
-  choose D hD hDb using hex
-  have hDn : ∀ i, 0 ≤ D i := fun i => zero_le_one.trans (hD i)
-  let C := 1 + ∑ i ∈ s, D i
-  have hC : 0 < C := by
-    have := Finset.sum_nonneg (fun i (_ : i ∈ s) => hDn i)
-    dsimp [C]
-    linarith
-  refine ⟨C, hC, fun q hq hq1 w hw => ?_⟩
-  have hwO := hKO hw
-  have hmn : (m : WithTop ℕ∞) ≤ ∞ := ENat.natCast_le_of_coe_top_le_withTop le_rfl m
-  have hsum := iteratedFDerivWithin_fun_sum_apply (𝕜 := ℝ) (i := m) hO.uniqueDiffOn hwO
-    (fun i hi => ((hF i hi w hwO).const_smul (q ^ b i)).of_le hmn)
-  have hs : iteratedFDeriv ℝ m (fun y => ∑ i ∈ s, q ^ b i * F i y) w =
-      ∑ i ∈ s, iteratedFDeriv ℝ m (fun y => q ^ b i * F i y) w := by
-    simpa only [iteratedFDerivWithin_of_isOpen _ hO hwO, smul_eq_mul] using hsum
-  rw [hs]
-  calc
-    _ ≤ ∑ i ∈ s, ‖iteratedFDeriv ℝ m (fun y => q ^ b i * F i y) w‖ := norm_sum_le _ _
-    _ ≤ ∑ i ∈ s, D i * q ^ bmin := by
-      apply Finset.sum_le_sum
-      intro i hi
-      have he : iteratedFDeriv ℝ m (fun y => q ^ b i * F i y) w =
-          q ^ b i • iteratedFDeriv ℝ m (F i) w := by
-        simpa only [smul_eq_mul] using iteratedFDeriv_const_smul_apply' (a := q ^ b i)
-          (((hF i hi).contDiffAt (hO.mem_nhds hwO)).of_le hmn)
-      rw [he, norm_smul (q ^ b i : ℝ) (iteratedFDeriv ℝ m (F i) w),
-        Real.norm_eq_abs, abs_of_pos (Real.rpow_pos_of_pos hq _)]
-      calc
-        _ ≤ q ^ b i * D i := mul_le_mul_of_nonneg_left (hDb i w hw hi) (Real.rpow_nonneg hq.le _)
-        _ ≤ q ^ bmin * D i := mul_le_mul_of_nonneg_right
-          (Real.rpow_le_rpow_of_exponent_ge hq hq1 (hb i hi)) (hDn i)
-        _ = _ := mul_comm _ _
-    _ = (∑ i ∈ s, D i) * q ^ bmin := (Finset.sum_mul _ _ _).symm
-    _ ≤ C * q ^ bmin := mul_le_mul_of_nonneg_right (by dsimp [C]; linarith)
-      (Real.rpow_nonneg hq.le _)
 
 
 
@@ -1278,12 +1112,6 @@ theorem zDensity_eq_axialDensity {S : Set ℝ} (hS : IsOpen S)
     rw [hdz (n-j) (Nat.sub_le _ _), mul_zero]
   · exact (axialWeighted_eq_zDensity h f hn (hf w hw.2 hR) (hp' w hw.2 hR) (hL w.2 hw.2)).symm
 
-theorem primitive_stress_congr_slice (m : ℕ) {F G : InnerProfile} {R eta : ℝ}
-    (hFG : ∀ r : ℝ, F (r, eta) = G (r, eta)) :
-    SlowStressSupport.stress m F (R, eta) = SlowStressSupport.stress m G (R, eta) := by
-  have hp : ProfileHistories.primitive F (R, eta) = ProfileHistories.primitive G (R, eta) :=
-    intervalIntegral.integral_congr (fun r _ => hFG r)
-  simp only [SlowStressSupport.stress, hp]
 
 
 
@@ -1379,16 +1207,6 @@ theorem normalized_axial_viscosity {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
   simp only [pullback, hqp, hip, Real.one_rpow, one_mul]
 
 
-theorem hierarchy_profile_smoothAt {R : ℝ} {U : Set ℂ} {h C : ℝ}
-    {base : Fin 5 → InnerProfile} (A : SlowRecursion.LocalHierarchy R U h C base)
-    (hR : 0 < R) (hU : IsOpen U) (n : ℕ) (i : Fin 5)
-    {w : InnerPoint} (hX : w.1 ∈ Ioo (0 : ℝ) (R ^ 2)) (heta : (w.2 : ℂ) ∈ U) :
-    ContDiffAt ℝ ∞ (SlowRecursion.profile (A.coefficients n i)) w := by
-  have hsub : Ioo (0 : ℝ) (R ^ 2) ×ˢ PositiveAxisExistence.realParameterDomain U ⊆
-      Ico (0 : ℝ) (R ^ 2) ×ˢ PositiveAxisExistence.realParameterDomain U :=
-    fun _ hw => ⟨⟨hw.1.1.le, hw.1.2⟩, hw.2⟩
-  exact ((A.profiles_smooth hR hU n i).mono hsub).contDiffAt
-    ((isOpen_Ioo.prod (PositiveAxisExistence.realParameterDomain_isOpen hU)).mem_nhds ⟨hX, heta⟩)
 
 
 

@@ -158,16 +158,6 @@ theorem periodizeScalar_refine (g : Geometry) (f : Plane → ℝ) (d : ℕ) (Y :
       periodizeScalar g f (coverPower d Y) :=
   CopySolveCompatibility.native_copy_sum_refine g d f Y
 
-theorem periodizeScalar_transport (g : Geometry) (f : Plane → ℝ) (d : ℕ)
-    (shift rate : ℝ) (hrate : rate ≠ 0) (Y : Plane) :
-    periodizeScalar (CopySolveCompatibility.transportGeometry g d shift rate hrate)
-      (f ∘ CopySolveCompatibility.nativeTimeMap shift rate) Y =
-      periodizeScalar g f (coverPower d Y) := by
-  unfold periodizeScalar
-  apply tsum_congr
-  intro k
-  simp only [comp_apply, CopySolveCompatibility.transportGeometry,
-    CopySolveCompatibility.coordinates_refine, CopySolveCompatibility.coordinates_timeGeometry]
 
 /-- The clock itself is periodicized together with its cutoff. -/
 noncomputable def periodicClock (g : Geometry) (χ : Plane → ℝ) : Plane → ℝ :=
@@ -186,14 +176,6 @@ theorem periodicClock_refine (g : Geometry) (χ : Plane → ℝ) (d : ℕ) (Y : 
       periodicClock g χ (coverPower d Y) :=
   periodizeScalar_refine g _ d Y
 
-/-- Clock reparametrization transports the compact native scalar as a whole.
-The shift is multiplied by the cutoff as well. -/
-theorem periodicClock_transport (g : Geometry) (χ : Plane → ℝ) (d : ℕ)
-    (shift rate : ℝ) (hrate : rate ≠ 0) (Y : Plane) :
-    periodizeScalar (CopySolveCompatibility.transportGeometry g d shift rate hrate)
-      (fun z => χ (CopySolveCompatibility.nativeTimeMap shift rate z) * (shift + rate * z.2)) Y =
-      periodicClock g χ (coverPower d Y) :=
-  periodizeScalar_transport g (fun z => χ z * z.2) d shift rate hrate Y
 
 section Germs
 
@@ -226,21 +208,6 @@ theorem periodicClock_germ (g : Geometry) (w : ClockWindow)
 
 end Germs
 
-/-- The complete earlier-time Volterra path can be kept in the clock plateau.
-This uses the full sampled interval, including points where the wave cutoff
-itself vanishes. -/
-theorem periodicClock_path (g : Geometry) (w : ClockWindow)
-    (hinj : InjOn quotientPoint ((fun z => g.center + g.basis z) '' w.outer))
-    (k : Frequency) (Y : Plane) (t : ℝ)
-    (htransverse : (g.coordinates k Y).1 ∈ Icc w.lower.1 w.upper.1)
-    (ht : t ∈ Icc w.lower.2 w.upper.2) :
-    periodicClock g w.cutoff (g.path k Y t) = t := by
-  have hc : g.coordinates k (g.path k Y t) ∈ w.core := by
-    rw [g.coordinates_path]
-    exact ⟨htransverse, ht⟩
-  have he := (periodicClock_germ (P := ℝ) g w hinj k
-    (z := (0, g.path k Y t)) hc).self_of_nhds
-  simpa only [g.coordinates_path] using he
 
 /-! ## Actual phases and complete carriers -/
 
@@ -297,24 +264,7 @@ theorem angularLift_contDiff {Φ : P × Plane → ℝ} (hΦ : ContDiff ℝ ∞ �
     (contDiff_const.mul contDiff_fst.snd)
 
 
-omit [NormedSpace ℝ P] in
-theorem angularLift_germ {Φ Ψ : P × Plane → ℝ} (angular : ℝ)
-    {x : (P × ℝ) × Plane} (hΦ : Φ =ᶠ[𝓝 (x.1.1, x.2)] Ψ) :
-    angularLift Φ angular =ᶠ[𝓝 x] angularLift Ψ angular := by
-  have ht : Tendsto (fun z : (P × ℝ) × Plane => (z.1.1, z.2))
-      (𝓝 x) (𝓝 (x.1.1, x.2)) :=
-    (continuous_fst.fst.prodMk continuous_snd).continuousAt
-  filter_upwards [ht.eventually hΦ] with y hy
-  exact congrArg (fun t => t + angular * y.1.2) hy
 
-omit [NormedSpace ℝ P] in
-theorem fullPhase_germ (g : Geometry) (w : ClockWindow)
-    (hinj : InjOn quotientPoint ((fun z => g.center + g.basis z) '' w.outer))
-    (A B : P → ℝ) (angular : ℝ) (k : Frequency) {x : (P × ℝ) × Plane}
-    (hx : g.coordinates k x.2 ∈ w.core) :
-    angularLift (phase g w.cutoff A B) angular =ᶠ[𝓝 x]
-      angularLift (nativePhase g A B k) angular :=
-  angularLift_germ angular (phase_germ g w hinj A B k hx)
 
 
 omit [NormedAddCommGroup P] [NormedSpace ℝ P] in
@@ -332,31 +282,7 @@ theorem carrier_periodic (g : Geometry) (χ : Plane → ℝ) (A B : P → ℝ)
   simp only [HarmonicCalculus.carrier, fullPhase_periodic]
 
 
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] in
-theorem carrier_angularLift_eq_character (Φ : P × Plane → ℝ) {K : ℝ} (hK : K ≠ 0)
-    (m j : ℤ) (x : (P × ℝ) × Plane) :
-    HarmonicCalculus.carrier ((j : ℝ) * K) (angularLift Φ ((m : ℝ) / K)) x =
-      HarmonicFields.character j (K * Φ (x.1.1, x.2) + (m : ℝ) * x.1.2) := by
-  unfold HarmonicCalculus.carrier HarmonicCalculus.phaseFactor angularLift HarmonicFields.character
-  congr 1
-  push_cast
-  have hKc : (K : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr hK
-  field_simp [hKc]
 
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] in
-/-- The integer angular character is retained by the actual global carrier. -/
-theorem carrier_angular_periodic (Φ : P × Plane → ℝ) {K : ℝ} (hK : K ≠ 0)
-    (m j : ℤ) (p : P) (Y : Plane) (θ : ℝ) :
-    HarmonicCalculus.carrier ((j : ℝ) * K) (angularLift Φ ((m : ℝ) / K))
-        ((p, θ + 2 * Real.pi), Y) =
-      HarmonicCalculus.carrier ((j : ℝ) * K) (angularLift Φ ((m : ℝ) / K)) ((p, θ), Y) := by
-  rw [carrier_angularLift_eq_character Φ hK, carrier_angularLift_eq_character Φ hK]
-  have he : K * Φ (p, Y) + (m : ℝ) * (θ + 2 * Real.pi) =
-      (K * Φ (p, Y) + (m : ℝ) * θ) + (m : ℝ) * HarmonicFields.period := by
-    unfold HarmonicFields.period
-    ring
-  rw [he, HarmonicFields.character_phase_add, HarmonicFields.character_int_mul,
-    HarmonicFields.character_period, mul_one]
 
 end Phases
 
@@ -377,39 +303,10 @@ noncomputable def profilePhase (g : Geometry) (χ : Plane → ℝ) (ε p pz x0 :
   phase g χ (profileIntercept ε pz x0) (profileRate p pz F G)
 
 
-theorem profilePhase_germ (g : Geometry) (w : ClockWindow)
-    (hinj : InjOn quotientPoint ((fun z => g.center + g.basis z) '' w.outer))
-    (ε p pz x0 : ℝ) (F G : Parameter → ℝ) (k : Frequency)
-    {x : (Parameter × ℝ) × Plane} (hx : g.coordinates k x.2 ∈ w.core) :
-    angularLift (profilePhase g w.cutoff ε p pz x0 F G) p =ᶠ[𝓝 x]
-      (fun y => PhaseCalculus.phase ε p pz x0 (fun s => F (s.1, (s.2.2, s.2.1)))
-        (fun s => G (s.1, (s.2.2, s.2.1)))
-        (slowSwap y.1.1, (y.1.2, (g.coordinates k y.2).2))) := by
-  have he := fullPhase_germ g w hinj (profileIntercept ε pz x0) (profileRate p pz F G) p k hx
-  filter_upwards [he] with y hy
-  unfold profilePhase
-  rw [hy]
-  unfold angularLift nativePhase profileIntercept profileRate slowSwap PhaseCalculus.phase
-  ring
 
 
 /-! ## One reference phase under actual clock and common-cover changes -/
 
-theorem periodicClock_scale_transport (g : Geometry) (χ : Plane → ℝ) (d : ℕ)
-    (rate : ℝ) (hrate : rate ≠ 0) (Y : Plane) :
-    rate * periodicClock (CopySolveCompatibility.transportGeometry g d 0 rate hrate)
-      (χ ∘ CopySolveCompatibility.nativeTimeMap 0 rate) Y =
-      periodicClock g χ (coverPower d Y) := by
-  calc
-    _ = periodizeScalar (CopySolveCompatibility.transportGeometry g d 0 rate hrate)
-        (fun z => χ (CopySolveCompatibility.nativeTimeMap 0 rate z) * (0 + rate * z.2)) Y := by
-      unfold periodicClock periodizeScalar
-      rw [← tsum_mul_left]
-      apply tsum_congr
-      intro k
-      simp only [comp_apply, zero_add]
-      ring
-    _ = _ := periodicClock_transport g χ d 0 rate hrate Y
 
 section Transport
 
@@ -428,69 +325,10 @@ theorem transportPhase_weighted (Φ : P × Plane → ℝ) (φ : Q → P) (gap : 
   unfold transportPhase
   field_simp
 
-theorem transportPhase_contDiff {Φ : P × Plane → ℝ} {φ : Q → P}
-    (hΦ : ContDiff ℝ ∞ Φ) (hφ : ContDiff ℝ ∞ φ) (gap : ℕ) (K Kr : ℝ) :
-    ContDiff ℝ ∞ (transportPhase Φ φ gap K Kr) :=
-  contDiff_const.mul (hΦ.comp ((hφ.comp contDiff_fst).prodMk
-    ((coverPower gap).contDiff.comp contDiff_snd)))
-
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] [NormedAddCommGroup Q] [NormedSpace ℝ Q] in
-theorem transportPhase_periodic {Φ : P × Plane → ℝ}
-    (hΦ : ∀ p Y k, Φ (p, Y + latticePoint k) = Φ (p, Y))
-    (φ : Q → P) (gap : ℕ) (K Kr : ℝ) (p : Q) (Y : Plane) (k : Frequency) :
-    transportPhase Φ φ gap K Kr (p, Y + latticePoint k) =
-      transportPhase Φ φ gap K Kr (p, Y) := by
-  simp only [transportPhase, map_add, coverPower_lattice, hΦ]
 
 
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] [NormedAddCommGroup Q] [NormedSpace ℝ Q] in
-/-- The actual physical clock rate and its rescaled cutoff give the same
-global target phase as the weighted reference pullback. -/
-theorem transportPhase_eq_scaled_clock (g : Geometry) (χ : Plane → ℝ) (A B : P → ℝ)
-    (φ : Q → P) (gap : ℕ) (K Kr rate : ℝ) (hrate : rate ≠ 0) :
-    transportPhase (phase g χ A B) φ gap K Kr =
-      phase (CopySolveCompatibility.transportGeometry g gap 0 rate hrate)
-        (χ ∘ CopySolveCompatibility.nativeTimeMap 0 rate)
-        (fun p => (Kr / K) * A (φ p)) (fun p => (Kr / K) * rate * B (φ p)) := by
-  funext z
-  simp only [transportPhase, phase]
-  rw [← periodicClock_scale_transport g χ gap rate hrate z.2]
-  ring
 
-omit [NormedSpace ℝ P] [NormedSpace ℝ Q] in
-/-- The full native phase, with its original anchor, agrees as a germ on
-every transformed cell. Only continuity of the parameter change is needed
-to transport the germ. -/
-theorem transportPhase_native_germ (g : Geometry) (w : ClockWindow)
-    (hinj : InjOn quotientPoint ((fun z => g.center + g.basis z) '' w.outer))
-    (A B : P → ℝ) (φ : Q → P) (gap : ℕ) (K Kr shift rate : ℝ) (hrate : rate ≠ 0)
-    (copy : Frequency) {z : Q × Plane} (hφ : ContinuousAt φ z.1)
-    (hz : CopySolveCompatibility.nativeTimeMap shift rate
-      ((CopySolveCompatibility.transportGeometry g gap shift rate hrate).coordinates copy z.2) ∈ w.core) :
-    transportPhase (phase g w.cutoff A B) φ gap K Kr =ᶠ[𝓝 z]
-      nativePhase (CopySolveCompatibility.transportGeometry g gap shift rate hrate)
-        (fun p => (Kr / K) * (A (φ p) - shift * B (φ p)))
-        (fun p => (Kr / K) * rate * B (φ p)) copy := by
-  have hcoord (Y : Plane) :
-      CopySolveCompatibility.nativeTimeMap shift rate
-        ((CopySolveCompatibility.transportGeometry g gap shift rate hrate).coordinates copy Y) =
-          g.coordinates copy (coverPower gap Y) := by
-    simp only [CopySolveCompatibility.transportGeometry,
-      CopySolveCompatibility.coordinates_refine, CopySolveCompatibility.coordinates_timeGeometry]
-  rw [hcoord] at hz
-  have he := phase_germ g w hinj A B copy (z := (φ z.1, coverPower gap z.2)) hz
-  have ht : Tendsto (fun y : Q × Plane => (φ y.1, coverPower gap y.2))
-      (𝓝 z) (𝓝 (φ z.1, coverPower gap z.2)) :=
-    (hφ.comp continuousAt_fst).prodMk
-      ((coverPower gap).continuous.continuousAt.comp continuousAt_snd)
-  filter_upwards [ht.eventually he] with y hy
-  change (Kr / K) * phase g w.cutoff A B (φ y.1, coverPower gap y.2) = _
-  rw [hy]
-  have hc := congrArg Prod.snd (hcoord y.2)
-  simp only [CopySolveCompatibility.nativeTimeMap] at hc
-  simp only [nativePhase]
-  rw [← hc]
-  ring
+
 
 
 
@@ -566,17 +404,6 @@ theorem bandPhase_eq_actualCarrier (D : ParticularWaveAssembly.AssemblyData Para
 
 /-! ## Native support geometry and direct carrier adapters -/
 
-theorem transportGeometry_affine (g : Geometry) (gap : ℕ) (shift rate : ℝ)
-    (hrate : rate ≠ 0) (z : Plane) :
-    (CopySolveCompatibility.transportGeometry g gap shift rate hrate).center +
-        (CopySolveCompatibility.transportGeometry g gap shift rate hrate).basis z =
-      g.center + g.basis (CopySolveCompatibility.nativeTimeMap shift rate z) := by
-  simp only [CopySolveCompatibility.transportGeometry, CopySolveCompatibility.refineGeometry,
-    CopySolveCompatibility.timeGeometry, CommonCoverClass.scaledBasis_apply,
-    CopySolveCompatibility.nativeTimeMap]
-  rw [show (z.1, shift + rate * z.2) = (0, shift) + (z.1, rate * z.2) by ext <;> simp]
-  rw [map_add]
-  abel
 
 
 section AdditionalTransport
@@ -593,18 +420,7 @@ section CarrierAdapters
 variable {P : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
 
 
-omit [NormedSpace ℝ P] in
-theorem carrier_germ {Φ Ψ : P → ℝ} {x : P} (hΦ : Φ =ᶠ[𝓝 x] Ψ) (K : ℝ) :
-    HarmonicCalculus.carrier K Φ =ᶠ[𝓝 x] HarmonicCalculus.carrier K Ψ := by
-  filter_upwards [hΦ] with y hy
-  simp only [HarmonicCalculus.carrier, hy]
 
-omit [NormedSpace ℝ P] in
-theorem fullMode_germ {Φ Ψ : P → ℝ} {x : P} (hΦ : Φ =ᶠ[𝓝 x] Ψ)
-    (K : ℝ) (a : P → ℂ) :
-    HarmonicCalculus.mode K Φ a =ᶠ[𝓝 x] HarmonicCalculus.mode K Ψ a := by
-  filter_upwards [carrier_germ hΦ K] with y hy
-  exact congrArg (fun z => a y * z) hy
 
 
 

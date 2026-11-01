@@ -313,12 +313,6 @@ theorem anchoredSolve_initial (k : Frequency) (p : P × Plane) :
     d.anchoredSolve g hab k p a = 0 := by
   simp [anchoredSolve, ParametricODE.solutionExtension]
 
-omit [NormedAddCommGroup P] [NormedSpace ℝ P] in
-theorem copySolve_at_entry (k : Frequency) (p : P) (xi : ℝ) :
-    d.copySolve g hab k (p, g.point k (xi, a)) = 0 := by
-  unfold copySolve
-  rw [g.coordinates_point]
-  exact d.anchoredSolve_initial g hab k _
 
 end LinearData
 
@@ -365,15 +359,7 @@ theorem copySolve_zero_of_source_zero (k : Frequency) (p : P) (Y : Plane)
     (hf : ∀ s ∈ Icc a b, d.source (p, g.path k Y s) = 0) :
     d.copySolve g hab k (p, Y) = 0 := d.anchoredSolve_zero_of_source_zero g hab k p Y hf _
 
-theorem copySolve_preserves_slow_support {U : Set P}
-    (hf : ∀ p ∉ U, ∀ Y, d.source (p, Y) = 0) (k : Frequency) {p : P} (hp : p ∉ U)
-    (Y : Plane) : d.copySolve g hab k (p, Y) = 0 :=
-  d.copySolve_zero_of_source_zero g hab k p Y (fun _ _ => hf p hp _)
 
-theorem copySolve_preserves_transverse_support (k : Frequency) {S : Set ℝ} (p : P)
-    (hf : ∀ xi ∉ S, ∀ eta ∈ Icc a b, d.source (p, g.point k (xi, eta)) = 0)
-    (Y : Plane) (hY : (g.coordinates k Y).1 ∉ S) : d.copySolve g hab k (p, Y) = 0 :=
-  d.copySolve_zero_of_source_zero g hab k p Y (fun s hs => hf _ hY s hs)
 
 end LinearData
 
@@ -460,15 +446,6 @@ theorem anchoredSolve_hasDerivAt (k : Frequency)
     SmoothPathFamily.pathFamily_apply _ _ hAc, SmoothPathFamily.pathFamily_apply _ _ hfc]
     using hd
 
-theorem copySolve_alongPath_hasDerivAt (k : Frequency)
-    (hA : ContinuousOn d.coefficient (U ×ˢ univ))
-    (hB : ContinuousOn d.forcingMap (U ×ˢ univ))
-    (hf : ContinuousOn d.source (U ×ˢ univ))
-    {p : P} (hp : p ∈ U) (Y : Plane) (s : Icc a b) :
-    HasDerivAt (fun t => d.copySolve g hab k (p, g.path k Y t))
-      (d.coefficientAlong g k ((p, Y), s) (d.copySolve g hab k (p, g.path k Y s)) +
-        d.forcingAlong g k ((p, Y), s)) s := by
-  simpa only [copySolve_path] using d.anchoredSolve_hasDerivAt g hab k hA hB hf hp Y s
 
 theorem anchoredSolve_unique (k : Frequency)
     (hA : ContinuousOn d.coefficient (U ×ˢ univ))
@@ -620,11 +597,6 @@ noncomputable def torusDescent {W : Type} (f : Plane → W) (hf : LatticePeriodi
     (z : Torus) : W := (firstDescent_periodic f hf z.1).lift z.2
 
 
-theorem torusDescent_continuous {W : Type} [TopologicalSpace W] {f : Plane → W}
-    (hf : LatticePeriodic f) (hc : Continuous f) : Continuous (torusDescent f hf) := by
-  have hq : IsOpenQuotientMap (fun x : ℝ => (x : UnitAddCircle)) :=
-    QuotientAddGroup.isOpenQuotientMap_mk
-  exact (hq.prodMap hq).isQuotientMap.continuous_iff.mpr hc
 
 namespace LinearData
 
@@ -639,9 +611,6 @@ noncomputable def commonOnTorus (κ : Plane → ℝ) (p : P) (hp : PeriodicAt d.
     Torus → E := torusDescent (fun Y => d.commonSolve g hab κ (p, Y))
       (d.commonSolve_periodic g hab κ p hp)
 
-theorem commonOnTorus_coe (κ : Plane → ℝ) (p : P) (hp : PeriodicAt d.source p) (Y : Plane) :
-    d.commonOnTorus g hab κ p hp (TorusAverages.quotientPoint Y) =
-      d.commonSolve g hab κ (p, Y) := rfl
 
 /-! Joint regularity is derived from the actual ODE construction. -/
 
@@ -921,50 +890,7 @@ noncomputable def linearData : LinearData P H H where
   forcingMap z := negativeTangentProjection (t.normal z)
   source := t.source
 
-/-- The concrete copy solve satisfies equation (27) with the source evaluated
-at the actual lifted earlier point, including the normal-motion term. -/
-theorem anchoredSolve_projected_equation {U : Set P} (k : Frequency)
-    (hA : ContinuousOn t.linearData.coefficient (U ×ˢ univ))
-    (hB : ContinuousOn t.linearData.forcingMap (U ×ˢ univ))
-    (hf : ContinuousOn t.source (U ×ˢ univ)) {p : P} (hp : p ∈ U)
-    (Y : Plane) (s : Icc a b) :
-    let z := (p, ((g.coordinates k Y).1, (s : ℝ)))
-    HasDerivAt (t.linearData.anchoredSolve g hab k (p, Y))
-      (TangentProjection.projectedRhs (t.normal z) (t.normalDot z)
-        (t.linearData.anchoredSolve g hab k (p, Y) s)
-        (t.action z (t.linearData.anchoredSolve g hab k (p, Y) s))
-        (t.source (p, g.path k Y s)) (t.damping z)) s := by
-  have hd := t.linearData.anchoredSolve_hasDerivAt g hab k hA hB hf hp Y s
-  simpa only [LinearData.coefficientAlong, LinearData.forcingAlong, linearData,
-    negativeTangentProjection_apply, ← sub_eq_add_neg, TangentODE.projectedOperator_apply]
-    using hd
 
-/-- Tangency of this constructed solution follows from the moving-normal
-defect equation and zero initial data. -/
-theorem copySolve_tangent {U : Set P} (k : Frequency)
-    (hA : ContinuousOn t.linearData.coefficient (U ×ˢ univ))
-    (hB : ContinuousOn t.linearData.forcingMap (U ×ˢ univ))
-    (hf : ContinuousOn t.source (U ×ˢ univ))
-    (hδ : ContinuousOn t.damping (U ×ˢ univ)) {p : P} (hp : p ∈ U) (Y : Plane)
-    (hn0 : ∀ s ∈ Icc a b, t.normal (p, ((g.coordinates k Y).1, s)) ≠ 0)
-    (hn : ∀ s ∈ Icc a b,
-      HasDerivAt (fun v => t.normal (p, ((g.coordinates k Y).1, v)))
-        (t.normalDot (p, ((g.coordinates k Y).1, s))) s)
-    (heta : (g.coordinates k Y).2 ∈ Icc a b) :
-    ⟪t.normal (p, g.coordinates k Y), t.linearData.copySolve g hab k (p, Y)⟫_ℝ = 0 := by
-  have hδ' : ContinuousOn (fun s => t.damping (p, ((g.coordinates k Y).1, s))) (Icc a b) :=
-    hδ.comp (continuous_const.prodMk (continuous_const.prodMk continuous_id)).continuousOn
-      (fun _ _ => ⟨hp, mem_univ _⟩)
-  have hu := TangentODE.projected_tangency_preserved hab
-    (fun s => t.normal (p, ((g.coordinates k Y).1, s)))
-    (fun s => t.normalDot (p, ((g.coordinates k Y).1, s)))
-    (fun s => t.source (p, g.path k Y s))
-    (t.linearData.anchoredSolve g hab k (p, Y))
-    (fun s => t.action (p, ((g.coordinates k Y).1, s)))
-    (fun s => t.damping (p, ((g.coordinates k Y).1, s))) hδ' hn0 hn
-    (fun s hs => t.anchoredSolve_projected_equation g hab k hA hB hf hp Y ⟨s, hs⟩)
-    (by simp only [t.linearData.anchoredSolve_initial g hab, inner_zero_right])
-  exact hu _ heta
 
 end TangentData
 

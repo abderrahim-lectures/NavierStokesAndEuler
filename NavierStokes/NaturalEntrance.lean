@@ -317,21 +317,6 @@ def referenceRemainder {h j σ : ℝ} {P0 : ℝ → ℝ} (v : CoefficientFamily 
     (p : entranceSet) : ℝ :=
   sourceRemainder h j σ p 0 (sourceJets v.epsilon_pos (referencePair v) p)
 
-theorem reference_phi_value {h j σ : ℝ} {P0 : ℝ → ℝ} (v : CoefficientFamily h j σ P0)
-    (p : entranceSet) :
-    sourceJets v.epsilon_pos (referencePair v) p 0 =
-      AxisSeries.profile (NaturalAxisData.chi h j σ p.val.2) p.val.1 := by
-  have hη : p.val.2 ∈ window.interval :=
-    ⟨(original_interval_interior p.property.2).1.le, (original_interval_interior p.property.2).2.le⟩
-  change AxisEvaluation.mixedSeries window v.epsilon (referencePair v).1 0 0 p.val = _
-  rw [AxisEvaluation.mixedSeries_zero]
-  change AxisEvaluation.profile window v.epsilon
-    (referenceCoefficients window v.epsilon_pos (v.elements .chi) v.axisData).1
-      (p.val.1, p.val.2) = _
-  rw [AxisReference.referenceCoefficients_profile_eq_series window v.epsilon_pos
-    (v.elements .chi) v.axisData v.compatible hη]
-  rw [v.value .chi hη]
-  rfl
 
 
 theorem reference_phiY_zero {h j σ : ℝ} {P0 : ℝ → ℝ} (v : CoefficientFamily h j σ P0)
@@ -1149,22 +1134,6 @@ theorem exists_entranceProfile {h j σ δ : ℝ} {P0 : ℝ → ℝ}
   exact F.cone_at_four hsmall hδ hΛone hΛN hC hcut hη
     (ha (4 / Λ, η) hpoint (by positivity))
 
-/-- Ideal-prefix pressure data produce the actual initial stress-free
-cone test in the prescribed order: cutoff, common analytic radius, scale,
-and only then normalization. -/
-theorem ideal_prefix_entranceProfile {h j : ℝ}
-    (hsmall : NaturalAxisRange.Parameters h j)
-    {g a : ℝ → ℝ} {cap B : ℝ}
-    (hp : PressureDatum.Admissible g a cap) (hB : 2 ≤ B)
-    (hg : ∀ y ≤ 0, g y = B ^ 2 * Real.exp ((1 / 5 : ℝ) * y))
-    (ha : ∀ y ≤ 0, a y = 1) :
-    ∃ δ σ : ℝ, 0 < δ ∧ 0 < σ ∧
-      ∃ d : AnalyticInputs h j σ (PressureDatum.pressure g a),
-        ∃ M : ℝ, 0 < M ∧ ∀ Λ : ℝ, M ≤ Λ → ∀ C : ℝ,
-          entranceNormalization d Λ δ ≤ C → Nonempty (EntranceProfile d Λ C) := by
-  obtain ⟨δ, σ, hδ, hσ, hcut, ⟨d⟩⟩ := ideal_prefix_analytic_inputs hsmall hp hB hg ha
-  exact ⟨δ, σ, hδ, hσ, d,
-    exists_entranceProfile d hsmall hσ (PressureDatum.pressure_contDiff hp) hδ hcut⟩
 
 private theorem first_two_derivatives_continuous {g : ℝ → ℝ} {x : ℝ}
     (hg : ContDiffAt ℝ 2 g x) :

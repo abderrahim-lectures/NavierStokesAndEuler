@@ -97,39 +97,6 @@ theorem gaussian_mask_sum {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     _ = l.mask n Y • (l.gaussian n Y • a) := (l.mask_summable n Y).tsum_smul_const _
     _ = _ := smul_comm _ _ _
 
-/-- Local finiteness of the actual native cutoffs permits arbitrary
-smooth slow factors; only their germs on the native support are needed. -/
-theorem maskedSum_contDiffOn {D E : Type*} [NormedAddCommGroup D] [NormedSpace ℝ D]
-    [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (n : ℕ) (projection : D → Plane) (hprojection : ContDiff ℝ ∞ projection)
-    {O : Set D} (hO : IsOpen O) (f : Frequency → D → E)
-    (hf : ∀ k x, x ∈ O → (l.geometry n).coordinates k (projection x) ∈ tsupport (l.cutoff n) →
-      ContDiffAt ℝ ∞ (f k) x) :
-    ContDiffOn ℝ ∞ (fun x => ∑' k, l.nativeMask n k (projection x) • f k x) O := by
-  classical
-  have hc (k : Frequency) : ContDiff ℝ ∞ (fun x => (l.geometry n).coordinates k (projection x)) :=
-    ((l.geometry n).coordinates_contDiff k).comp hprojection
-  have ht (k : Frequency) (x : D) (hx : x ∈ O) :
-      ContDiffAt ℝ ∞ (fun y => l.nativeMask n k (projection y) • f k y) x := by
-    by_cases hs : (l.geometry n).coordinates k (projection x) ∈ tsupport (l.cutoff n)
-    · exact (((l.cutoff_smooth n).comp (hc k)).contDiffAt).smul (hf k x hx hs)
-    · have hz := (notMem_tsupport_iff_eventuallyEq.mp hs).comp_tendsto (hc k).continuous.continuousAt
-      apply (contDiffAt_const (c := (0 : E))).congr_of_eventuallyEq
-      filter_upwards [hz] with y hy
-      change l.cutoff n ((l.geometry n).coordinates k (projection y)) = 0 at hy
-      simp only [nativeMask, hy, zero_smul]
-  apply hO.contDiffOn_iff.mpr
-  intro x hx
-  obtain ⟨J, hJ⟩ := (l.geometry n).finite_copy_cutoffs (l.cutoff_compact n) (‖projection x‖ + 1)
-  have he : (fun y => ∑' k, l.nativeMask n k (projection y) • f k y) =ᶠ[𝓝 x]
-      fun y => ∑ k ∈ J, l.nativeMask n k (projection y) • f k y := by
-    filter_upwards [(isOpen_lt hprojection.continuous.norm continuous_const).mem_nhds
-      (show ‖projection x‖ < ‖projection x‖ + 1 by linarith)] with y hy
-    apply tsum_eq_sum
-    intro k hk
-    change l.cutoff n ((l.geometry n).coordinates k (projection y)) • f k y = 0
-    rw [hJ (projection y) hy.le k hk, zero_smul]
-  exact (ContDiffAt.sum (fun k _ => ht k x hx)).congr_of_eventuallyEq he
 
 end Layout
 
@@ -428,15 +395,6 @@ theorem actual_commonCorrected_eq (D : V.StateData) (j : Fin 2) :
       (views B l V).exactCoefficients (stateData B l D).request j :=
   commonCorrected_eq B l V D.request j
 
-/-- This equality holds before restriction to a physical graph, at every
-point of the full slow/angle/fast strip. -/
-theorem actual_amplitude_transport (D : V.StateData) (j : Fin 2)
-    (n : ℕ) (x : Cylinder) (hx : x ∈ V.strip.domain) :
-    (actualCopyData B l V D j).common.amplitude n x =
-      V.velocity n • (periodizedPrimary B l).raw D.referenceRequest j reference (V.map n x) := by
-  rw [actualCopyData, common_amplitude]
-  exact (views B l V).amplitude_transport D.request D.referenceRequest j n x
-    (D.request_transport n x hx)
 
 
 
@@ -601,34 +559,7 @@ theorem scalar_smooth (j : Fin 2) :
     exact mul_ne_zero (by norm_num) ((R.cone x hx).amplitudes_pos j).ne'
   exact (contDiffOn_const.mul (hi.div (contDiffOn_const.mul ha) hd)).mul R.mask
 
-theorem unit_smoothAt (j : Fin 2) (k : Frequency) {x : Cylinder} (hx : x ∈ B.strip.domain)
-    (hs : (l.geometry reference).coordinates k x.1.2.2 ∈ tsupport (l.cutoff reference)) :
-    ContDiffAt ℝ ∞ (referenceNativeUnit B l j reference k) x := by
-  have hc : ContDiff ℝ ∞ (fun y : Cylinder => l.nativeClock reference k y.1.2.2) :=
-    (((l.geometry reference).coordinates_contDiff k).comp contDiff_fst.snd.snd).snd.div_const _
-  have hu : ContDiffAt ℝ ∞ (PrimaryPulseBounds.normalizedPulse ((B.pulse j).frame reference)
-      ((B.pulse j).lam reference) ((B.pulse j).u reference) ((B.pulse j).L reference))
-      ((B.coordinate reference x).1, l.nativeClock reference k x.1.2.2) :=
-    ((B.pulse j).pulse_jets.smooth reference).contDiffAt
-    (((U.isOpen reference).prod isOpen_Ioo).mem_nhds
-      ⟨R.coordinate_mem x hx, R.native_time k x hx hs⟩)
-  exact hu.comp x
-    ((R.coordinate.contDiffAt (B.strip.isOpen_domain.mem_nhds hx)).prodMk hc.contDiffAt)
 
-/-- Smoothness is derived from the actual native sum, including its
-zero germs between support cells. -/
-theorem raw_smooth (j : Fin 2) :
-    ContDiffOn ℝ ∞ ((periodizedPrimary B l).raw request j reference) B.strip.domain := by
-  rw [reference_raw_eq_sum]
-  apply l.maskedSum_contDiffOn reference (fun x : Cylinder => x.1.2.2) contDiff_fst.snd.snd
-    B.strip.isOpen_domain
-  intro k x hx hs
-  have hg : ContDiff ℝ ∞ (fun y : Cylinder => l.nativeGaussian reference k y.1.2.2) :=
-    GaussianTailFlat.profile_contDiff.comp
-      ((((l.geometry reference).coordinates_contDiff k).comp contDiff_fst.snd.snd).snd.div_const _)
-  exact hg.contDiffAt.smul
-    ((R.scalar_smooth j).contDiffAt (B.strip.isOpen_domain.mem_nhds hx) |>.smul
-      (CurlClassBounds.complexify.contDiff.contDiffAt.comp x (R.unit_smoothAt j k hx hs)))
 
 theorem raw_tangent {x : Cylinder} (hx : x ∈ B.strip.domain) :
     normalDot (B.base.normal B.strip B.directions reference x)

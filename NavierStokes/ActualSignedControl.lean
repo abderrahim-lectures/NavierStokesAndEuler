@@ -43,33 +43,6 @@ noncomputable def phaseAction {U : Domain ι PhaseCalculus.Slow}
 
 
 
-/-- The three geometric jet estimates are obtained from the actual phase
-construction, rather than being supplied for the pressure output. -/
-theorem phase_geometry_jets {V : JetDomain ι D} {U : Domain ι PhaseCalculus.Slow}
-    (F : PhaseConstruction U) (χ : ι → D → PhaseCalculus.Slow × ℝ)
-    (hscale : ∀ i, U.scale i = V.scale i) (hχ : PolynomialJets V.toDomain χ)
-    (hmap : ∀ i x, x ∈ V.carrier i → χ i x ∈ U.carrier i ×ˢ Ioo (0 : ℝ) 1) :
-    PolynomialJets V.toDomain (phaseNormal F χ) ∧
-    PolynomialJets V.toDomain (phaseMotion F χ) ∧
-    PolynomialJets V.toDomain (phaseAction F χ) ∧
-    (∀ i x, x ∈ V.carrier i → F.b ≤ ‖phaseNormal F χ i x‖) ∧
-    (∀ i x, x ∈ V.carrier i → ‖phaseNormal F χ i x‖ ≤ F.M ^ 2 + 3 * F.M) := by
-  have hp := PrimaryCopyBounds.phasePoint_jets F χ hscale hχ
-  have hm := PrimaryCopyBounds.phasePoint_maps F χ hmap
-  have hb := F.phase.polynomial_jets U F.V F.openV F.baseF F.baseG
-    F.r_pos F.one_le_M F.constants F.epsilon_ne F.radius F.slot
-  have hN := ((EnvelopeJets.of_polynomial hb.1).comp hp hscale hm).to_polynomial
-    (fun _ _ _ => le_rfl)
-  have hNd := ((EnvelopeJets.of_polynomial hb.2.1).comp hp hscale hm).to_polynomial
-    (fun _ _ _ => le_rfl)
-  have hshear := ((EnvelopeJets.of_polynomial hb.2.2).comp hp hscale hm).to_polynomial
-    (fun _ _ _ => le_rfl)
-  have hF := ((EnvelopeJets.of_polynomial F.baseF).comp
-    (hχ.clm (ContinuousLinearMap.fst ℝ PhaseCalculus.Slow ℝ)) hscale
-    (fun i x hx => (hmap i x hx).1)).to_polynomial (fun _ _ _ => le_rfl)
-  exact ⟨hN, hNd, (hF.pair hshear).clm PrimaryCopyBridge.baseOperatorFamily,
-    fun i x hx => F.normal_range.1 i _ (hm i x hx),
-    fun i x hx => F.normal_range.2 i _ (hm i x hx)⟩
 
 /-- A proved reference certificate. The prepared-family constructor below
 derives its target and mask estimates and all three scalar margins. -/
@@ -109,16 +82,7 @@ theorem matrix_jets (j k : Fin 2) :
   pulseMatrix_jets F pref χ h.scale h.coordinate_jets
     (fun i x hx => (h.coordinate_mem i x hx).1) h.prefactor_jets j k
 
-theorem unit_jets (j : Fin 2) : NativeJets V (pulseEnvelope F χ j) (pulseVector F χ j) :=
-  pulseVector_jets F χ h.scale h.coordinate_jets h.coordinate_mem j
 
-theorem geometry_jets (j : Fin 2) :
-    PolynomialJets V.toDomain (phaseNormal (F j) χ) ∧
-    PolynomialJets V.toDomain (phaseMotion (F j) χ) ∧
-    PolynomialJets V.toDomain (phaseAction (F j) χ) ∧
-    (∀ i x, x ∈ V.carrier i → (F j).b ≤ ‖phaseNormal (F j) χ i x‖) ∧
-    (∀ i x, x ∈ V.carrier i → ‖phaseNormal (F j) χ i x‖ ≤ (F j).M ^ 2 + 3 * (F j).M) :=
-  phase_geometry_jets (F j) χ h.scale h.coordinate_jets h.coordinate_mem
 
 theorem cutoff_jets : PolynomialJets V.toDomain
     (fun i x => GaussianTailFlat.profile (χ i x).2) := by
@@ -309,20 +273,6 @@ noncomputable def referenceBounds (hcone : LeadingStressWeights.FullTrueCone v�
 
 end PreparedChart
 
-/-- A supplied prepared family is only restricted to a later tail.
-Every surviving phase and representative is the same one used by the
-primary construction. No determinant or final control record is assumed. -/
-theorem exists_referenceBounds (a : PrimaryGeometryAssembly.Prepared H₀ v₀ upper B r0 N0)
-    (hcone : LeadingStressWeights.FullTrueCone v₀) (hr0 : 0 < r0)
-    (vr vt : TorusInverse.Plane) (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) :
-    ∃ N : ℕ, ∃ hN : a.N ≤ N,
-      ∀ c : PreparedChart H₀ v₀ (a.restrict N hN) D,
-        Nonempty (ReferenceBounds c.native (PrimaryGeometryAssembly.domain W₀ N)
-          (PrimaryGeometryAssembly.construction H₀ v₀ (a.restrict N hN) hr0)
-          (preparedPrefactor r0 vr vt) c.coordinate c.target c.mask c.weight) := by
-  obtain ⟨N, hN, dg, eb, il, hdg, heb, hil, hz⟩ :=
-    PrimaryTargetBounds.exists_restricted_actual_bounds H₀ v₀ a hcone vr vt hdet hr0
-  exact ⟨N, hN, fun c => ⟨c.referenceBounds hcone hr0 vr vt dg eb il hdg heb hil hz⟩⟩
 
 end Prepared
 
@@ -343,11 +293,6 @@ variable (a b : PositiveScale Λ)
 
 theorem value_pos (l : Λ) (n : ℕ) : 0 < a.value l n := a.lower_pos.trans_le (a.bounds l n).1
 
-theorem bandBound (s : StripData X) : UniformPrimaryWeights.UniformBandBound s 0 a.value := by
-  refine ⟨a.upper, zero_le_one.trans a.upper_one, 0, ?_⟩
-  intro l n
-  simpa only [Real.norm_eq_abs, abs_of_pos (a.value_pos l n), Real.rpow_zero,
-    pow_zero, mul_one] using (a.bounds l n).2
 
 theorem square_bandBound (s : StripData X) :
     UniformPrimaryWeights.UniformBandBound s 0 (fun l n => a.value l n ^ 2) := by
@@ -504,45 +449,8 @@ noncomputable def nativeCovarianceAt (hzeta : ∀ x ∈ s.domain, 0 < s.zeta x) 
 
 include h
 
-omit [Countable Λ] [Nonempty Λ] in
-theorem copied_unit_jets (j : Fin 2) {W : Λ → ℕ → X → ℝ}
-    (hW : ∀ l n x, x ∈ s.domain → 0 ≤ W l n x)
-    (henv : ∀ l n i x, x ∈ s.domain → x ∈ K l n i →
-      c.pull (pulseEnvelope F χ j) l n i x ≤ W l n x) :
-    UniformLocalJets s W 0 K (c.pull (pulseVector F χ j)) :=
-  c.envelope (h.unit_jets j) hW henv
 
-/-- The modeled normal, normal motion and action are the transported
-ones from the selected primary phase, with its actual clock factors. -/
-theorem copied_geometry_jets (normal clock : PositiveScale Λ) (j : Fin 2) :
-    UniformLocalJets s (fun _ _ _ => 1) 0 K
-      (fun l n i x => normal.value l n • c.pull (phaseNormal (F j) χ) l n i x) ∧
-    UniformLocalJets s (fun _ _ _ => 1) 0 K
-      (fun l n i x => (normal.value l n * clock.value l n) • c.pull (phaseMotion (F j) χ) l n i x) ∧
-    UniformLocalJets s (fun _ _ _ => 1) 0 K
-      (fun l n i x => clock.value l n • c.pull (phaseAction (F j) χ) l n i x) := by
-  have hg := h.geometry_jets j
-  refine ⟨?_, ?_, ?_⟩
-  · simpa only [zero_add] using uniform_band_smul (c.unweighted hg.1) (normal.bandBound s)
-      (fun _ _ _ _ => zero_le_one)
-  · simpa only [zero_add, PositiveScale.mul] using
-      uniform_band_smul (c.unweighted hg.2.1) ((normal.mul clock).bandBound s)
-        (fun _ _ _ _ => zero_le_one)
-  · simpa only [zero_add] using uniform_band_smul (c.unweighted hg.2.2.1) (clock.bandBound s)
-      (fun _ _ _ _ => zero_le_one)
 
-omit [Countable Λ] [Nonempty Λ] in
-theorem copied_normal_bounds (normal : PositiveScale Λ) (j : Fin 2)
-    (l : Λ) (n : ℕ) (i : I) {x : X} (hx : x ∈ s.domain) (hi : x ∈ K l n i) :
-    normal.lower * (F j).b ≤ ‖normal.value l n • c.pull (phaseNormal (F j) χ) l n i x‖ ∧
-    ‖normal.value l n • c.pull (phaseNormal (F j) χ) l n i x‖ ≤
-      normal.upper * ((F j).M ^ 2 + 3 * (F j).M) := by
-  have hg := h.geometry_jets j
-  have hlo := hg.2.2.2.1 (c.index l n) _ (c.maps l n i x hx hi)
-  have hhi := hg.2.2.2.2 (c.index l n) _ (c.maps l n i x hx hi)
-  simp only [norm_smul, Real.norm_eq_abs, abs_of_pos (normal.value_pos l n)]
-  exact ⟨mul_le_mul (normal.bounds l n).1 hlo (F j).b_pos.le (normal.value_pos l n).le,
-    mul_le_mul (normal.bounds l n).2 hhi (norm_nonneg _) (zero_le_one.trans normal.upper_one)⟩
 
 end ReferenceBounds
 
@@ -573,41 +481,6 @@ noncomputable def copiedCoefficients
 
 include h
 
-/-- The native signed estimates are obtained from the constructed
-reference, without accepting a completed native covariance record. -/
-theorem copied_coefficients_jets
-    (base : Λ → I → LinearWaveBounds.WaveCoefficients X)
-    (dirs : Λ → I → LinearWaveBounds.GraphDirections X)
-    (request : ℕ → X → Vec2) {β : ℝ} {W : Λ → ℕ → X → ℝ}
-    (hzeta : ∀ x ∈ s.domain, 0 < s.zeta x)
-    (hR : ∀ q, UniformLocalJets s (fun _ _ x => s.zeta x) β K (fun _ n _ x => request n x q))
-    (hW : ∀ l n x, x ∈ s.domain → 0 ≤ W l n x)
-    (j : Fin 2)
-    (henv : ∀ l n i x, x ∈ s.domain → x ∈ K l n i →
-      c.pull (pulseEnvelope F χ j) l n i x ≤ W l n x)
-    (hnormal : ∀ l n i x, x ∈ s.domain → x ∈ K l n i →
-      (fun y => normal.value l n • c.pull (phaseNormal (F j) χ) l n i y) =ᶠ[𝓝 x]
-        (base l i).normal s (dirs l i) n)
-    (hfrequency : UniformPrimaryWeights.UniformBandBound s (1 / 2)
-      (fun li : Λ × I => fun n => 1 / (base li.1 li.2).frequency n)) :
-    UniformLocalJets s (fun l n x => Real.sqrt (s.zeta x) * W l n x) (β + 1 / 2) K
-      (fun l n i => (copiedCoefficients (F := F) (pref := pref) (χ := χ) (T := T) (mask := mask)
-        c scale normal clock base dirs request j l i).amplitude n) ∧
-    UniformLocalJets s (fun l n x => Real.sqrt (s.zeta x) * W l n x) (β + 1) K
-      (fun l n i => (copiedCoefficients (F := F) (pref := pref) (χ := χ) (T := T) (mask := mask)
-        c scale normal clock base dirs request j l i).pressure n) := by
-  have hg := h.copied_geometry_jets c normal clock j
-  have hN := uniform_local_congr hg.1 hnormal
-  apply SignedCopyBounds.uniform_coefficients_jets (M := normal.upper * ((F j).M ^ 2 + 3 * (F j).M))
-    (h.nativeCovariance c scale hzeta) hR
-    (c.unweighted h.mask_jets) (h.copied_unit_jets c j hW henv) hW hN hg.2.1 hg.2.2
-    (mul_pos normal.lower_pos (F j).b_pos) _ _ hfrequency j
-  · intro l n i x hx hi
-    rw [← Filter.EventuallyEq.eq_of_nhds (hnormal l n i x hx hi)]
-    exact (h.copied_normal_bounds c normal j l n i hx hi).1
-  · intro l n i x hx hi
-    rw [← Filter.EventuallyEq.eq_of_nhds (hnormal l n i x hx hi)]
-    exact (h.copied_normal_bounds c normal j l n i hx hi).2
 
 end ReferenceBounds
 

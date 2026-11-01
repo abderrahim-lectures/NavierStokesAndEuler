@@ -587,26 +587,6 @@ private theorem closedInterval_subset_closure_openInterval :
     Icc (-1 : ℝ) 1 ⊆ closure (Ioo (-1 : ℝ) 1) := by
   rw [closure_Ioo (by norm_num : (-1 : ℝ) ≠ 1)]
 
-omit [FiniteDimensional ℝ X] in
-/-- A fiber that vanishes on the open strip also vanishes at its two completed
-endpoints. This follows from continuity, not a support enlargement. -/
-theorem stripClosedField_zero {f : ℝ × X → V}
-    (hf : ContDiffOn ℝ ∞ f openStrip)
-    (hb : ∀ n : ℕ, ∃ C : ℝ, ∀ z ∈ openStrip, ‖iteratedFDeriv ℝ n f z‖ ≤ C)
-    {x : X} (hz : ∀ t ∈ Ioo (-1 : ℝ) 1, f (t, x) = 0)
-    {t : ℝ} (ht : t ∈ Icc (-1 : ℝ) 1) : closedField openStrip f (t, x) = 0 := by
-  have he : ContinuousOn (fun t : ℝ => closedField openStrip f (t, x)) (Icc (-1 : ℝ) 1) :=
-    (stripClosedField_contDiffOn hf hb).continuousOn.comp
-      (continuous_id.prodMk continuous_const).continuousOn
-      (fun s hs => ⟨hs, mem_univ x⟩)
-  have hzero : EqOn (fun t : ℝ => closedField openStrip f (t, x))
-      (fun _ => 0) (Ioo (-1 : ℝ) 1) := by
-    intro s hs
-    change closedField openStrip f (s, x) = 0
-    rw [closedField_eq openStrip_isOpen hf (x := (s, x)) ⟨hs, mem_univ x⟩]
-    exact hz s hs
-  exact hzero.of_subset_closure he continuousOn_const Ioo_subset_Icc_self
-    closedInterval_subset_closure_openInterval ht
 
 omit [FiniteDimensional ℝ X] in
 /-- Every spatial additive period passes to both completed boundary values. -/
@@ -698,12 +678,6 @@ theorem upperClosed_eq {f : ℝ × X → V} (hf : ContDiffOn ℝ ∞ f closedStr
     (show (t, x) ∈ Gluing.past 1 from ⟨hhi, mem_univ x⟩)]
   simp only [clamped, lowerClamp_eq hlo]
 
-omit [CompleteSpace V] in
-theorem upperClosed_zero {f : ℝ × X → V} (hf : ContDiffOn ℝ ∞ f closedStrip)
-    {x : X} (hz : ∀ t ∈ Icc (-1 : ℝ) 1, f (t, x) = 0) (t : ℝ) :
-    upperClosed f hf (t, x) = 0 :=
-  Gluing.smoothExtension_zero_fiber (clamped_contDiffOn hf)
-    (fun _ hs => hz _ (lowerClamp_mem hs)) t
 
 omit [CompleteSpace V] in
 theorem upperClosed_add_period {f : ℝ × X → V} (hf : ContDiffOn ℝ ∞ f closedStrip)
@@ -741,13 +715,6 @@ theorem lowerClosed_eq {f : ℝ × X → V} (hf : ContDiffOn ℝ ∞ f closedStr
   rw [upperClosed_eq (reflect_contDiffOn hf) (by linarith) (by linarith)]
   simp only [reflect, neg_neg]
 
-omit [CompleteSpace V] in
-theorem lowerClosed_zero {f : ℝ × X → V} (hf : ContDiffOn ℝ ∞ f closedStrip)
-    {x : X} (hz : ∀ t ∈ Icc (-1 : ℝ) 1, f (t, x) = 0) (t : ℝ) :
-    lowerClosed f hf (t, x) = 0 := by
-  apply upperClosed_zero (reflect_contDiffOn hf)
-  intro s hs
-  exact hz (-s) ⟨by linarith [hs.2], by linarith [hs.1]⟩
 
 omit [CompleteSpace V] in
 theorem lowerClosed_add_period {f : ℝ × X → V} (hf : ContDiffOn ℝ ∞ f closedStrip)
@@ -789,14 +756,6 @@ theorem closedStripExtension_contDiff {f : ℝ × X → V}
     filter_upwards [(continuous_fst.tendsto z).eventually (Ioi_mem_nhds hpos)] with y hy
     exact ite_eq_right (not_le_of_gt hy)
 
-omit [CompleteSpace V] in
-theorem closedStripExtension_zero {f : ℝ × X → V}
-    (hf : ContDiffOn ℝ ∞ f closedStrip) {x : X}
-    (hz : ∀ t ∈ Icc (-1 : ℝ) 1, f (t, x) = 0) (t : ℝ) :
-    closedStripExtension f hf (t, x) = 0 := by
-  by_cases ht : t ≤ 0
-  · rw [closedStripExtension, ite_eq_left ht, lowerClosed_zero hf hz]
-  · rw [closedStripExtension, ite_eq_right ht, upperClosed_zero hf hz]
 
 omit [CompleteSpace V] in
 theorem closedStripExtension_add_period {f : ℝ × X → V}

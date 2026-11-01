@@ -229,28 +229,7 @@ theorem velocity_on_axis (H K : Profile) (t : ℝ) (x : Space)
     rw [velocity_two H K t x hH hK]
     simp [profilePoint, radialEnergy, hx0, hx1, coordinateVector]
 
-/-- The potential's closed spatial support is controlled by the two profile
-supports, pulled back under the smooth `(t,s,z)` coordinate map. -/
-theorem tsupport_potential_slice_subset (H K : Profile) (t : ℝ) :
-    tsupport (fun x : Space => potential H K (t, x)) ⊆
-      profilePoint t ⁻¹' (tsupport H ∪ tsupport K) := by
-  apply closure_minimal
-  · intro x hx
-    by_contra hn
-    have hnH : profilePoint t x ∉ tsupport H := fun h => hn (Or.inl h)
-    have hnK : profilePoint t x ∉ tsupport K := fun h => hn (Or.inr h)
-    have hHzero := image_eq_zero_of_notMem_tsupport hnH
-    have hKzero := image_eq_zero_of_notMem_tsupport hnK
-    exact hx (by simp [potential, hHzero, hKzero])
-  · exact ((isClosed_tsupport H).union (isClosed_tsupport K)).preimage
-      (contDiff_profilePoint_slice t (n := 0)).continuous
 
-/-- Taking the actual curl does not enlarge this closed spatial support. -/
-theorem tsupport_velocity_slice_subset (H K : Profile) (t : ℝ) :
-    tsupport (fun x : Space => velocity H K (t, x)) ⊆
-      profilePoint t ⁻¹' (tsupport H ∪ tsupport K) :=
-  (SpatialCurl.tsupport_curl_subset (fun x : Space => potential H K (t, x))).trans
-    (tsupport_potential_slice_subset H K t)
 
 
 /-- The Cartesian cylinder cut out by bounds on `s` and `z` is compact. -/
@@ -273,17 +252,6 @@ theorem isCompact_cylinder (R Z : ℝ) :
   apply Real.sqrt_le_sqrt
   simpa only [Real.norm_eq_abs, sq_abs] using hs
 
-/-- Bounds on profile support give a literal closed cylinder in Cartesian
-space: `s ≤ R` and `|z| ≤ Z`. -/
-theorem tsupport_velocity_cylinder_subset (H K : Profile) (t R Z : ℝ)
-    (hH : tsupport H ⊆ {p : ProfilePoint | p.2.1 ≤ R ∧ |p.2.2| ≤ Z})
-    (hK : tsupport K ⊆ {p : ProfilePoint | p.2.1 ≤ R ∧ |p.2.2| ≤ Z}) :
-    tsupport (fun x : Space => velocity H K (t, x)) ⊆
-      {x : Space | radialEnergy x ≤ R ∧ |x 2| ≤ Z} := by
-  intro x hx
-  rcases tsupport_velocity_slice_subset H K t hx with h | h
-  · exact hH h
-  · exact hK h
 
 
 end NavierStokes.AxisymmetricFields

@@ -38,15 +38,6 @@ theorem L_pos {h η : ℝ} (hh₀ : 0 ≤ h) (hh : h < 1 / 2)
   unfold L
   nlinarith [mul_nonneg hh₀ (sub_nonneg.mpr hη)]
 
-/-- Determinant of the forward coordinate Jacobian for
-`τ = q (1-η²)` and `z = q^D η`. The derivative of `q^D` is
-written as `D * (q^D/q)` on the positive half-line. -/
-theorem jacobian_det {q : ℝ} (hq : q ≠ 0) (h η : ℝ) :
-    d η * q ^ D h - (-2 * q * η) * (D h * η * (q ^ D h / q)) =
-      q ^ D h * L h η := by
-  field_simp
-  unfold d D L
-  ring
 
 
 /-- The inverse Jacobian acting on `(τ',z')`, first component. -/
@@ -59,25 +50,7 @@ def inverseEta (q h η τ' z' : ℝ) : ℝ :=
 
 
 
-theorem inverseQ_recover {q h η : ℝ} (hq : 0 < q) (hL : L h η ≠ 0)
-    (q' η' : ℝ) :
-    inverseQ q h η (d η * q' - 2 * q * η * η')
-      (D h * η * (q ^ D h / q) * q' + q ^ D h * η') = q' := by
-  have hpow : q ^ D h ≠ 0 := (Real.rpow_pos_of_pos hq _).ne'
-  unfold inverseQ
-  field_simp
-  unfold d D L
-  ring
 
-theorem inverseEta_recover {q h η : ℝ} (hq : 0 < q) (hL : L h η ≠ 0)
-    (q' η' : ℝ) :
-    inverseEta q h η (d η * q' - 2 * q * η * η')
-      (D h * η * (q ^ D h / q) * q' + q ^ D h * η') = η' := by
-  have hpow : q ^ D h ≠ 0 := (Real.rpow_pos_of_pos hq _).ne'
-  unfold inverseEta
-  field_simp
-  unfold d D L
-  ring
 
 
 def qTime (h η : ℝ) : ℝ := -1 / L h η
@@ -130,18 +103,6 @@ theorem axial_chain_coefficient {q : ℝ} (hq : 0 < q)
   unfold qAxial xAxial etaAxial axialCoeff
   field_simp [hq.ne', hpow, hL]; ring
 
-/-- Algebra behind the incompressibility formula (5). The two hypotheses
-are the primitive identities `(X Ubar)_X = U` and its `η` derivative. -/
-theorem incompressibility_numerator
-    (h η X U UX Uη Ubar UbarX Ubarη UbarηX : ℝ)
-    (hU : Ubar + X * UbarX = U) (hUη : Ubarη + X * UbarηX = Uη) :
-    2 * η * U - 2 * D h * η * Ubar - d η * Ubarη +
-        X * (2 * η * UX - 2 * D h * η * UbarX - d η * UbarηX) =
-      2 * A h * η * U - d η * Uη + 2 * η * X * UX := by
-  calc
-    _ = 2 * η * U - 2 * D h * η * (Ubar + X * UbarX) -
-        d η * (Ubarη + X * UbarηX) + 2 * η * X * UX := by ring
-    _ = _ := by rw [hU, hUη]; unfold A D; ring
 
 
 end

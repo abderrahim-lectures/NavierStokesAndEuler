@@ -34,35 +34,6 @@ def AdmissibleCone (a b p₁ p₂ : ℝ) : Prop :=
   RelaxedCone a b p₁ p₂ ∧ 2 < shearMagnitude a b
 
 
-/-- The compact large-lag assertion of `seed:cone-test`. The conclusion has
-no lower bound on the shear magnitude. The theorem also covers an empty set. -/
-theorem compact_large_lag {K : Set (ℝ × ℝ × ℝ)} (hK : IsCompact K)
-    (ha : ∀ z ∈ K, 0 < z.1)
-    (hfirst : ∀ z ∈ K, 0 < z.1 - z.2.1 * z.2.2)
-    (hsecond : ∀ z ∈ K,
-      2 * z.2.1 * z.2.2 + z.2.1 ^ 2 / z.1 + (z.1 - 2) * z.2.2 ^ 2 < 2) :
-    ∃ P : ℝ, 0 < P ∧ ∀ z ∈ K, ∀ p₁ : ℝ, P ≤ p₁ →
-      RelaxedCone z.1 z.2.1 p₁ (z.2.2 * p₁) := by
-  obtain ⟨_, p₀, _, hp₀, _, hlarge⟩ :=
-    UniformCone.compact_equation_eleven hK
-      continuous_fst.continuousOn
-      (continuous_fst.comp continuous_snd).continuousOn
-      (continuous_snd.comp continuous_snd).continuousOn ha hfirst hsecond
-  refine ⟨p₀ + 1, by linarith, ?_⟩
-  intro z hz p hp
-  obtain ⟨hP, hv⟩ := hlarge p (by linarith) z hz
-  have hparallel : parallelStress z.1 z.2.1 p (z.2.2 * p) =
-      p * (1 - z.2.1 * z.2.2 / z.1) := by
-    unfold parallelStress
-    ring
-  have htransverse : transverseStress z.1 z.2.1 p (z.2.2 * p) =
-      p * (z.2.2 + z.2.1 / z.1) := by
-    unfold transverseStress
-    ring
-  have hshear : shearMagnitude z.1 z.2.1 =
-      z.1 * (1 + (z.2.1 / z.1) ^ 2) := by
-    simp only [shearMagnitude, neg_div, neg_sq]
-  exact ⟨ha z hz, by rwa [hparallel], by rwa [hshear, hparallel, htransverse]⟩
 
 
 end NavierStokes.SeedConePaper

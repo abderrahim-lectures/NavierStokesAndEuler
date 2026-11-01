@@ -337,15 +337,6 @@ theorem FrameData.SmoothOn.forcing {d : FrameData Q} {Ω : Set (Q × ℝ)}
   exact (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞) MovingFrameODE.pairCLM).comp_contDiffOn
     (((hx.add hdiv).div_const 2).prodMk ((hx.sub hdiv).div_const 2))
 
-/-- Jointly smooth physical/frame inputs give an actually constructed smooth
-family of modal paths. -/
-theorem solutionPath_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc a b ⊆ V)
-    (hd : d.SmoothOn (U ×ˢ V)) (j : ℤ) (x₀ : Q → State) (f : Q × ℝ → Space)
-    (hx₀ : ContDiffOn ℝ ∞ x₀ U) (hf : ContDiffOn ℝ ∞ f (U ×ˢ V)) :
-    ContDiffOn ℝ ∞ (SmoothPathFamily.odeFamily hab (d.coefficient j) x₀ (d.forcing f)) U :=
-  SmoothPathFamily.contDiffOn_odeFamily_of_joint hab U V hU hV hI
-    (d.coefficient j) x₀ (d.forcing f) (hd.coefficient j) hx₀ (hd.forcing hf)
 
 end Smooth
 
@@ -491,76 +482,7 @@ section Forward
 variable {Q : Type} [NormedAddCommGroup Q]
 variable {a b : ℝ}
 
-theorem solution_forward_bound (hab : a ≤ b) (d : FrameData Q) {j : ℤ} (hj : j ≠ 0)
-    (x₀ : Q → State) (f : Q × ℝ → Space) {U : Set Q}
-    (hA : ContinuousOn (d.coefficient j) (U ×ˢ Icc a b))
-    (hf : ContinuousOn (d.forcing f) (U ×ˢ Icc a b))
-    {p : Q} (hp : p ∈ U) (referenceDamping rate P : ℝ → ℝ)
-    {S C D : ℝ} (hS : 0 < S) (hC : 0 ≤ C) (hD : 0 ≤ D)
-    (hPpos : ∀ v, 0 < P v) (hP : ∀ v, HasDerivAt P (rate v * P v) v)
-    (hreference : ∀ v ∈ Icc a b, rate v = d.eigenvalue (p, v) - referenceDamping v)
-    (hlam : ∀ v ∈ Icc a b, 0 ≤ d.eigenvalue (p, v))
-    (hν : ∀ v ∈ Icc a b, 0 ≤ d.viscosity (p, v))
-    (hνerr : ∀ v ∈ Icc a b, referenceDamping v - D / S ≤ d.viscosity (p, v))
-    (herr : ∀ v ∈ Icc a b,
-      |d.error11 (p, v)| ≤ C / S ∧ |d.error12 (p, v)| ≤ C / S ∧
-      |d.error21 (p, v)| ≤ C / S ∧ |d.error22 (p, v)| ≤ C / S) :
-    ∀ v ∈ Icc a b, ‖solution hab d j x₀ f p v‖ ≤
-      Real.exp (((D + 4 * C) / S) * (v - a)) * P v *
-        (‖x₀ p‖ / P a + ∫ s in a..v, ‖d.forcing f (p, s)‖ / P s) := by
-  have hode (v : ℝ) (hv : v ∈ Icc a b) := solution_hasDerivAt hab d j x₀ f hA hf hp hv
-  have hu : ContinuousOn (solution hab d j x₀ f p) (Icc a b) :=
-    fun v hv => (hode v hv).continuousAt.continuousWithinAt
-  have hforce : ContinuousOn (fun v => d.forcing f (p, v)) (Icc a b) :=
-    hf.comp (continuous_const.prodMk continuous_id).continuousOn (fun v hv => ⟨hp, hv⟩)
-  have he (v : ℝ) (hv : v ∈ Ico a b) (w : State) :
-      ⟪w, d.coefficient j (p, v) w⟫_ℝ ≤ (rate v + (D + 4 * C) / S) * ‖w‖ ^ 2 := by
-    have hv' := Ico_subset_Icc_self hv
-    rw [hreference v hv']
-    exact d.energy_bound (p, v) hj (hlam v hv') (hν v hv') (hνerr v hv') (herr v hv') w
-  have hbnd := ViscousPropagator.norm_le_envelope_mul_integral_on
-    (fun v => d.coefficient j (p, v)) rate P (div_nonneg (by positivity) hS.le)
-    hPpos hP hu hforce (fun v hv => (hode v (Ico_subset_Icc_self hv)).hasDerivWithinAt) he
-  simpa only [solution_initial] using hbnd
 
-/-- The same forward propagator constant applies to every nonzero harmonic.
-The start of the finite interval may be any earlier slot time. -/
-theorem homogeneous_forward_bound (hab : a ≤ b) (d : FrameData Q) {j : ℤ} (hj : j ≠ 0)
-    (x₀ : Q → State) {U : Set Q}
-    (hA : ContinuousOn (d.coefficient j) (U ×ˢ Icc a b))
-    {p : Q} (hp : p ∈ U) (referenceDamping rate P : ℝ → ℝ)
-    {S C D L : ℝ} (hS : 0 < S) (hC : 0 ≤ C) (hD : 0 ≤ D)
-    (hslot : b - a ≤ L * S)
-    (hPpos : ∀ v, 0 < P v) (hP : ∀ v, HasDerivAt P (rate v * P v) v)
-    (hreference : ∀ v ∈ Icc a b, rate v = d.eigenvalue (p, v) - referenceDamping v)
-    (hlam : ∀ v ∈ Icc a b, 0 ≤ d.eigenvalue (p, v))
-    (hν : ∀ v ∈ Icc a b, 0 ≤ d.viscosity (p, v))
-    (hνerr : ∀ v ∈ Icc a b, referenceDamping v - D / S ≤ d.viscosity (p, v))
-    (herr : ∀ v ∈ Icc a b,
-      |d.error11 (p, v)| ≤ C / S ∧ |d.error12 (p, v)| ≤ C / S ∧
-      |d.error21 (p, v)| ≤ C / S ∧ |d.error22 (p, v)| ≤ C / S) :
-    ∀ v ∈ Icc a b, ‖solution hab d j x₀ (fun _ => 0) p v‖ ≤
-      Real.exp ((D + 4 * C) * L) * (P v / P a) * ‖x₀ p‖ := by
-  have hf : ContinuousOn (d.forcing (fun _ => 0)) (U ×ˢ Icc a b) := by
-    rw [FrameData.forcing_zero_function]
-    exact continuousOn_const
-  have hbnd := solution_forward_bound hab d hj x₀ (fun _ => 0) hA hf hp referenceDamping rate P
-    hS hC hD hPpos hP hreference hlam hν hνerr herr
-  simp only [FrameData.forcing_zero, norm_zero, zero_div, intervalIntegral.integral_zero, add_zero] at hbnd
-  intro v hv
-  have hexp : Real.exp (((D + 4 * C) / S) * (v - a)) ≤ Real.exp ((D + 4 * C) * L) := by
-    apply Real.exp_le_exp.mpr
-    have hfactor : ((D + 4 * C) / S) * (L * S) = (D + 4 * C) * L := by
-      field_simp
-    rw [← hfactor]
-    exact mul_le_mul_of_nonneg_left ((sub_le_sub_right hv.2 a).trans hslot)
-      (div_nonneg (by positivity) hS.le)
-  calc
-    _ ≤ Real.exp (((D + 4 * C) / S) * (v - a)) * P v * (‖x₀ p‖ / P a) := hbnd v hv
-    _ ≤ Real.exp ((D + 4 * C) * L) * P v * (‖x₀ p‖ / P a) :=
-      mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_right hexp (hPpos v).le)
-        (div_nonneg (norm_nonneg _) (hPpos a).le)
-    _ = _ := by ring
 
 /-- Zero-initial source solves are constructed by the same operator, and retain
 every prescribed small amplitude factor in the source bound. -/
@@ -778,79 +700,10 @@ section SmoothPrimary
 
 variable {Q : Type} [NormedAddCommGroup Q] [NormedSpace ℝ Q]
 
-/-- Smoothness of the actual initial envelope, proved using integration as a
-bounded linear map on the fixed compact time interval. -/
-theorem initialEnvelope_contDiffOn {a b : ℝ} (hab : a ≤ b)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc a b ⊆ V)
-    (rate : Q × ℝ → ℝ) (hrate : ContDiffOn ℝ ∞ rate (U ×ˢ V)) (midpoint : Icc a b) :
-    ContDiffOn ℝ ∞
-      (fun p => GaussianEnvelope.envelope (fun t => rate (p, t)) midpoint a) U := by
-  let T : C(Icc a b, ℝ) →L[ℝ] ℝ :=
-    (ContinuousMap.evalCLM ℝ midpoint).comp (ParametricODE.integrator hab)
-  have hpath := SmoothPathFamily.contDiffOn_pathFamily_of_joint U V hU hV hI rate hrate
-  have hc := ((ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞) T).comp_contDiffOn hpath).neg.exp
-  apply hc.congr
-  intro p hp
-  have hslice := SmoothPathFamily.slice_continuous
-    (hrate.continuousOn.mono (Set.prod_mono Subset.rfl hI)) hp
-  have hint : (∫ s in a..(midpoint : ℝ),
-      ParametricODE.extend hab (SmoothPathFamily.pathFamily rate p) s) =
-      ∫ s in a..(midpoint : ℝ), rate (p, s) := by
-    apply intervalIntegral.integral_congr
-    intro s hs
-    rw [uIcc_of_le midpoint.2.1] at hs
-    have hs' : s ∈ Icc a b := ⟨hs.1, hs.2.trans midpoint.2.2⟩
-    rw [ParametricODE.extend, projIcc_of_mem hab hs']
-    exact SmoothPathFamily.pathFamily_apply rate p hslice ⟨s, hs'⟩
-  change Real.exp (∫ s in (midpoint : ℝ)..a, rate (p, s)) =
-    Real.exp (-(∫ s in a..(midpoint : ℝ),
-      ParametricODE.extend hab (SmoothPathFamily.pathFamily rate p) s))
-  rw [hint, intervalIntegral.integral_symm]
-
-theorem referenceRate_contDiffOn {U : Set Q} (V : Set ℝ)
-    (lam u : Q → ℝ) (ell : ℝ) (hlam : ContDiffOn ℝ ∞ lam U) (hu : ContDiffOn ℝ ∞ u U) :
-    ContDiffOn ℝ ∞ (fun z : Q × ℝ => GaussianEnvelope.referenceRate (lam z.1) (u z.1) ell z.2)
-      (U ×ˢ V) := by
-  have hl : ContDiffOn ℝ ∞ (fun z : Q × ℝ => lam z.1) (U ×ˢ V) :=
-    hlam.comp contDiffOn_fst (fun _ hz => hz.1)
-  have hu' : ContDiffOn ℝ ∞ (fun z : Q × ℝ => u z.1) (U ×ˢ V) :=
-    hu.comp contDiffOn_fst (fun _ hz => hz.1)
-  have hs : ContDiffOn ℝ ∞ (fun z : Q × ℝ => PulseGrowth.slotMagnitude (u z.1) ell z.2)
-      (U ×ˢ V) := (hu'.div_const 2).add ((hu'.mul contDiffOn_snd).div_const ell)
-  have hs2 := (contDiffOn_const (c := (1 : ℝ))).add (hs.pow 2)
-  have hu2 := (contDiffOn_const (c := (1 : ℝ))).add (hu'.pow 2)
-  have hr := hs2.sqrt (fun z _ => (PulseGrowth.one_add_sq_pos _).ne')
-  have hur := hu2.sqrt (fun z _ => (PulseGrowth.one_add_sq_pos _).ne')
-  exact (hl.div hr (fun z _ => (PulseGrowth.radius_pos _).ne')).sub
-    ((hl.mul hs2).div (hu2.mul hur) (fun z _ => (PulseGrowth.dampingDenominator_pos _).ne'))
-
-/-- The manuscript normalization `z₊(0)=P(0), z₋(0)=0` is itself a smooth
-parameter family, obtained from the explicit reference rate. -/
-theorem primarySeed_reference_contDiffOn {ell : ℝ} (hell : 0 ≤ ell)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc 0 ell ⊆ V)
-    (lam u : Q → ℝ) (hlam : ContDiffOn ℝ ∞ lam U) (hu : ContDiffOn ℝ ∞ u U) :
-    ContDiffOn ℝ ∞ (primarySeed 0 (referenceEnvelope lam u ell)) U := by
-  have hm : ell / 2 ∈ Icc 0 ell := by constructor <;> linarith
-  have hE := initialEnvelope_contDiffOn hell U V hU hV hI
-    (fun z : Q × ℝ => GaussianEnvelope.referenceRate (lam z.1) (u z.1) ell z.2)
-    (referenceRate_contDiffOn V lam u ell hlam hu) ⟨ell / 2, hm⟩
-  exact (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞) MovingFrameODE.pairCLM).comp_contDiffOn
-    (hE.prodMk contDiffOn_const)
 
 
-/-- Parameter smoothness of the constructed extension at every time in the
-closed slot, including its endpoints. -/
-theorem solution_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc a b ⊆ V)
-    (hd : d.SmoothOn (U ×ˢ V)) (j : ℤ) (x₀ : Q → State) (f : Q × ℝ → Space)
-    (hx₀ : ContDiffOn ℝ ∞ x₀ U) (hf : ContDiffOn ℝ ∞ f (U ×ˢ V)) (v : Icc a b) :
-    ContDiffOn ℝ ∞ (fun q => solution hab d j x₀ f q v) U := by
-  have hpath := solutionPath_contDiffOn hab d U V hU hV hI hd j x₀ f hx₀ hf
-  have heval := (ContinuousLinearMap.contDiff (𝕜 := ℝ) (n := ∞)
-    (ContinuousMap.evalCLM ℝ v)).comp_contDiffOn hpath
-  apply heval.congr
-  intro q _
-  exact extendedFamily_eq_path _ _ _ _ _ _
+
+
 
 
 end SmoothPrimary
@@ -859,16 +712,6 @@ section Joint
 
 variable {Q : Type} [NormedAddCommGroup Q] [NormedSpace ℝ Q]
 
-/-- Genuine joint parameter/time smoothness of the constructed solution on
-the closed slot.  The joint theorem constructs a smooth representative by
-time rescaling, rather than claiming the clamped extension smooth outside. -/
-theorem solution_joint_contDiffOn {a b : ℝ} (hab : a ≤ b) (d : FrameData Q)
-    (U : Set Q) (V : Set ℝ) (hU : IsOpen U) (hV : IsOpen V) (hI : Icc a b ⊆ V)
-    (hd : d.SmoothOn (U ×ˢ V)) (j : ℤ) (x₀ : Q → State) (f : Q × ℝ → Space)
-    (hx₀ : ContDiffOn ℝ ∞ x₀ U) (hf : ContDiffOn ℝ ∞ f (U ×ˢ V)) :
-    ContDiffOn ℝ ∞ (fun z : Q × ℝ => solution hab d j x₀ f z.1 z.2) (U ×ˢ Icc a b) :=
-  JointODE.contDiffOn_solutionExtension_joint hab U V hU hV hI
-    (d.coefficient j) x₀ (d.forcing f) (hd.coefficient j) hx₀ (hd.forcing hf)
 
 
 end Joint

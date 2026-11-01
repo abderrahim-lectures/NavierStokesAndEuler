@@ -411,58 +411,12 @@ theorem shiftedProductWeightSum_le {ε : ℝ} (hε : 0 < ε) (n m : ℕ) :
       (weight_pos hε _ _).le
   exact hsub.trans (productWeightSum_le hε (n + 1) m)
 
-/-- A single mixed term after applying the inverse radial divisor. -/
-theorem mixed_weight_term_le {ε : ℝ} (hε : 0 < ε) {r n i j : ℕ}
-    (hr : 1 ≤ r) (hij : i + j = n) (m k l : ℕ) :
-    (((m.choose k : ℝ) * j) / radialDivisor r n) * weight ε i (k + 1) * weight ε j l ≤
-      (80 / ε) * ((m.choose k : ℝ) * weight ε (i + 1) k * weight ε j l) := by
-  have hD := radialDivisor_pos hr n
-  have hcoef : 0 ≤ ((m.choose k : ℝ) * j) / radialDivisor r n := by positivity
-  have hfactor : (((i : ℝ) + 1) * j) / radialDivisor r n ≤ 1 := by
-    apply (div_le_iff₀ hD).2
-    simpa only [one_mul] using mixed_factors_le_divisor hr hij
-  have hnonneg : 0 ≤ (80 / ε) *
-      ((m.choose k : ℝ) * weight ε (i + 1) k * weight ε j l) := by
-    exact mul_nonneg (by positivity)
-      (mul_nonneg (mul_nonneg (Nat.cast_nonneg _) (weight_pos hε _ _).le) (weight_pos hε _ _).le)
-  calc
-    _ ≤ (((m.choose k : ℝ) * j) / radialDivisor r n) *
-        ((80 / ε) * ((i : ℝ) + 1) * weight ε (i + 1) k) * weight ε j l := by
-      exact mul_le_mul_of_nonneg_right
-        (mul_le_mul_of_nonneg_left (weight_parameter_radial_shift hε i k) hcoef)
-        (weight_pos hε _ _).le
-    _ = ((80 / ε) * ((m.choose k : ℝ) * weight ε (i + 1) k * weight ε j l)) *
-        ((((i : ℝ) + 1) * j) / radialDivisor r n) := by ring
-    _ ≤ ((80 / ε) * ((m.choose k : ℝ) * weight ε (i + 1) k * weight ε j l)) * 1 :=
-      mul_le_mul_of_nonneg_left hfactor hnonneg
-    _ = _ := mul_one _
 
 def mixedWeightSum (ε : ℝ) (r n m : ℕ) : ℝ :=
   ∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
     (((m.choose kl.1 : ℝ) * ij.2) / radialDivisor r n) *
       weight ε ij.1 (kl.1 + 1) * weight ε ij.2 kl.2
 
-theorem mixedWeightSum_le {ε : ℝ} (hε : 0 < ε) {r : ℕ} (hr : 1 ≤ r) (n m : ℕ) :
-    mixedWeightSum ε r n m ≤ (5120 / ε) * weight ε (n + 1) m := by
-  have hsum : mixedWeightSum ε r n m ≤
-      ∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
-        (80 / ε) * ((m.choose kl.1 : ℝ) * weight ε (ij.1 + 1) kl.1 * weight ε ij.2 kl.2) := by
-    apply Finset.sum_le_sum
-    intro ij hij
-    apply Finset.sum_le_sum
-    intro kl hkl
-    exact mixed_weight_term_le hε hr (mem_antidiagonal.mp hij) m kl.1 kl.2
-  have hfactor :
-      (∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
-        (80 / ε) * ((m.choose kl.1 : ℝ) * weight ε (ij.1 + 1) kl.1 * weight ε ij.2 kl.2)) =
-      (80 / ε) * shiftedProductWeightSum ε n m := by
-    simp only [shiftedProductWeightSum, Finset.mul_sum]
-  rw [hfactor] at hsum
-  calc
-    _ ≤ (80 / ε) * shiftedProductWeightSum ε n m := hsum
-    _ ≤ (80 / ε) * (64 * weight ε (n + 1) m) :=
-      mul_le_mul_of_nonneg_left (shiftedProductWeightSum_le hε n m) (by positivity)
-    _ = _ := by ring
 
 /-- The coefficient at radial degree n+1 of J_r((∂η f) D_Y g).
 The radial divisor is distributed over its finite convolution sum. -/
@@ -471,34 +425,6 @@ def inverseMixedJet (r : ℕ) (f g : ℕ → ℕ → ℝ) (n m : ℕ) : ℝ :=
     (((m.choose kl.1 : ℝ) * ij.2) / radialDivisor r n) *
       f ij.1 (kl.1 + 1) * g ij.2 kl.2
 
-/-- The mixed derivative is bounded after radial inversion, with explicit
-constant 5120/ε. Neither individual derivative is assumed bounded. -/
-theorem inverseMixedJet_bound {ε F G : ℝ} (hε : 0 < ε) (hF : 0 ≤ F) (hG : 0 ≤ G)
-    {r : ℕ} (hr : 1 ≤ r) (f g : ℕ → ℕ → ℝ)
-    (hf : ∀ n m, |f n m| ≤ F * weight ε n m)
-    (hg : ∀ n m, |g n m| ≤ G * weight ε n m) (n m : ℕ) :
-    |inverseMixedJet r f g n m| ≤ (5120 / ε) * F * G * weight ε (n + 1) m := by
-  have hD := radialDivisor_pos hr n
-  have hsum : |inverseMixedJet r f g n m| ≤
-      ∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
-        (F * G) * ((((m.choose kl.1 : ℝ) * ij.2) / radialDivisor r n) *
-          weight ε ij.1 (kl.1 + 1) * weight ε ij.2 kl.2) := by
-    apply abs_double_sum_le
-    intro ij hij kl hkl
-    exact abs_bilinear_term_le _ _ _ _ _ _ _ (by positivity) hF hG
-      (weight_pos hε _ _).le (weight_pos hε _ _).le (hf _ _) (hg _ _)
-  have hfactor :
-      (∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
-        (F * G) * ((((m.choose kl.1 : ℝ) * ij.2) / radialDivisor r n) *
-          weight ε ij.1 (kl.1 + 1) * weight ε ij.2 kl.2)) =
-      (F * G) * mixedWeightSum ε r n m := by
-    simp only [mixedWeightSum, Finset.mul_sum]
-  rw [hfactor] at hsum
-  calc
-    _ ≤ (F * G) * mixedWeightSum ε r n m := hsum
-    _ ≤ (F * G) * ((5120 / ε) * weight ε (n + 1) m) :=
-      mul_le_mul_of_nonneg_left (mixedWeightSum_le hε hr n m) (mul_nonneg hF hG)
-    _ = _ := by ring
 
 /-- Coefficients of the radial averaging operator `Bf(Y)=∫₀¹ f(tY)dt`. -/
 def averageJet (f : ℕ → ℕ → ℝ) (n m : ℕ) : ℝ := f n m / ((n : ℝ) + 1)
@@ -518,14 +444,6 @@ def parameterPrimitiveJet (f : ℕ → ℕ → ℝ) : ℕ → ℕ → ℝ
   | 0, _ => 0
   | n + 1, m => f n (m + 1) / ((n : ℝ) + 1)
 
-theorem averageJet_bound {ε F : ℝ} (_hε : 0 < ε) (_hF : 0 ≤ F)
-    (f : ℕ → ℕ → ℝ) (hf : ∀ n m, |f n m| ≤ F * weight ε n m) (n m : ℕ) :
-    |averageJet f n m| ≤ F * weight ε n m := by
-  unfold averageJet
-  rw [abs_div, abs_of_pos (by positivity : 0 < (n : ℝ) + 1)]
-  exact (div_le_self (abs_nonneg _) (by
-    have hn : (0 : ℝ) ≤ n := by positivity
-    linarith)).trans (hf n m)
 
 
 theorem radialDivisor_ge_one {r : ℕ} (hr : 1 ≤ r) (n : ℕ) : 1 ≤ radialDivisor r n := by

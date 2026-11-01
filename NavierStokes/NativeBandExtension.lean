@@ -687,10 +687,6 @@ theorem native_mem_of_data (L : PrimaryGeometryAssembly.Index W a.N) {x : Native
   apply (BaseContextAssembly.nativeStrip_mem W _ _).mpr
   exact ⟨⟨hx.1, hq⟩, hx.2⟩
 
-theorem native_mem_band (L : PrimaryGeometryAssembly.Index W a.N) {x : Native}
-    (hx : x ∈ (ActualSignedGeometry.nativeDomain H v a).carrier L) :
-    nativeQ F.data.h x ∈ Ioo (1 / 2 : ℝ) 2 :=
-  ((BaseContextAssembly.nativeStrip_mem W _ _).mp hx.1.2).1.2
 
 theorem band_pair_zero_jets_off_native (M : ClosedMargins H v a vr vt)
     (j : Fin 2) (L : PrimaryGeometryAssembly.Index W a.N) {x : Native}
@@ -727,19 +723,6 @@ theorem band_pair_zero_jets_off_native (M : ClosedMargins H v a vr vt)
   · have hz := band_pair_zero_germ_cell H v a hr0 vr vt j L hx.1 hp
     exact ⟨(zero_germ_jets hz.1).2 n, (zero_germ_jets hz.2).2 n⟩
 
-theorem band_pair_band_edge_jets (M : ClosedMargins H v a vr vt)
-    (j : Fin 2) (L : PrimaryGeometryAssembly.Index W a.N) {x : Native}
-    (hx : x ∈ radialInterior W) (he : nativeQ F.data.h x = 1 / 2 ∨ nativeQ F.data.h x = 2) (n : ℕ) :
-    iteratedFDeriv ℝ n (bandVelocity H v a hr0 vr vt j L) x = 0 ∧
-      iteratedFDeriv ℝ n (bandPressure H v a hr0 vr vt j L) x = 0 := by
-  apply band_pair_zero_jets_off_native H v a hr0 vr vt M j L hx _ n
-  intro hi
-  have hq := native_mem_band H v a L hi
-  rcases he with he | he
-  · rw [he] at hq
-    exact (lt_irrefl _ hq.1)
-  · rw [he] at hq
-    exact (lt_irrefl _ hq.2)
 
 /-- The full open radial domain, preserving the original native growth
 function exactly and adding the flat band/transverse boundary points. -/
@@ -955,23 +938,6 @@ theorem band_pair_native_regular_of_raw_jets (M : ClosedMargins H v a vr vt) (j 
   · exact (hp.polynomial_smul (outerCutoff_native_polynomial H v a hr0)).congr
       (fun L x _ => (bandPressure_eq_outer H v a hr0 vr vt j L x).symm)
 
-/-- The band boundary tensors remain zero after the radial attachment,
-including the intersections of the band and radial boundaries. -/
-theorem attached_pair_band_edge_jets (M : ClosedMargins H v a vr vt) (j : Fin 2)
-    (hu : NativeJets (ActualSignedGeometry.nativeDomain H v a) (velocityWeight H v a hr0 j)
-      (preOuterVelocity H v a hr0 vr vt j))
-    (hp : NativeJets (ActualSignedGeometry.nativeDomain H v a) (pressureWeight H v a hr0 j)
-      (preOuterPressure H v a hr0 vr vt j))
-    (L : PrimaryGeometryAssembly.Index W a.N) {x : Native}
-    (hT : 0 < x.1.2.2) (he : nativeQ F.data.h x = 1 / 2 ∨ nativeQ F.data.h x = 2) (n : ℕ) :
-    iteratedFDeriv ℝ n (WaveEdgeExtension.nativeExtension W (bandVelocity H v a hr0 vr vt j L)) x = 0 ∧
-      iteratedFDeriv ℝ n (WaveEdgeExtension.nativeExtension W (bandPressure H v a hr0 vr vt j L)) x = 0 := by
-  obtain ⟨hv, hp'⟩ := band_pair_native_regular_of_raw_jets H v a hr0 vr vt M j hu hp L
-  by_cases hi : WaveEdgeExtension.nativeRadius F.data.h x ∈
-      Ioo (PrimaryTargetBounds.leftRadius W) (PrimaryTargetBounds.rightRadius W)
-  · rw [hv.jet_inside n hT hi, hp'.jet_inside n hT hi]
-    exact band_pair_band_edge_jets H v a hr0 vr vt M j L ⟨hT, hi⟩ he n
-  · exact ⟨hv.jet_outside n hT hi, hp'.jet_outside n hT hi⟩
 
 end Attachment
 

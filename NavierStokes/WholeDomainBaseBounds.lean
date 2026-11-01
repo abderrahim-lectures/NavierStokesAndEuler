@@ -99,32 +99,6 @@ variable {F : OutgoingProfile.Profile} {W : NominalProfile.Witness F}
     (H : NominalConeAssembly.Certificate W) {ld : ModulatedProfileAssembly.LoopData W}
     (v : ModulatedProfileAssembly.Witness ld)
 
-theorem velocity_bound (upper : ℝ) (B m : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ w ∈ preterminal, physicalQ F.data.h w ≤ 1 →
-      ‖iteratedFDeriv ℝ m (FinalSlowBase.velocity H v upper B) w‖ ≤
-        C * physicalQ F.data.h w ^ (-ActualBaseVelocityBounds.heatLoss m) := by
-  apply bound_of_origin_and_exterior F.data.h_pos F.data.h_lt_half
-    (ActualBaseVelocityBounds.heatLoss_nonneg m) (BaseExterior.nominalExteriorRadius_pos W).le
-    (FinalSlowBase.velocity_smooth H v upper B)
-    (SlowBaseEndpoint.final_fields_awayExtensions H v upper B).1 m
-    (ActualBaseVelocityBounds.velocity_rate H v upper B m)
-  obtain ⟨C,hC,hb⟩ := WholeDomainHeatBounds.heat_velocity_bound
-    (BaseExterior.nominalHeatNormalization W) F.data.h_pos F.data.h_lt_half
-    (BaseExterior.nominalExteriorRadius_pos W) m
-  refine ⟨C,hC,?_⟩
-  intro w hw hq hX
-  have he : FinalSlowBase.velocity H v upper B =ᶠ[𝓝 w]
-      BaseExterior.heatVelocity (BaseExterior.nominalHeatNormalization W) F.data.h :=
-    Filter.eventuallyEq_of_mem
-      ((BaseExterior.cartesianExterior_isOpen F.data.h_pos F.data.h_lt_half _).mem_nhds ⟨hw,hX⟩)
-      (FinalSlowBase.exterior_fields_eq_heat H v upper B).1
-  rw [iteratedFDeriv_eq_of_eventuallyEq he m]
-  refine (hb w hw hq hX).trans (mul_le_mul_of_nonneg_left
-    (Real.rpow_le_rpow_of_exponent_ge (physicalQ_pos F.data.h_pos F.data.h_lt_half hw) hq ?_) hC)
-  rw [ActualBaseVelocityBounds.heatLoss_eq]
-  unfold WholeDomainHeatBounds.heatLoss
-  have hm : 0 ≤ (m : ℝ) := by positivity
-  nlinarith [sq_nonneg (m : ℝ)]
 
 theorem pressure_bound (upper : ℝ) (B m : ℕ) :
     ∃ C : ℝ, 0 ≤ C ∧ ∀ w ∈ preterminal, physicalQ F.data.h w ≤ 1 →

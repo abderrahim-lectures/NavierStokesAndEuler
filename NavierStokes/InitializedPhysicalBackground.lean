@@ -122,16 +122,6 @@ noncomputable def initializedVelocity (upper : ℝ) (B : ℕ)
   fun w => SpatialCurl.spatialCurl (initializedPotential H v upper B WA MA) w +
     MB.family.angularField w
 
-theorem initializedPotential_smooth (upper : ℝ) (B : ℕ)
-    (WA : WaveData F.data.h D I K (Fin 3))
-    (MA : MeanData F.data.h (CoordinateAlgebra.A F.data.h - 1 / 2))
-    {qbig : ℝ} (hq : qbig ≤ ChartScales.Q MA.firstBand) :
-    ContDiffOn ℝ ∞ (initializedPotential H v upper B WA MA)
-      (CutStageEstimates.physicalSublevel F.data.h qbig) :=
-  ((TailGaugePotential.finalPotential_smooth H v upper B).mono
-    (t := CutStageEstimates.physicalSublevel F.data.h qbig)
-    (fun _ hw => ⟨hw.1, mem_univ _⟩)).add
-      (potentialIncrement_smooth WA MA F.data.h_pos F.data.h_lt_half hq)
 
 /-- The only use of the anchored gauge is its proved equality of curls. -/
 theorem initializedVelocity_decomposition (upper : ℝ) (B : ℕ)
@@ -201,30 +191,7 @@ theorem initializedVelocity_rate (upper : ℝ) (B : ℕ)
     (initializedVelocity_decomposition H v upper B WA MA MB hqA).symm
 
 
-theorem uncutVelocity_zero_eq_initialized (upper : ℝ) (B : ℕ)
-    (WA : ℕ → WaveData F.data.h D I K (Fin 3))
-    (MA : ℕ → MeanData F.data.h (CoordinateAlgebra.A F.data.h - 1 / 2))
-    (MB : ℕ → MeanData F.data.h (CoordinateAlgebra.A F.data.h)) :
-    MixedDiagonalResidual.uncutVelocity
-        (potentialStages (TailGaugePotential.finalPotential H v upper B) WA MA)
-        (directStages MB) 0 =
-      initializedVelocity H v upper B (WA 0) (MA 0) (MB 0) := by
-  rw [MixedFiniteBackground.uncutVelocity_zero]
-  rfl
 
-/-- Direct input for `MixedFiniteBackground.mixed_background_from_initial`,
-using the actual index-zero native estimates. -/
-theorem stages_initial_rate (upper : ℝ) (B : ℕ)
-    (WA : ℕ → WaveData F.data.h D I K (Fin 3))
-    (MA : ℕ → MeanData F.data.h (CoordinateAlgebra.A F.data.h - 1 / 2))
-    (MB : ℕ → MeanData F.data.h (CoordinateAlgebra.A F.data.h)) (m : ℕ) :
-    JetRate ActualBaseVelocityBounds.endpoint (PhysicalWaveSum.physicalQ F.data.h)
-      (MixedDiagonalResidual.uncutVelocity
-        (potentialStages (TailGaugePotential.finalPotential H v upper B) WA MA)
-        (directStages MB) 0) m
-      (-initialLoss F.data.h (WA 0).alpha (WA 0).shift (MA 0).alpha (MB 0).alpha m) := by
-  rw [uncutVelocity_zero_eq_initialized]
-  exact initializedVelocity_rate H v upper B (WA 0) (MA 0) (MB 0) m
 
 /-- An exact representation adapter for initialization assembled elsewhere.
 Its inputs identify the literal potential and direct angular field on an

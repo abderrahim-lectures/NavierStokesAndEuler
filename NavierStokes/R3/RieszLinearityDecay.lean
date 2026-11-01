@@ -64,9 +64,6 @@ def rieszTestLinear (i j : Fin 3) : ComplexTest →ₗ[ℂ] (Space → ℂ) wher
 
 
 
-theorem rieszTest_sum (i j : Fin 3) {ι : Type*} (s : Finset ι) (ψ : ι → ComplexTest) :
-    rieszTest i j (∑ a ∈ s, ψ a) = ∑ a ∈ s, rieszTest i j (ψ a) :=
-  map_sum (rieszTestLinear i j) ψ s
 
 theorem rieszTest_tendsto_zero (i j : Fin 3) (ψ : ComplexTest) :
     Tendsto (rieszTest i j ψ) (cocompact Space) (𝓝 0) := by

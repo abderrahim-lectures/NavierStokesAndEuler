@@ -186,20 +186,6 @@ theorem complexField_analytic {g a : ℝ → ℝ} {cap : ℝ}
       complexZ, complexChi, complexGradient, denominator] <;>
     fun_prop (disch := assumption)
 
-/-- One compact complex neighborhood for the whole finite family. -/
-theorem exists_common_neighborhood {h j σ : ℝ}
-    (hp : NaturalAxisRange.Parameters h j) (hσ : 0 < σ) :
-    ∃ ρ : ℝ, 0 < ρ ∧ ∃ K : Set ℂ, IsCompact K ∧
-      (∀ x ∈ window.interval, closedBall (x : ℂ) ρ ⊆ K) ∧ K ⊆ regularSet h j σ := by
-  let R : Set ℂ := Complex.ofReal '' window.interval
-  have hR : IsCompact R := isCompact_Icc.image Complex.continuous_ofReal
-  have hsub : R ⊆ regularSet h j σ := by
-    rintro z ⟨x, hx, rfl⟩
-    exact real_mem_regularSet hp hσ hx
-  obtain ⟨ρ, hρ, hρU⟩ := hR.exists_cthickening_subset_open (regularSet_open h j σ) hsub
-  refine ⟨ρ, hρ, cthickening ρ R, hR.cthickening, ?_, hρU⟩
-  intro x hx
-  exact closedBall_subset_cthickening (mem_image_of_mem Complex.ofReal hx) ρ
 
 /-- A convex open outer neighborhood and compact inner neighborhood.
 The inner radius can be used for both the fixed fields and an analytic primitive. -/
@@ -341,13 +327,6 @@ theorem exists_coefficientFamily_on_neighborhood {h j σ ρ : ℝ}
   rw [boundedAxisElement_coefficient hε hερ hB (hf k) (hb' k) n hx]
   simp only [f, complexField_ofReal hp, Complex.ofReal_re]
 
-theorem exists_coefficientFamily {h j σ : ℝ}
-    (hsmall : NaturalAxisRange.Parameters h j) (hσ : 0 < σ)
-    {g a : ℝ → ℝ} {cap : ℝ} (hp : PressureDatum.Admissible g a cap) :
-    Nonempty (CoefficientFamily h j σ (PressureDatum.pressure g a)) := by
-  obtain ⟨ρ, hρ, K, hK, hcover, hKU⟩ := exists_common_neighborhood hsmall hσ
-  obtain ⟨v, _⟩ := exists_coefficientFamily_on_neighborhood hp hρ hK hcover hKU
-  exact ⟨v⟩
 
 /-- The coefficient family and the open convex domain for its primitive
 can be chosen together, with an explicit strict gap between the two radii. -/

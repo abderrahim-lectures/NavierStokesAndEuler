@@ -406,131 +406,15 @@ noncomputable def longitudinalCoefficient (n : EuclideanSpace ℝ (Fin 3))
     ‖longitudinalCoefficient n a‖ = ‖normalDot n a‖ / ‖n‖ := by
   simp [longitudinalCoefficient]
 
-theorem norm_strippedDivergence_le (R : E → ℝ) (Vr Vz : E → E)
-    (a : E → ComplexVector) (x : E) :
-    ‖strippedDivergence R Vr Vz a x‖ ≤
-      ‖along Vr (fun y => a y 0) x‖ + ‖a x 0‖ / |R x| +
-        ‖along Vz (fun y => a y 2) x‖ := by
-  calc
-    ‖strippedDivergence R Vr Vz a x‖ ≤
-        ‖along Vr (fun y => a y 0) x + (R x)⁻¹ • a x 0‖ +
-          ‖along Vz (fun y => a y 2) x‖ := norm_add_le _ _
-    _ ≤ (‖along Vr (fun y => a y 0) x‖ + ‖(R x)⁻¹ • a x 0‖) +
-          ‖along Vz (fun y => a y 2) x‖ := add_le_add_left (norm_add_le _ _) _
-    _ = _ := by simp only [norm_smul, norm_inv, Real.norm_eq_abs, div_eq_mul_inv]; ring
 
-/-- Exact divergence supplies the frequency gain; the identity is proved
-above from the actual harmonic derivative, not assumed here. -/
-theorem normalDot_norm_eq_div (R : E → ℝ) (Vr Vθ Vz : E → E)
-    (κ : ℝ) {Φ : E → ℝ} {a : E → ComplexVector} {x : E}
-    (hκ : κ ≠ 0) (hΦ : DifferentiableAt ℝ Φ x)
-    (ha : ∀ i, DifferentiableAt ℝ (fun y => a y i) x)
-    (haθ : along Vθ (fun y => a y 1) x = 0)
-    (hdiv : cylindricalDivergence R Vr Vθ Vz (vectorMode κ Φ a) x = 0) :
-    ‖normalDot (phaseNormal R Vr Vθ Vz Φ x) (a x)‖ =
-      ‖strippedDivergence R Vr Vz a x‖ / |κ| := by
-  have he := congrArg norm (longitudinal_identity R Vr Vθ Vz κ hΦ ha haθ hdiv)
-  simp only [norm_mul, norm_phaseFactor, norm_neg] at he
-  apply (eq_div_iff (abs_ne_zero.mpr hκ)).mpr
-  simpa only [mul_comm] using he
 
-/-- Quantitative pointwise gain using actual radial and axial derivatives
-of the coefficient. -/
-theorem longitudinalCoefficient_bound (R : E → ℝ) (Vr Vθ Vz : E → E)
-    (κ : ℝ) {Φ : E → ℝ} {a : E → ComplexVector} {x : E}
-    (hκ : κ ≠ 0) (hΦ : DifferentiableAt ℝ Φ x)
-    (ha : ∀ i, DifferentiableAt ℝ (fun y => a y i) x)
-    (haθ : along Vθ (fun y => a y 1) x = 0)
-    (hdiv : cylindricalDivergence R Vr Vθ Vz (vectorMode κ Φ a) x = 0) :
-    ‖longitudinalCoefficient (phaseNormal R Vr Vθ Vz Φ x) (a x)‖ ≤
-      (‖along Vr (fun y => a y 0) x‖ + ‖a x 0‖ / |R x| +
-        ‖along Vz (fun y => a y 2) x‖) /
-        (|κ| * ‖phaseNormal R Vr Vθ Vz Φ x‖) := by
-  rw [norm_longitudinalCoefficient, normalDot_norm_eq_div R Vr Vθ Vz κ hκ hΦ ha haθ hdiv,
-    div_div]
-  exact div_le_div_of_nonneg_right (norm_strippedDivergence_le R Vr Vz a x)
-    (mul_nonneg (abs_nonneg κ) (norm_nonneg _))
 
-/-- A lower bound on radius and normal, together with bounds on the
-actual coefficient derivatives, yields the uniform inverse-frequency gain. -/
-theorem longitudinal_gain_frequency (R : E → ℝ) (Vr Vθ Vz : E → E)
-    (κ : ℝ) {Φ : E → ℝ} {a : E → ComplexVector} {x : E}
-    {r₀ n₀ A Ar Az : ℝ} (hκ : κ ≠ 0) (hΦ : DifferentiableAt ℝ Φ x)
-    (ha : ∀ i, DifferentiableAt ℝ (fun y => a y i) x)
-    (haθ : along Vθ (fun y => a y 1) x = 0)
-    (hdiv : cylindricalDivergence R Vr Vθ Vz (vectorMode κ Φ a) x = 0)
-    (hr₀ : 0 < r₀) (hr : r₀ ≤ R x)
-    (hn₀ : 0 < n₀) (hn : n₀ ≤ ‖phaseNormal R Vr Vθ Vz Φ x‖)
-    (hA : ‖a x 0‖ ≤ A) (hAr : ‖along Vr (fun y => a y 0) x‖ ≤ Ar)
-    (hAz : ‖along Vz (fun y => a y 2) x‖ ≤ Az) :
-    ‖longitudinalCoefficient (phaseNormal R Vr Vθ Vz Φ x) (a x)‖ ≤
-      (Ar + A / r₀ + Az) / (|κ| * n₀) := by
-  have hA₀ : 0 ≤ A := (norm_nonneg _).trans hA
-  have hrabs : r₀ ≤ |R x| := hr.trans (le_abs_self _)
-  have hrad : ‖a x 0‖ / |R x| ≤ A / r₀ :=
-    (div_le_div_of_nonneg_right hA (abs_nonneg _)).trans
-      (div_le_div_of_nonneg_left hA₀ hr₀ hrabs)
-  have hnum : ‖along Vr (fun y => a y 0) x‖ + ‖a x 0‖ / |R x| +
-      ‖along Vz (fun y => a y 2) x‖ ≤ Ar + A / r₀ + Az :=
-    add_le_add (add_le_add hAr hrad) hAz
-  have hnum₀ : 0 ≤ Ar + A / r₀ + Az :=
-    (add_nonneg (add_nonneg (norm_nonneg _) (div_nonneg (norm_nonneg _) (abs_nonneg _)))
-      (norm_nonneg _)).trans hnum
-  calc
-    ‖longitudinalCoefficient (phaseNormal R Vr Vθ Vz Φ x) (a x)‖ ≤
-        (‖along Vr (fun y => a y 0) x‖ + ‖a x 0‖ / |R x| +
-          ‖along Vz (fun y => a y 2) x‖) /
-          (|κ| * ‖phaseNormal R Vr Vθ Vz Φ x‖) :=
-      longitudinalCoefficient_bound R Vr Vθ Vz κ hκ hΦ ha haθ hdiv
-    _ ≤ (Ar + A / r₀ + Az) / (|κ| * ‖phaseNormal R Vr Vθ Vz Φ x‖) :=
-      div_le_div_of_nonneg_right hnum (mul_nonneg (abs_nonneg _) (norm_nonneg _))
-    _ ≤ (Ar + A / r₀ + Az) / (|κ| * n₀) :=
-      div_le_div_of_nonneg_left hnum₀ (mul_pos (abs_pos.mpr hκ) hn₀)
-        (mul_le_mul_of_nonneg_left hn (abs_nonneg _))
 
 
 
 /-! ## Finite jets of the longitudinal contraction -/
 
 
-/-- At every derivative order, the contraction `n·a` has the same
-inverse-frequency factor. Derivatives of the normal are included on the
-left, and derivatives of the full coefficient divergence on the right. -/
-theorem normalDot_jet_norm_eq {U : Set E} (R : E → ℝ) (Vr Vθ Vz : E → E)
-    (κ : ℝ) {Φ : E → ℝ} {a : E → ComplexVector} {x : E} (m : ℕ)
-    (hκ : κ ≠ 0) (hU : IsOpen U) (hΦ : DifferentiableOn ℝ Φ U)
-    (ha : ∀ i, DifferentiableOn ℝ (fun y => a y i) U)
-    (haθ : ∀ y ∈ U, along Vθ (fun z => a z 1) y = 0)
-    (hdiv : ∀ y ∈ U, cylindricalDivergence R Vr Vθ Vz (vectorMode κ Φ a) y = 0)
-    (hS : ContDiffOn ℝ ∞ (strippedDivergence R Vr Vz a) U) (hx : x ∈ U) :
-    ‖iteratedFDeriv ℝ m (fun y => normalDot (phaseNormal R Vr Vθ Vz Φ y) (a y)) x‖ =
-      ‖iteratedFDeriv ℝ m (strippedDivergence R Vr Vz a) x‖ / |κ| := by
-  have hc : phaseFactor κ ≠ 0 := by
-    apply norm_ne_zero_iff.mp
-    simpa only [norm_phaseFactor] using abs_ne_zero.mpr hκ
-  have heq : EqOn (fun y => normalDot (phaseNormal R Vr Vθ Vz Φ y) (a y))
-      (fun y => (-(phaseFactor κ)⁻¹) • strippedDivergence R Vr Vz a y) U := by
-    intro y hy
-    have he := longitudinal_identity R Vr Vθ Vz κ
-      ((hΦ y hy).differentiableAt (hU.mem_nhds hy))
-      (fun i => (ha i y hy).differentiableAt (hU.mem_nhds hy)) (haθ y hy) (hdiv y hy)
-    calc
-      _ = -strippedDivergence R Vr Vz a y / phaseFactor κ :=
-        (eq_div_iff hc).mpr (by simpa only [mul_comm] using he)
-      _ = _ := by simp only [smul_eq_mul, div_eq_mul_inv]; ring
-  have he : (fun y => normalDot (phaseNormal R Vr Vθ Vz Φ y) (a y)) =ᶠ[𝓝 x]
-      (fun y => (-(phaseFactor κ)⁻¹) • strippedDivergence R Vr Vz a y) :=
-    eventually_of_mem (hU.mem_nhds hx) heq
-  have he' : (fun y => normalDot (phaseNormal R Vr Vθ Vz Φ y) (a y)) =ᶠ[𝓝[univ] x]
-      (fun y => (-(phaseFactor κ)⁻¹) • strippedDivergence R Vr Vz a y) := by
-    simpa only [nhdsWithin_univ] using he
-  have hj := he'.iteratedFDerivWithin_eq (𝕜 := ℝ) he.self_of_nhds m
-  simp only [iteratedFDerivWithin_univ] at hj
-  rw [hj, iteratedFDeriv_const_smul_apply'
-    ((hS.contDiffAt (hU.mem_nhds hx)).of_le
-      (ENat.natCast_le_of_coe_top_le_withTop le_rfl m))]
-  simp only [norm_smul, norm_neg, norm_inv, norm_phaseFactor, div_eq_mul_inv]
-  ring
 
 
 

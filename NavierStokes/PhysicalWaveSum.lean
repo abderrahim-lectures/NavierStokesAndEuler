@@ -242,9 +242,6 @@ theorem physicalMask_support_subset (D : ℝ) (L : Label) :
   obtain ⟨hd, hs⟩ := mul_ne_zero_iff.mp hz
   exact ⟨subset_tsupport _ hd, subset_tsupport _ hs⟩
 
-theorem physicalMask_tsupport_subset (D : ℝ) (L : Label) :
-    tsupport (physicalMask D L) ⊆ labelRegion D L :=
-  closure_minimal (physicalMask_support_subset D L) (labelRegion_closed D L)
 
 theorem labelRegion_band {D : ℝ} {L : Label} {z : ℝ × Position}
     (hz : z ∈ labelRegion D L) :
@@ -859,9 +856,6 @@ theorem physical_sum_jet_bound {h a b Z r0 P B eBase : ℝ}
 noncomputable def coverChange (d e : ℕ) : LiftPoint →L[ℝ] LiftPoint :=
   (downLift e).comp (upLift d)
 
-theorem coverChange_common (h : ℝ) (n d e : ℕ) (w : SpaceTime) :
-    coverChange d e (commonLift h n d w) = commonLift h n e w := by
-  simp only [coverChange, commonLift, ContinuousLinearMap.comp_apply, Function.comp_apply, up_down]
 
 theorem norm_coverChange_le {d e Δ : ℕ} (hd : d ≤ Δ) (he : e ≤ Δ) :
     ‖coverChange d e‖ ≤ coverBound Δ ^ 2 := by
@@ -873,13 +867,6 @@ theorem norm_coverChange_le {d e Δ : ℕ} (hd : d ≤ Δ) (he : e ≤ Δ) :
         have := coverBound_ge_one Δ; linarith)
     _ = _ := (pow_two _).symm
 
-/-- Re-expressing a source by the true linear cover change preserves its
-physical wave exactly. This does not require finer native periodicity. -/
-theorem commonWave_reexpress (a h : ℝ) (n d e : ℕ) (r0 : ℝ)
-    (c : CarrierData) (amp : LiftPoint → ℂ) (j : ℤ) (w : SpaceTime) :
-    commonWave a h n d r0 c (amp ∘ coverChange d e) j w =
-      commonWave a h n e r0 c amp j w := by
-  simp only [commonWave, Function.comp_apply, coverChange_common]
 
 
 theorem RegularFamily.sum_locally_finite {H : ℕ} {f : WaveFamily H} {a b h r0 Z : ℝ} {Δ : ℕ}

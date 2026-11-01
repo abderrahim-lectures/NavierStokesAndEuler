@@ -219,35 +219,7 @@ theorem extension_of_powerLog_jets {h qbig : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
   have hq1 : PhysicalWaveSum.physicalQ h w ≤ 1 := hs.1.2.le.trans hqbig
   exact (hm w hs.1 hs.2.2 hq1).trans (hK _ ⟨hs.2.1.le, hq1⟩)
 
-theorem extension_of_power_jets {h qbig : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (hqbig : qbig ≤ 1) {f : SpaceTime → V}
-    (hf : ContDiffOn ℝ ∞ f (CutStageEstimates.physicalSublevel h qbig))
-    (hb : ∀ m : ℕ, ∃ C e : ℝ, ∀ w ∈ CutStageEstimates.physicalSublevel h qbig,
-      PhysicalWaveSum.physicalQ h w ≤ 1 →
-      ‖iteratedFDeriv ℝ m f w‖ ≤ C * PhysicalWaveSum.physicalQ h w ^ e)
-    {x : Space} (hx : x 2 ≠ 0)
-    (hqx : EndpointCoordinates.endpointRoot (2 * h) (x 2) < qbig) :
-    Nonempty (JointResidualLimits.OneSidedExtension f x) := by
-  apply extension_of_powerLog_jets hh hh1 hqbig hf _ hx hqx
-  intro m
-  obtain ⟨C, e, hm⟩ := hb m
-  refine ⟨C, 0, e, fun w hw _ hq1 => ?_⟩
-  simpa only [Real.rpow_zero, mul_one] using hm w hw hq1
 
-/-- Positive raw stages extend directly from `RawStageBounds`. The stage
-index hypothesis is retained exactly: no stage-zero estimate is inferred. -/
-theorem rawStage_extension {h qbig : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (hqbig : qbig ≤ 1) {F : ℕ → SpaceTime → V} {g L : ℕ → ℝ} {C p : ℕ → ℕ → ℝ}
-    (hb : CutStageEstimates.RawStageBounds (PhysicalWaveSum.physicalQ h) F g L C p
-      (PhysicalWaveSum.preterminal ∩ CutStageEstimates.physicalSublevel h qbig))
-    {j : ℕ} (hj : 1 ≤ j)
-    (hf : ContDiffOn ℝ ∞ (F j) (CutStageEstimates.physicalSublevel h qbig))
-    {x : Space} (hx : x 2 ≠ 0)
-    (hqx : EndpointCoordinates.endpointRoot (2 * h) (x 2) < qbig) :
-    Nonempty (JointResidualLimits.OneSidedExtension (F j) x) := by
-  apply extension_of_powerLog_jets hh hh1 hqbig hf _ hx hqx
-  intro m
-  exact ⟨C j m, p j m, g j - L m, fun w hw _ hq1 => hb j hj m w ⟨hw.1, hw⟩ hq1⟩
 
 
 end PhysicalExtensions
@@ -299,44 +271,10 @@ section FiniteInitialPieces
 open ActualPhysicalStageBounds
 
 
-theorem mean_angular_extension {h degree qbig : ℝ} (M : MeanInput h degree)
-    (hh : 0 < h) (hh1 : h < 1 / 2) (hqbig : qbig ≤ 1)
-    (hq : qbig ≤ ChartScales.Q M.firstBand) {x : Space} (hx : x 2 ≠ 0)
-    (hqx : EndpointCoordinates.endpointRoot (2 * h) (x 2) < qbig) :
-    Nonempty (JointResidualLimits.OneSidedExtension M.family.angularField x) := by
-  apply extension_of_power_jets hh hh1 hqbig (M.angular_smooth hh hh1 hq) _ hx hqx
-  intro m
-  obtain ⟨C, _, hb⟩ := M.angular_bound hh hh1 hq m
-  exact ⟨C, h * M.alpha - PhysicalMeanJetBounds.loss degree m, hb⟩
 
 variable {D : Type} [NormedAddCommGroup D] [NormedSpace ℝ D] {I K : Type*}
 
-/-- The finite initialized potential correction has its own derived
-estimate. This theorem does not apply the positive-stage bound to index zero. -/
-theorem initialIncrement_extension {h qbig : ℝ}
-    (W : PhysicalStageBounds.WaveData h D I K (Fin 3))
-    (MT MR : MeanInput h (CoordinateAlgebra.A h - 1 / 2))
-    (hh : 0 < h) (hh1 : h < 1 / 2) (hqbig : qbig ≤ 1)
-    (hqT : qbig ≤ ChartScales.Q MT.firstBand) (hqR : qbig ≤ ChartScales.Q MR.firstBand)
-    {x : Space} (hx : x 2 ≠ 0)
-    (hqx : EndpointCoordinates.endpointRoot (2 * h) (x 2) < qbig) :
-    Nonempty (JointResidualLimits.OneSidedExtension (initialIncrement W MT MR) x) := by
-  apply extension_of_power_jets hh hh1 hqbig (initialIncrement_smooth W MT MR hh hh1 hqT hqR) _ hx hqx
-  intro m
-  obtain ⟨C, _, hb⟩ := initialIncrement_bound W MT MR hh hh1 hqT hqR m
-  exact ⟨C, -InitializedPhysicalBackground.seedPotentialLoss h W.alpha W.shift (min MT.alpha MR.alpha) m, hb⟩
 
-theorem initialPressureIncrement_extension {h qbig : ℝ}
-    (W : PhysicalStageBounds.WaveData h D I K Unit)
-    (M : MeanInput h (2 * CoordinateAlgebra.A h))
-    (hh : 0 < h) (hh1 : h < 1 / 2) (hqbig : qbig ≤ 1)
-    (hq : qbig ≤ ChartScales.Q M.firstBand) {x : Space} (hx : x 2 ≠ 0)
-    (hqx : EndpointCoordinates.endpointRoot (2 * h) (x 2) < qbig) :
-    Nonempty (JointResidualLimits.OneSidedExtension (initialPressureIncrement W M) x) := by
-  apply extension_of_power_jets hh hh1 hqbig (initialPressureIncrement_smooth W M hh hh1 hq) _ hx hqx
-  intro m
-  obtain ⟨C, _, hb⟩ := initialPressureIncrement_bound W M hh hh1 hq m
-  exact ⟨C, -initialPressureLoss h W.alpha W.shift M.alpha m, hb⟩
 
 end FiniteInitialPieces
 

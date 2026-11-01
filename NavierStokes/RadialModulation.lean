@@ -78,15 +78,6 @@ theorem phase_hasDerivAt_X
   rw [hv, map_add, map_smul] at hc
   simpa only [id_eq, phasePoint, Function.comp_def, partialX, partialTheta, smul_eq_mul] using hc
 
-/-- The rapid phase is independent of η, so no frequency enters this derivative. -/
-theorem phase_hasDerivAt_eta
-    (A : PrimitiveProfile) (n X η : ℝ)
-    (hA : DifferentiableAt ℝ A (phasePoint n X η)) :
-    HasDerivAt (fun e => A (phasePoint n X e))
-      (partialEta A (phasePoint n X η)) η := by
-  have hg := (hasDerivAt_const η X).prodMk
-    ((hasDerivAt_id η).prodMk (hasDerivAt_const η (n * Real.log X)))
-  exact hA.hasFDerivAt.comp_hasDerivAt η hg
 
 /-- Exact radial derivative of the multiplicative angular modulation. -/
 theorem modulatedE_hasDerivAt_X
@@ -168,13 +159,6 @@ theorem periodicPrimitive_periodic
   simpa only [periodicPrimitive, zero_add, hzero, add_zero] using
     hperiodic.intervalIntegral_add_eq_add 0 θ (fun a b => hq.intervalIntegrable a b)
 
-/-- The integral primitive inherits all finite smoothness orders from q. -/
-theorem periodicPrimitive_contDiff
-    (q : ℝ → ℝ) (hq : ContDiff ℝ ∞ q) : ContDiff ℝ ∞ (periodicPrimitive q) := by
-  apply contDiff_infty_iff_deriv.mpr
-  have hd : deriv (periodicPrimitive q) = q :=
-    funext (fun θ => (periodicPrimitive_hasDerivAt q hq.continuous θ).deriv)
-  exact ⟨fun θ => (periodicPrimitive_hasDerivAt q hq.continuous θ).differentiableAt, hd.symm ▸ hq⟩
 
 /-- Subtracting the primitive's mean fixes the zero-mean normalization. -/
 def zeroMeanPrimitive (q : ℝ → ℝ) (θ : ℝ) : ℝ :=
@@ -185,29 +169,7 @@ theorem zeroMeanPrimitive_hasDerivAt
     HasDerivAt (zeroMeanPrimitive q) (q θ) θ := by
   exact (periodicPrimitive_hasDerivAt q hq θ).sub_const _
 
-theorem zeroMeanPrimitive_integral
-    (q : ℝ → ℝ) (hq : Continuous q) :
-    intervalIntegral (zeroMeanPrimitive q) 0 1 volume = 0 := by
-  have hd : Differentiable ℝ (periodicPrimitive q) :=
-    fun θ => (periodicPrimitive_hasDerivAt q hq θ).differentiableAt
-  have hc : Continuous (periodicPrimitive q) := hd.continuous
-  unfold zeroMeanPrimitive
-  rw [intervalIntegral.integral_sub (hc.intervalIntegrable 0 1)
-    (continuous_const.intervalIntegrable 0 1)]
-  simp
 
-/-- Every smooth period-one, mean-zero source has an actual smooth period-one,
-mean-zero primitive, with its derivative proved by the fundamental theorem. -/
-theorem exists_smooth_periodic_zeroMean_primitive
-    (q : ℝ → ℝ) (hq : ContDiff ℝ ∞ q) (hperiodic : Function.Periodic q 1)
-    (hzero : intervalIntegral q 0 1 volume = 0) :
-    ∃ A : ℝ → ℝ, ContDiff ℝ ∞ A ∧ Function.Periodic A 1 ∧
-      intervalIntegral A 0 1 volume = 0 ∧ ∀ θ, HasDerivAt A (q θ) θ := by
-  refine ⟨zeroMeanPrimitive q, (periodicPrimitive_contDiff q hq).sub contDiff_const, ?_,
-    zeroMeanPrimitive_integral q hq.continuous, zeroMeanPrimitive_hasDerivAt q hq.continuous⟩
-  intro θ
-  unfold zeroMeanPrimitive
-  rw [periodicPrimitive_periodic q hq.continuous hperiodic hzero θ]
 
 
 /-! ### Uniform bounds for every fixed parameter jet -/

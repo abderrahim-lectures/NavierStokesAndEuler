@@ -147,20 +147,7 @@ theorem commonSolve_transform (d : LinearData P V E) (φ : Q → P)
   intro j
   exact localizedCopy_transform d φ g hab k κ j q Y
 
-theorem commonSolve_refine (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
-    (k : ℕ) (κ : Plane → ℝ) (p : P) (Y : Plane) :
-    (pullbackData d k).commonSolve (refineGeometry g k) hab κ (p, Y) =
-      d.commonSolve g hab κ (p, coverPower k Y) :=
-  commonSolve_transform d id g hab k κ p Y
 
-omit [CompleteSpace E] in
-theorem source_periodic_transform (d : LinearData P V E) (φ : Q → P) (k : ℕ)
-    (q : Q) (hp : PeriodicAt d.source (φ q)) :
-    PeriodicAt (transformData d φ k).source q := by
-  intro Y j
-  change d.source (φ q, coverPower k (Y + TorusAverages.latticePoint j)) = _
-  rw [map_add, coverPower_lattice]
-  exact hp (coverPower k Y) (coverIndex k j)
 
 
 end Paths
@@ -170,23 +157,8 @@ end Paths
 noncomputable def recenterGeometry (g : Geometry) (l : Frequency) : Geometry :=
   { g with center := g.center + TorusAverages.latticePoint l }
 
-theorem coordinates_recenter (g : Geometry) (l j : Frequency) (Y : Plane) :
-    (recenterGeometry g l).coordinates j Y = g.coordinates (j + l) Y := by
-  unfold Geometry.coordinates recenterGeometry
-  rw [TorusAverages.latticePoint_add]
-  congr 1
-  ext <;> simp only [Prod.fst_add, Prod.snd_add, Prod.fst_sub, Prod.snd_sub] <;> ring
 
-theorem point_recenter (g : Geometry) (l j : Frequency) (z : Plane) :
-    (recenterGeometry g l).point j z = g.point (j + l) z := by
-  unfold Geometry.point recenterGeometry
-  rw [TorusAverages.latticePoint_add]
-  congr 1
-  ext <;> simp only [Prod.fst_add, Prod.snd_add] <;> ring
 
-theorem path_recenter (g : Geometry) (l j : Frequency) (Y : Plane) (s : ℝ) :
-    (recenterGeometry g l).path j Y s = g.path (j + l) Y s := by
-  simp only [Geometry.path, coordinates_recenter, point_recenter]
 
 section Recenter
 
@@ -195,33 +167,8 @@ variable {P V E : Type}
   [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
   {a b : ℝ}
 
-theorem anchoredSolve_recenter (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
-    (l j : Frequency) (p : P) (Y : Plane) (s : ℝ) :
-    d.anchoredSolve (recenterGeometry g l) hab j (p, Y) s =
-      d.anchoredSolve g hab (j + l) (p, Y) s := by
-  have hA : d.coefficientPath (a := a) (b := b) (recenterGeometry g l) j (p, Y) =
-      d.coefficientPath g (j + l) (p, Y) := by
-    apply pathFamily_congr
-    intro t
-    simp only [LinearData.coefficientAlong, coordinates_recenter]
-  have hf : d.forcingPath (a := a) (b := b) (recenterGeometry g l) j (p, Y) =
-      d.forcingPath g (j + l) (p, Y) := by
-    apply pathFamily_congr
-    intro t
-    simp only [LinearData.forcingAlong, coordinates_recenter, path_recenter]
-  simp only [LinearData.anchoredSolve, hA, hf]
 
-theorem copySolve_recenter (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
-    (l j : Frequency) (p : P) (Y : Plane) :
-    d.copySolve (recenterGeometry g l) hab j (p, Y) =
-      d.copySolve g hab (j + l) (p, Y) := by
-  simp only [LinearData.copySolve, coordinates_recenter, anchoredSolve_recenter]
 
-theorem localizedCopy_recenter (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
-    (l j : Frequency) (κ : Plane → ℝ) (p : P) (Y : Plane) :
-    d.localizedCopy (recenterGeometry g l) hab κ j (p, Y) =
-      d.localizedCopy g hab κ (j + l) (p, Y) := by
-  simp only [LinearData.localizedCopy, coordinates_recenter, copySolve_recenter]
 
 
 end Recenter
@@ -515,40 +462,6 @@ noncomputable def physicalOutput {a b : ℝ} (d : LinearData P V E) (g : Geometr
   fun x => d.commonSolve g hab κ (χ x)
 
 
-/-- The family of chart solves represents one explicitly constructed
-physical field. Assumptions concern only input transport and the coordinate
-maps; no output equality or chartwise existence witness is assumed. -/
-theorem commonSolve_family_represents
-    {A B : ℝ} (hAB : A ≤ B) (d : LinearData P V E) (g : Geometry)
-    {U : Set P} (hA : ContinuousOn d.coefficient (U ×ˢ univ))
-    (hB : ContinuousOn d.forcingMap (U ×ˢ univ)) (hf : ContinuousOn d.source (U ×ˢ univ))
-    (κ : Plane → ℝ) (hκ : support κ ⊆ univ ×ˢ Icc A B)
-    (χ : X → P × Plane) (domains : I → Set X)
-    (charts : I → X → Q × Plane) (φ : I → Q → P) (gaps : I → ℕ)
-    (entry exit shift rate amplitude : I → ℝ)
-    (hrate : ∀ i, 0 < rate i) (hinterval : ∀ i, entry i ≤ exit i)
-    (hentry : ∀ i, shift i + rate i * entry i = A)
-    (hexit : ∀ i, shift i + rate i * exit i = B)
-    (hchart : ∀ i x, x ∈ domains i →
-      (φ i (charts i x).1, coverPower (gaps i) (charts i x).2) = χ x)
-    (hslow : ∀ i x, x ∈ domains i → (χ x).1 ∈ U) :
-    ∀ i x, x ∈ domains i →
-      (transportData d (φ i) (gaps i) (shift i) (rate i) (amplitude i)).commonSolve
-          (transportGeometry g (gaps i) (shift i) (rate i) (hrate i).ne') (hinterval i)
-          (κ ∘ nativeTimeMap (shift i) (rate i)) (charts i x) =
-        amplitude i • physicalOutput d g hAB κ χ x := by
-  intro i x hx
-  have hq : φ i (charts i x).1 ∈ U := by
-    have he := congrArg Prod.fst (hchart i x hx)
-    change φ i (charts i x).1 = (χ x).1 at he
-    rw [he]
-    exact hslow i x hx
-  have hκi : support κ ⊆ univ ×ˢ Icc (shift i + rate i * entry i) (shift i + rate i * exit i) := by
-    simpa only [hentry i, hexit i] using hκ
-  have h := commonSolve_transport d (φ i) g (hinterval i) (gaps i)
-    (shift i) (rate i) (amplitude i) (hrate i) hA hB hf κ hκi
-    (charts i x).1 hq (charts i x).2
-  simpa only [hentry i, hexit i, hchart i x hx, physicalOutput] using h
 
 end PhysicalCompatibility
 
@@ -627,16 +540,6 @@ noncomputable def constantForcing : LinearData ℝ ℝ ℝ where
   forcingMap := fun _ => ContinuousLinearMap.id ℝ ℝ
   source := fun _ => 1
 
-theorem constantForcing_anchoredSolve {a b : ℝ} (g : Geometry) (hab : a ≤ b)
-    (j : Frequency) (p : ℝ) (Y : Plane) {s : ℝ} (hs : s ∈ Icc a b) :
-    constantForcing.anchoredSolve g hab j (p, Y) s = s - a := by
-  have h := constantForcing.anchoredSolve_unique g hab j (U := univ)
-    continuousOn_const continuousOn_const continuousOn_const (mem_univ p) Y
-    (u := fun t => t - a) (sub_self a) (fun t _ => by
-      simpa only [LinearData.coefficientAlong, LinearData.forcingAlong, constantForcing,
-        _root_.zero_apply, ContinuousLinearMap.id_apply, zero_add, id_eq] using
-        (hasDerivAt_id t).sub_const a)
-  exact (h hs).symm
 
 
 end NavierStokes.CopySolveCompatibility

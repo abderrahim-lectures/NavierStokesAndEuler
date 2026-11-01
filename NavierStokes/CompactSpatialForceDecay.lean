@@ -77,10 +77,6 @@ theorem jet_decay {S : Set Space} (hS : IsCompact S) {f : VelocityField}
   · rw [jet_zero_outside hS.isClosed hs m ht hx, norm_zero]
     exact le_of_lt (div_pos (lt_of_lt_of_le zero_lt_one (le_max_right _ _)) hp)
 
-theorem rescale_supported {S : Set Space} {f : VelocityField} (hf : SupportedIn S f)
-    (a : ℝ) {c : ℝ} (hc : 0 ≤ c) : SupportedIn S (ComparatorBridge.rescale a c f) := by
-  intro t ht x hx
-  simp only [ComparatorBridge.rescale, hf (c * t) (mul_nonneg hc ht) x hx, smul_zero]
 
 theorem forceConditionDecay {S : Set Space} (hS : IsCompact S) {f : VelocityField}
     (hf : ContDiffOn ℝ ∞ f futureDomain) (hs : SupportedIn S f)

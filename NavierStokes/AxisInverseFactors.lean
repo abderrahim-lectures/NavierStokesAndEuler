@@ -110,20 +110,7 @@ theorem norm_insert_le (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 
     (A B : AxisSpace I ε) : ‖insert I hε r hr A B‖ ≤ 64 * ‖A‖ * ‖B‖ :=
   norm_ofJetFamily_le _ _ _ _ _ _ _ _ _
 
-theorem jet_insert (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (A B : AxisSpace I ε) (n m : ℕ) {x : ℝ} (hx : x ∈ I.interval) :
-    inputJet I ε (insert I hε r hr A B) n m x = insertFamily I ε r A B n m x := by
-  unfold insert inputJet
-  exact jet_ofJetFamily I (weight ε) (weight_pos hε) _ _ _ _ _ _ _ _ hx
 
-theorem coefficient_insert (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (A B : AxisSpace I ε) (n : ℕ) {x : ℝ} (hx : x ∈ I.interval) :
-    coefficient I (weight ε) (insert I hε r hr A B) n x =
-      ∑ ij ∈ antidiagonal n, ratio r n ij.1 *
-        coefficient I (weight ε) A ij.1 x * coefficient I (weight ε) B ij.2 x := by
-  simpa only [insertFamily, jetProduct, antidiagonal_zero, Finset.sum_singleton,
-    Nat.choose_zero_right, Nat.cast_one, one_mul, coefficient] using
-      jet_insert I hε r hr A B n 0 hx
 
 
 /-- Repeat insertion for any finite list of factors. -/
@@ -132,23 +119,6 @@ def insertFactors (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r
   | [] => A
   | B :: Bs => insertFactors I hε r hr (insert I hε r hr A B) Bs
 
-theorem norm_insertFactors_le (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r)
-    (A : AxisSpace I ε) (Bs : List (AxisSpace I ε)) :
-    ‖insertFactors I hε r hr A Bs‖ ≤ 64 ^ Bs.length * ‖A‖ * (Bs.map norm).prod := by
-  induction Bs generalizing A with
-  | nil => simp [insertFactors]
-  | cons B Bs ih =>
-      apply (ih (insert I hε r hr A B)).trans
-      have hp : 0 ≤ (Bs.map norm).prod := by
-        apply List.prod_nonneg
-        intro a ha
-        obtain ⟨v, _, rfl⟩ := List.mem_map.mp ha
-        exact norm_nonneg v
-      calc
-        _ ≤ 64 ^ Bs.length * (64 * ‖A‖ * ‖B‖) * (Bs.map norm).prod :=
-          mul_le_mul_of_nonneg_right
-            (mul_le_mul_of_nonneg_left (norm_insert_le I hε r hr A B) (by positivity)) hp
-        _ = _ := by simp only [List.length_cons, List.map_cons, List.prod_cons, pow_succ]; ring
 
 /-- Recover the source coefficients by applying the radial differential
 operator to a zero-constant inverse. These coefficients need not themselves

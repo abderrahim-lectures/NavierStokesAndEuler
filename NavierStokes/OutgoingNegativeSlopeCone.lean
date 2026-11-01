@@ -89,9 +89,6 @@ structure FullCleanOutgoingCone {d : TailData} {K : ℝ} (w : ResetWitness d K)
   true_from_transition : ∀ p ∈ trueWindowFromTransition d,
     TrueAt w (CorrectedPulseAmplitude.amplitude d w.coefficients) XR p
 
-theorem full_of_clean {d : TailData} {K XR left : ℝ} {w : ResetWitness d K}
-    (h : CleanOutgoingCone w XR left) (hleft : left ≤ 0) : FullCleanOutgoingCone w XR left :=
-  ⟨h, true_from_transition h hleft⟩
 
 
 

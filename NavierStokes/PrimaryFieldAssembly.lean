@@ -161,43 +161,8 @@ theorem slotVelocity_formula {U : UnsignedLabel} (P : PairData sys U)
   rw [slotVelocity_formula, coveredVector_succ]
   rfl
 
-theorem slotVelocity_mask_zero {U : UnsignedLabel} (P : PairData sys U)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : ℝ) (T : Vec2)
-    (q : ℝ) (x : SlotColoring.Position) (hm : mask D U q x = 0)
-    (j : Fin 2) (Y : Plane) (θ : ℝ) :
-    slotVelocity P hdet outer ε T q x j Y θ = 0 := by
-  funext i
-  simp [slotVelocity_formula, amplitude, hm]
 
-/-- The same finite set of signed labels works for all auxiliary points
-and all angles at a positive physical point. -/
-theorem finite_active_slots (D : ℝ) (N : ℕ) {q : ℝ} (hq : 0 < q)
-    (x : SlotColoring.Position) :
-    ∃ F : Finset SignedIndex, ∀ a : SignedIndex, a ∉ F →
-      mask D (tailLabel N a.1) q x = 0 := by
-  classical
-  let hs := finite_active_masks D N hq x
-  refine ⟨hs.toFinset.product Finset.univ, ?_⟩
-  intro a ha
-  by_contra hm
-  exact ha (Finset.mem_product.mpr ⟨hs.mem_toFinset.mpr hm, Finset.mem_univ _⟩)
 
-private theorem finsum_vector_apply {ι : Type*} (f : ι → Vector) (s : Finset ι)
-    (hf : ∀ a, a ∉ s → f a = 0) (i : Fin 3) :
-    (∑ᶠ a, f a) i = ∑ᶠ a, f a i := by
-  classical
-  have hv : (∑ᶠ a, f a) = ∑ a ∈ s, f a := by
-    apply finsum_eq_sum_of_support_subset
-    intro a ha
-    by_contra hn
-    exact ha (hf a hn)
-  have hi : (∑ᶠ a, f a i) = ∑ a ∈ s, f a i := by
-    apply finsum_eq_sum_of_support_subset
-    intro a ha
-    by_contra hn
-    exact ha (by change f a i = 0; rw [hf a hn]; rfl)
-  rw [hv, hi]
-  simp only [Finset.sum_apply]
 
 noncomputable def principalField {N : ℕ}
     (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
@@ -207,90 +172,12 @@ noncomputable def principalField {N : ℕ}
   ∑ᶠ a : SignedIndex,
     slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ
 
-theorem principalField_finite {N : ℕ}
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position) :
-    ∃ F : Finset SignedIndex, ∀ Y θ,
-      principalField P hdet outer ε T q x Y θ =
-        ∑ a ∈ F, slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ := by
-  classical
-  obtain ⟨F, hF⟩ := finite_active_slots D N hq x
-  refine ⟨F, ?_⟩
-  intro Y θ
-  apply finsum_eq_sum_of_support_subset
-  intro a ha
-  by_contra hn
-  exact ha (slotVelocity_mask_zero (P a.1) hdet _ _ _ q x (hF a hn) _ Y θ)
 
-theorem principalField_apply {N : ℕ}
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position)
-    (Y : Plane) (θ : ℝ) (i : Fin 3) :
-    principalField P hdet outer ε T q x Y θ i =
-      ∑ᶠ a : SignedIndex,
-        slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ i := by
-  obtain ⟨F, hF⟩ := finite_active_slots D N hq x
-  exact finsum_vector_apply _ F
-    (fun a ha => slotVelocity_mask_zero (P a.1) hdet _ _ _ q x (hF a ha) _ Y θ) i
 
-theorem principalField_components {N : ℕ}
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position)
-    (Y : Plane) (θ : ℝ) :
-    principalField P hdet outer ε T q x Y θ 0 =
-      assembledRadial P hdet outer ε T q x Y θ ∧
-    ∀ i : Fin 2, principalField P hdet outer ε T q x Y θ i.succ =
-      assembledTangent P hdet outer ε T q x i Y θ := by
-  constructor
-  · simp only [principalField_apply P hdet outer ε T hq x, slotVelocity_zero,
-      assembledRadial]
-  · intro i
-    simp only [principalField_apply P hdet outer ε T hq x, slotVelocity_succ,
-      assembledTangent]
 
-/-- The angular integral and torus-square integral of this actual vector
-field give the physical target, with the original inverse square roots. -/
-theorem physical_principal_covariance (sys : SlotSystem D h vr vt)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (N : ℕ) (hN : 1 ≤ N)
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    {q : ℝ} (hq : 0 < q) (hqN : q ≤ ChartScales.Q N) (x : SlotColoring.Position) (T0 : Vec2)
-    (hcone : ∀ U, mask D (tailLabel N U) q x ≠ 0 →
-      SmoothCovariance.StrictCone (P U).matrix (chartTarget h q N T0 U)) (i : Fin 2) :
-    doubleAverage (fun Y θ =>
-      principalField P hdet (physicalOuter h N) (physicalViscosity h N)
-        (chartTarget h q N T0) q x Y θ 0 *
-      principalField P hdet (physicalOuter h N) (physicalViscosity h N)
-        (chartTarget h q N T0) q x Y θ i.succ) =
-      q ^ (-velocityExponent h - 1 / 2) * T0 i := by
-  simp_rw [(principalField_components P hdet _ _ _ hq x _ _).1,
-    (principalField_components P hdet _ _ _ hq x _ _).2 i]
-  exact physical_primary_covariance sys hdet N hN P hq hqN x T0 hcone i
 
 /-! ## A single cutoff, before periodization -/
 
-/-- Multiplication by a locally supported cutoff commutes with actual
-periodization on an injective slot. No choice of a lattice copy is needed. -/
-theorem periodize_smul_of_injective_support {S : Set Plane}
-    (hS : InjOn TorusAverages.quotientPoint S) {ψ : Plane → ℝ} {a : Plane → Vector}
-    (hψ : support ψ ⊆ S) (ha : support a ⊆ S) (Y : Plane) :
-    TorusAverages.periodize ψ Y • TorusAverages.periodize a Y =
-      TorusAverages.periodize (fun z => ψ z • a z) Y := by
-  have hprod : support (fun z => ψ z • a z) ⊆ S := by
-    intro z hz
-    apply hψ
-    intro he
-    exact hz (by simp [he])
-  by_cases hactive : ∃ k : TorusInverse.Frequency, ψ (TorusAverages.latticePoint k + Y) ≠ 0
-  · obtain ⟨k, hk⟩ := hactive
-    rw [TorusAverages.periodize_eq_native_copy hS hψ (hψ hk),
-      TorusAverages.periodize_eq_native_copy hS ha (hψ hk),
-      TorusAverages.periodize_eq_native_copy hS hprod (hψ hk)]
-  · have hz : ∀ k : TorusInverse.Frequency, ψ (TorusAverages.latticePoint k + Y) = 0 := by
-      simpa only [not_exists, not_not] using hactive
-    simp [TorusAverages.periodize, hz]
 
 
 /-- Identification with any actual frequency/phase presentation of the
@@ -319,17 +206,6 @@ theorem mode_identification {X : Type*} (κ : ℝ) (Φ : X → ℝ)
   rw [hr, hphase]
   rfl
 
-/-- The phase in the manuscript gives precisely the recorded integer
-angular mode and the recorded slow phase remainder. -/
-theorem actual_phase_identification (k ε p pz x0 : ℝ)
-    (F G : PhaseCalculus.Slow → ℝ) (s : PhaseCalculus.Slow)
-    (v : Plane → ℝ) (m : ℤ) (hm : k * p = (m : ℝ)) (Y : Plane) (θ : ℝ) :
-    k * PhaseCalculus.phase ε p pz x0 F G (s, θ, v Y) =
-      (m : ℝ) * θ + k * ((pz / ε) * s.2.1 + x0 * s.1 -
-        v Y * (p * F s + pz * G s)) := by
-  unfold PhaseCalculus.phase
-  rw [← hm]
-  ring
 
 
 /-! ## The exact curl retains its covariance error -/
@@ -355,23 +231,7 @@ noncomputable def correctedVelocity (a : WaveCoefficients X) (s : StripData X)
   fun i => (vectorMode (a.frequency n) (a.phase n)
     ((a.corrected s d ψ).amplitude n) x i).re
 
-theorem correctedVelocity_split (a : WaveCoefficients X) (s : StripData X)
-    (d : GraphDirections X) (ψ : ℕ → X → ℝ) (n : ℕ) (x : X) :
-    correctedVelocity a s d ψ n x = cutoffVelocity a ψ n x + curlVelocity a s d ψ n x := by
-  funext i
-  simp [correctedVelocity, cutoffVelocity, curlVelocity, WaveCoefficients.corrected,
-    WaveCoefficients.addAmplitude, vectorMode, mode, add_mul]
 
-omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
-theorem cutoffVelocity_identification (a : WaveCoefficients X) (ψ : ℕ → X → ℝ)
-    (n : ℕ) (z : X) {U : UnsignedLabel} (P : PairData sys U)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : ℝ) (T : Vec2)
-    (q : ℝ) (x : SlotColoring.Position) (j : Fin 2) (Y : Plane) (θ : ℝ)
-    (ha : (a.withCutoff ψ).amplitude n z = slotAmplitude P hdet outer ε T q x j Y)
-    (hphase : a.frequency n * a.phase n z = slotPhase P j (Y, θ)) :
-    cutoffVelocity a ψ n z = slotVelocity P hdet outer ε T q x j Y θ :=
-  mode_identification (a.frequency n) (a.phase n) ((a.withCutoff ψ).amplitude n) z
-    P hdet outer ε T q x j Y θ ha hphase
 
 end CurlCorrection
 
@@ -379,54 +239,10 @@ noncomputable def covarianceError (V R : Plane → ℝ → Vector) (i : Fin 2)
     (Y : Plane) (θ : ℝ) : ℝ :=
   V Y θ 0 * R Y θ i.succ + R Y θ 0 * V Y θ i.succ + R Y θ 0 * R Y θ i.succ
 
-theorem covariance_expansion (V R : Plane → ℝ → Vector) (i : Fin 2) (Y : Plane) (θ : ℝ) :
-    (V Y θ + R Y θ) 0 * (V Y θ + R Y θ) i.succ =
-      V Y θ 0 * V Y θ i.succ + covarianceError V R i Y θ := by
-  simp only [Pi.add_apply, covarianceError]
-  ring
 
-private theorem continuous_angularMean {f : Plane → ℝ → ℝ}
-    (hf : Continuous f.uncurry) : Continuous (fun Y => SmoothLoop.angularMean (f Y)) :=
-  (intervalIntegral.continuous_parametric_intervalIntegral_of_continuous' hf
-    0 (2 * Real.pi)).div_const _
 
-private theorem squareAverage_add {f g : Plane → ℝ} (hf : Continuous f) (hg : Continuous g) :
-    TorusAverages.squareAverage (fun Y => f Y + g Y) =
-      TorusAverages.squareAverage f + TorusAverages.squareAverage g := by
-  rw [TorusAverages.squareAverage_eq_setIntegral (hf.fun_add hg),
-    TorusAverages.squareAverage_eq_setIntegral hf, TorusAverages.squareAverage_eq_setIntegral hg]
-  apply MeasureTheory.integral_add
-  · exact (hf.continuousOn.integrableOn_compact (isCompact_Icc.prod isCompact_Icc)).mono_set
-      (Set.prod_mono Ico_subset_Icc_self Ico_subset_Icc_self)
-  · exact (hg.continuousOn.integrableOn_compact (isCompact_Icc.prod isCompact_Icc)).mono_set
-      (Set.prod_mono Ico_subset_Icc_self Ico_subset_Icc_self)
 
-theorem doubleAverage_add {f g : Plane → ℝ → ℝ}
-    (hf : Continuous f.uncurry) (hg : Continuous g.uncurry) :
-    doubleAverage (fun Y θ => f Y θ + g Y θ) = doubleAverage f + doubleAverage g := by
-  unfold doubleAverage
-  have he : (fun Y => SmoothLoop.angularMean (fun θ => f Y θ + g Y θ)) =
-      fun Y => SmoothLoop.angularMean (f Y) + SmoothLoop.angularMean (g Y) := by
-    funext Y
-    apply SmoothLoop.angularMean_add
-    · exact hf.comp (continuous_const.prodMk continuous_id)
-    · exact hg.comp (continuous_const.prodMk continuous_id)
-  rw [he]
-  exact squareAverage_add (continuous_angularMean hf) (continuous_angularMean hg)
 
-/-- The covariance of the exact curl has three explicitly retained error
-products, rather than being identified with the principal covariance. -/
-theorem averaged_covariance_expansion (V R : Plane → ℝ → Vector)
-    (hV : Continuous V.uncurry) (hR : Continuous R.uncurry) (i : Fin 2) :
-    doubleAverage (fun Y θ => (V Y θ + R Y θ) 0 * (V Y θ + R Y θ) i.succ) =
-      doubleAverage (fun Y θ => V Y θ 0 * V Y θ i.succ) +
-        doubleAverage (covarianceError V R i) := by
-  simp_rw [covariance_expansion]
-  apply doubleAverage_add
-  · exact ((continuous_apply 0).comp hV).mul ((continuous_apply i.succ).comp hV)
-  · exact ((((continuous_apply 0).comp hV).mul ((continuous_apply i.succ).comp hR)).add
-      (((continuous_apply 0).comp hR).mul ((continuous_apply i.succ).comp hV))).add
-        (((continuous_apply 0).comp hR).mul ((continuous_apply i.succ).comp hR))
 
 /-! ## Canonical source data: actual ODE pulses and the same matrix -/
 
@@ -590,37 +406,7 @@ noncomputable def sourceField {N : ℕ}
   ∑ᶠ a : SignedIndex,
     (A a.1).actualVelocity hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ
 
-theorem sourceField_eq {N : ℕ}
-    (A : (U : UnsignedLabel) → SourcePair Q sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) (q : ℝ) (x : SlotColoring.Position)
-    (Y : Plane) (θ : ℝ) :
-    sourceField A hdet outer ε T q x Y θ =
-      principalField (fun U => (A U).pairData) hdet outer ε T q x Y θ := by
-  unfold sourceField principalField
-  apply finsum_congr
-  intro a
-  exact (A a.1).actualVelocity_eq hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ
 
-/-- End-to-end principal covariance for the actual ODE/source coefficient.
-The assumed cone concerns its actual normalized ODE integral matrix. -/
-theorem physical_source_covariance (sys : SlotSystem D h vr vt)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (N : ℕ) (hN : 1 ≤ N)
-    (A : (U : UnsignedLabel) → SourcePair Q sys (tailLabel N U))
-    {q : ℝ} (hq : 0 < q) (hqN : q ≤ ChartScales.Q N) (x : SlotColoring.Position) (T0 : Vec2)
-    (hcone : ∀ U, mask D (tailLabel N U) q x ≠ 0 →
-      SmoothCovariance.StrictCone (A U).sourceMatrix (chartTarget h q N T0 U)) (i : Fin 2) :
-    doubleAverage (fun Y θ =>
-      sourceField A hdet (physicalOuter h N) (physicalViscosity h N)
-        (chartTarget h q N T0) q x Y θ 0 *
-      sourceField A hdet (physicalOuter h N) (physicalViscosity h N)
-        (chartTarget h q N T0) q x Y θ i.succ) =
-      q ^ (-velocityExponent h - 1 / 2) * T0 i := by
-  simp_rw [sourceField_eq]
-  apply physical_principal_covariance sys hdet N hN _ hq hqN x T0 _ i
-  intro U hU
-  rw [← (A U).sourceMatrix_eq]
-  exact hcone U hU
 
 end Source
 
@@ -638,28 +424,6 @@ noncomputable def cutoffModeField (a : SignedIndex → WaveCoefficients X)
     (point : SignedIndex → Plane → ℝ → X) (Y : Plane) (θ : ℝ) : Vector :=
   ∑ᶠ b : SignedIndex, cutoffVelocity (a b) (ψ b) (band b) (point b Y θ)
 
-omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
-/-- The only bindings are the constructed coefficient and phase. The field
-and its assembled covariance are conclusions of this adapter. -/
-theorem cutoffModeField_eq_source {N : ℕ}
-    (A : (U : UnsignedLabel) → SourcePair Q sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) (q : ℝ) (x : SlotColoring.Position)
-    (a : SignedIndex → WaveCoefficients X) (ψ : SignedIndex → ℕ → X → ℝ)
-    (band : SignedIndex → ℕ) (point : SignedIndex → Plane → ℝ → X)
-    (hcoeff : ∀ b Y θ, ((a b).withCutoff (ψ b)).amplitude (band b) (point b Y θ) =
-      (A b.1).actualAmplitude hdet (outer b.1) (ε b.1) (T b.1) q x b.2 Y)
-    (hphase : ∀ b Y θ, (a b).frequency (band b) * (a b).phase (band b) (point b Y θ) =
-      slotPhase (A b.1).pairData b.2 (Y, θ)) (Y : Plane) (θ : ℝ) :
-    cutoffModeField a ψ band point Y θ = sourceField A hdet outer ε T q x Y θ := by
-  unfold cutoffModeField sourceField
-  apply finsum_congr
-  intro b
-  rw [(A b.1).actualVelocity_eq]
-  exact cutoffVelocity_identification (a b) (ψ b) (band b) (point b Y θ)
-    (A b.1).pairData hdet (outer b.1) (ε b.1) (T b.1) q x b.2 Y θ
-    ((hcoeff b Y θ).trans ((A b.1).actualAmplitude_eq hdet _ _ _ q x b.2 Y))
-    (hphase b Y θ)
 
 
 
@@ -670,45 +434,9 @@ end CoefficientAssembly
 private noncomputable def latticeCover (k : TorusInverse.Frequency) : TorusInverse.Frequency :=
   (3 * k.1 + k.2, k.1 + 5 * k.2)
 
-private theorem covering_add_lattice (Y : Plane) (k : TorusInverse.Frequency) :
-    TorusAverages.covering (Y + TorusAverages.latticePoint k) =
-      TorusAverages.covering Y + TorusAverages.latticePoint (latticeCover k) := by
-  ext <;> simp [TorusAverages.covering, TorusAverages.latticePoint, latticeCover] <;> ring
 
-private theorem covering_iterate_add_lattice (n : ℕ) (Y : Plane) (k : TorusInverse.Frequency) :
-    TorusAverages.covering^[n] (Y + TorusAverages.latticePoint k) =
-      TorusAverages.covering^[n] Y + TorusAverages.latticePoint (latticeCover^[n] k) := by
-  induction n with
-  | zero => rfl
-  | succ n ih =>
-      rw [Function.iterate_succ_apply', ih, covering_add_lattice,
-        Function.iterate_succ_apply', Function.iterate_succ_apply']
 
-theorem covered_periodic (n : ℕ) (f : Plane → ℝ) (Y : Plane) (k : TorusInverse.Frequency) :
-    covered n f (Y + TorusAverages.latticePoint k) = covered n f Y := by
-  unfold covered
-  rw [covering_iterate_add_lattice, TorusAverages.periodize_periodic]
 
-theorem slot_cross_zero {N : ℕ} (hN : 1 ≤ N)
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position)
-    {a b : SignedIndex} (hab : a ≠ b) (Y : Plane) (θ : ℝ) (i : Fin 2) :
-    slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ 0 *
-      slotVelocity (P b.1) hdet (outer b.1) (ε b.1) (T b.1) q x b.2 Y θ i.succ = 0 := by
-  have hlevel (c : SignedIndex) : 1 ≤ (signedTailLabel N c).1 := by
-    change 1 ≤ c.1.1 + N
-    omega
-  have hne : signedTailLabel N a ≠ signedTailLabel N b :=
-    fun he => hab ((signedTailLabel_injective N) he)
-  have hz := sys.wave_cross_zero (hlevel a) (hlevel b) hne
-    ((P a.1).rawRadial_support hdet a.2) ((P b.1).rawTangent_support hdet b.2 i) hq x Y θ
-    (outer a.1 * Real.sqrt (ε a.1) * SmoothCovariance.amplitudes (P a.1).matrix (T a.1) a.2)
-    (outer b.1 * Real.sqrt (ε b.1) * SmoothCovariance.amplitudes (P b.1).matrix (T b.1) b.2)
-    ((P a.1).modes a.2) ((P b.1).modes b.2) ((P a.1).phases a.2) ((P b.1).phases b.2)
-  simp only [slotVelocity_zero, slotVelocity_succ, PairData.radialWave, PairData.tangentWave,
-    signedTailLabel, physicalMask_signedLabel, amplitude, mul_assoc] at hz ⊢
-  exact hz
 
 noncomputable def diagonalCovariance {N : ℕ}
     (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
@@ -719,141 +447,14 @@ noncomputable def diagonalCovariance {N : ℕ}
     covered (SlotColoring.nativeIndex h (tailLabel N a.1).1) ((P a.1).rawRadial hdet a.2) Y *
       covered (SlotColoring.nativeIndex h (tailLabel N a.1).1) ((P a.1).rawTangent hdet a.2 i) Y * (1 / 2)
 
-/-- Both off-diagonal elimination and angular integration are performed
-on the actual finite active family, before descending to the torus. -/
-theorem angular_principal_finite {N : ℕ} (hN : 1 ≤ N)
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position) (i : Fin 2) :
-    ∃ F : Finset SignedIndex, ∀ Y,
-      SmoothLoop.angularMean (fun θ => principalField P hdet outer ε T q x Y θ 0 *
-        principalField P hdet outer ε T q x Y θ i.succ) =
-      ∑ a ∈ F, diagonalCovariance P hdet outer ε T q x a i Y := by
-  classical
-  obtain ⟨F, hF⟩ := principalField_finite P hdet outer ε T hq x
-  refine ⟨F, ?_⟩
-  intro Y
-  have hprod (θ : ℝ) : principalField P hdet outer ε T q x Y θ 0 *
-      principalField P hdet outer ε T q x Y θ i.succ =
-      ∑ a ∈ F, slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ 0 *
-        slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ i.succ := by
-    simp only [hF Y θ, Finset.sum_apply]
-    apply sum_product_diagonal
-    intro a _ b _ hab
-    exact slot_cross_zero hN P hdet outer ε T hq x hab Y θ i
-  simp_rw [hprod]
-  rw [angularMean_sum F]
-  · apply Finset.sum_congr rfl
-    intro a _
-    simp only [slotVelocity_zero, slotVelocity_succ, PairData.radialWave, PairData.tangentWave]
-    exact angularMean_wave_product _ _ _ _ _ ((P a.1).modes_ne a.2) _ _
-  · intro a _
-    simp only [slotVelocity_zero, slotVelocity_succ, PairData.radialWave, PairData.tangentWave]
-    exact (wave_continuous_theta _ _ _ _ _ _).mul (wave_continuous_theta _ _ _ _ _ _)
-
-theorem angular_principal_regular {N : ℕ} (hN : 1 ≤ N)
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position) (i : Fin 2) :
-    let f := fun Y => SmoothLoop.angularMean (fun θ =>
-      principalField P hdet outer ε T q x Y θ 0 * principalField P hdet outer ε T q x Y θ i.succ)
-    Continuous f ∧ ∀ Y k, f (Y + TorusAverages.latticePoint k) = f Y := by
-  dsimp only
-  obtain ⟨F, hF⟩ := angular_principal_finite hN P hdet outer ε T hq x i
-  constructor
-  · simp_rw [hF]
-    apply continuous_finsetSum
-    intro a _
-    exact ((continuous_const.mul
-      (covered_continuous ((P a.1).rawRadial_continuous hdet a.2)
-        ((P a.1).rawRadial_compact hdet a.2) _)).mul
-          (covered_continuous ((P a.1).rawTangent_continuous hdet a.2 i)
-            ((P a.1).rawTangent_compact hdet a.2 i) _)).mul continuous_const
-  · intro Y k
-    rw [hF, hF]
-    apply Finset.sum_congr rfl
-    intro a _
-    unfold diagonalCovariance
-    rw [covered_periodic, covered_periodic]
-
-/-- The square average is exactly the Haar integral of the angular
-covariance's continuous descent to the auxiliary torus. -/
-theorem principal_torus_average {N : ℕ} (hN : 1 ≤ N)
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position) (i : Fin 2) :
-    ∃ g : C(TorusInverse.Torus, ℂ),
-      (∀ Y, g (TorusAverages.quotientPoint Y) =
-        ((SmoothLoop.angularMean (fun θ => principalField P hdet outer ε T q x Y θ 0 *
-          principalField P hdet outer ε T q x Y θ i.succ) : ℝ) : ℂ)) ∧
-      (∫ z, g z ∂TorusInverse.torusMeasure) =
-        ((doubleAverage (fun Y θ => principalField P hdet outer ε T q x Y θ 0 *
-          principalField P hdet outer ε T q x Y θ i.succ) : ℝ) : ℂ) := by
-  obtain ⟨hc, hp⟩ := angular_principal_regular hN P hdet outer ε T hq x i
-  let f : Plane → ℝ := fun Y => SmoothLoop.angularMean (fun θ =>
-    principalField P hdet outer ε T q x Y θ 0 * principalField P hdet outer ε T q x Y θ i.succ)
-  have hcc : Continuous (fun Y => (f Y : ℂ)) := Complex.continuous_ofReal.comp hc
-  have hpc : SmoothFourierData.UnitPeriodic (fun Y => (f Y : ℂ)) := by
-    intro Y k
-    exact congrArg Complex.ofReal (hp Y k)
-  let g := SmoothFourierData.descendContinuous (fun Y => (f Y : ℂ)) hcc hpc
-  refine ⟨g, fun _ => rfl, ?_⟩
-  rw [← TorusAverages.squareAverage_torusLift g]
-  change TorusAverages.squareAverage (fun Y => (f Y : ℂ)) =
-    ((TorusAverages.squareAverage f : ℝ) : ℂ)
-  simp only [TorusAverages.squareAverage, ← intervalIntegral.integral_ofReal]
 
 
-theorem nativeVector_continuous {U : UnsignedLabel} (P : PairData sys U)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (j : Fin 2) :
-    Continuous (nativeVector P hdet j) := by
-  apply continuous_pi
-  intro i
-  refine Fin.cases ?_ (fun k => ?_) i
-  · exact P.rawRadial_continuous hdet j
-  · exact P.rawTangent_continuous hdet j k
-
-theorem slotVelocity_continuous {U : UnsignedLabel} (P : PairData sys U)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : ℝ) (T : Vec2)
-    (q : ℝ) (x : SlotColoring.Position) (j : Fin 2) (hphase : Continuous (P.phases j)) :
-    Continuous (fun z : Plane × ℝ => slotVelocity P hdet outer ε T q x j z.1 z.2) := by
-  have hcov : Continuous (coveredVector P hdet j) :=
-    (TorusAverages.periodize_continuous (nativeVector_continuous P hdet j)
-      (nativeVector_compact P hdet j)).comp (SlotGeometry.cover ^ SlotColoring.nativeIndex h U.1).continuous
-  apply continuous_pi
-  intro i
-  simp only [slotVelocity_formula]
-  exact (continuous_const.mul (((continuous_apply i).comp hcov).comp continuous_fst)).mul
-    (Real.continuous_cos.comp ((continuous_const.mul continuous_snd).add (hphase.comp continuous_fst)))
-
-theorem principalField_continuous {N : ℕ}
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) {q : ℝ} (hq : 0 < q) (x : SlotColoring.Position)
-    (hphase : ∀ U j, Continuous ((P U).phases j)) :
-    Continuous (fun z : Plane × ℝ => principalField P hdet outer ε T q x z.1 z.2) := by
-  obtain ⟨F, hF⟩ := principalField_finite P hdet outer ε T hq x
-  have he : (fun z : Plane × ℝ => principalField P hdet outer ε T q x z.1 z.2) =
-      fun z => ∑ a ∈ F, slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 z.1 z.2 := by
-    funext z
-    exact hF z.1 z.2
-  rw [he]
-  exact continuous_finsetSum F (fun a _ =>
-    slotVelocity_continuous (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 (hphase a.1 a.2))
 
 
-/-- Integer angular modes give actual full-turn periodicity. -/
-theorem slotVelocity_angular_periodic {U : UnsignedLabel} (P : PairData sys U)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : ℝ) (T : Vec2)
-    (q : ℝ) (x : SlotColoring.Position) (j : Fin 2) (Y : Plane) (θ : ℝ) :
-    slotVelocity P hdet outer ε T q x j Y (θ + 2 * Real.pi) =
-      slotVelocity P hdet outer ε T q x j Y θ := by
-  funext i
-  simp only [slotVelocity_formula]
-  congr 1
-  rw [show (P.modes j : ℝ) * (θ + 2 * Real.pi) + P.phases j Y =
-    ((P.modes j : ℝ) * θ + P.phases j Y) + (P.modes j : ℝ) * (2 * Real.pi) by ring]
-  exact Real.cos_add_int_mul_two_pi _ _
+
+
+
+
 
 
 
@@ -890,28 +491,6 @@ noncomputable def scaledCutoffModeField (outer : UnsignedLabel → ℝ)
     (Y : Plane) (θ : ℝ) : Vector :=
   ∑ᶠ b : SignedIndex, outer b.1 • cutoffVelocity (a b) (ψ b) (band b) (point b Y θ)
 
-omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
-theorem scaledCutoffModeField_eq_source {N : ℕ}
-    (A : (U : UnsignedLabel) → SourcePair Q sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) (q : ℝ) (x : SlotColoring.Position)
-    (a : SignedIndex → WaveCoefficients X) (ψ : SignedIndex → ℕ → X → ℝ)
-    (band : SignedIndex → ℕ) (point : SignedIndex → Plane → ℝ → X)
-    (hcoeff : ∀ b Y θ, ((a b).withCutoff (ψ b)).amplitude (band b) (point b Y θ) =
-      (A b.1).actualAmplitude hdet 1 (ε b.1) (T b.1) q x b.2 Y)
-    (hphase : ∀ b Y θ, (a b).frequency (band b) * (a b).phase (band b) (point b Y θ) =
-      slotPhase (A b.1).pairData b.2 (Y, θ)) (Y : Plane) (θ : ℝ) :
-    scaledCutoffModeField outer a ψ band point Y θ = sourceField A hdet outer ε T q x Y θ := by
-  unfold scaledCutoffModeField sourceField
-  apply finsum_congr
-  intro b
-  rw [(A b.1).actualVelocity_outer_scale]
-  congr 1
-  rw [(A b.1).actualVelocity_eq]
-  exact cutoffVelocity_identification (a b) (ψ b) (band b) (point b Y θ)
-    (A b.1).pairData hdet 1 (ε b.1) (T b.1) q x b.2 Y θ
-    ((hcoeff b Y θ).trans ((A b.1).actualAmplitude_eq hdet 1 _ _ q x b.2 Y))
-    (hphase b Y θ)
 
 
 

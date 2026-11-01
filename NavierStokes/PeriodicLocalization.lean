@@ -113,18 +113,6 @@ theorem exists_local_latticeBox {r : ℝ} {f : SpaceTime → V}
   exact hn ((mem_latticeBoxFinset N n).mpr
     (mem_latticeBox_of_translate_ne_zero hf hN.le hw.le hne))
 
-/-- The supports of the lattice translates form a locally finite family. -/
-theorem locallyFinite_support_translate {r : ℝ} {f : SpaceTime → V}
-    (hf : SupportedInCube r f) :
-    LocallyFinite (fun n : Lattice => Function.support (translate f n)) := by
-  intro z
-  obtain ⟨N, hN⟩ := exists_local_latticeBox hf z
-  refine ⟨{w | ∀ n ∉ latticeBoxFinset N, translate f n w = 0}, hN, ?_⟩
-  apply (finite_latticeBox N).subset
-  intro n hn
-  obtain ⟨w, hw, hzero⟩ := hn
-  by_contra hnot
-  exact hw (hzero n (by simpa using hnot))
 
 
 /-- Locally, the infinite sum equals a single finite sum of smooth translates. -/

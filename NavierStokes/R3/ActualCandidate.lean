@@ -121,18 +121,6 @@ theorem of_localized_fields {A B : VelocityField} {P : PressureField} {f : Veloc
       hF hsupport.1 hc.zero_initial_velocity
       (fun t ht => hc.divergence_free t ⟨ht.1.le, ht.2⟩) hNS
 
-/-- The selected physical sums satisfy every whole-space candidate property
-at viscosity one, including a single kinetic-energy bound for `0 ≤ t < 1`.
-The additional clause records the initial interval on which the flow is zero. -/
-theorem selected_candidate_one_with_early_zero :
-    ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
-      ProblemStatement.CandidateProperties 1 u p f K ∧
-        ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 := by
-  obtain ⟨a, _, ea, eb, ep, forcing, hc, hf, _⟩ :=
-    ActualCandidateAssembly.selected_witness
-  refine ⟨_, _, _, _, of_localized_fields hc hf, ?_⟩
-  intro t ht x
-  exact TimeLocalization.activatedVelocity_zero_early _ ht x
 
 
 /-- Both fields are identically zero on an initial time interval, so a

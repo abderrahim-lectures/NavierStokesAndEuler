@@ -47,12 +47,6 @@ theorem activation_le_one (T κ y : ℝ) (hκ : κ ∈ Icc (0 : ℝ) 1) :
   dsimp [activation]
   nlinarith [mul_nonneg hκ.1 hl]
 
-theorem activation_monotone {T κ : ℝ} (hT : 0 < T) (hκ : κ ≤ 1) :
-    Monotone (activation T κ) := by
-  intro x y hxy
-  exact mul_le_mul_of_nonneg_left
-    (OutgoingSchedule.sigma_monotone ((div_le_div_iff_of_pos_right hT).mpr hxy))
-    (sub_nonneg.mpr hκ)
 
 theorem activation_zero {T : ℝ} (hT : 0 < T) (κ : ℝ) {y : ℝ} (hy : y ≤ 0) :
     activation T κ y = 0 := by
@@ -70,10 +64,6 @@ theorem weightedField_smooth (T κ : ℝ) {J : Set ℝ} (hJ : IsOpen J) {B : Fie
     ContDiffOn ℝ ∞ (weightedField T κ B) (logDomain J hJ).carrier :=
   ((activation_smooth T κ).comp contDiff_fst).contDiffOn.mul hB
 
-theorem weightedPrimitive_smooth (T κ : ℝ) {J : Set ℝ} (hJ : IsOpen J) {B : Field}
-    (hB : ContDiffOn ℝ ∞ B (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (weightedPrimitive T κ B) (logDomain J hJ).carrier :=
-  primitive_smooth (logDomain J hJ) (weightedField_smooth T κ hJ hB)
 
 
 theorem weightedPrimitive_zero {T : ℝ} (hT : 0 < T) (κ : ℝ) (B : Field)
@@ -217,20 +207,7 @@ noncomputable def primitiveFactor (T : ℝ) (B : Field) (p : Point) : ℝ :=
   p.1 ^ 2 * stepDenominator T p.1 *
     ParametricFlatFactor.factor (T ^ 2) 0 (flatCoefficient T B) (p.2, p.1)
 
-theorem flatCoefficient_smooth (T : ℝ) {J : Set ℝ} (hJ : IsOpen J) {B : Field}
-    (hB : ContDiffOn ℝ ∞ B (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (flatCoefficient T B) (J ×ˢ univ) :=
-  (hB.comp (s := J ×ˢ univ) (t := (logDomain J hJ).carrier)
-    (contDiff_snd.prodMk contDiff_fst).contDiffOn (fun _ hp => ⟨hp.2, hp.1⟩)).div
-    ((stepDenominator_smooth T).comp contDiff_snd).contDiffOn
-    (fun p _ => (stepDenominator_pos T p.2).ne')
 
-theorem primitiveFactor_smooth {T : ℝ} (hT : 0 < T) {J : Set ℝ} (hJ : IsOpen J)
-    {B : Field} (hB : ContDiffOn ℝ ∞ B (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (primitiveFactor T B) (logDomain J hJ).carrier := by
-  exact ((contDiff_fst.pow 2).mul ((stepDenominator_smooth T).comp contDiff_fst)).contDiffOn.mul
-    ((flatFactor_local (sq_pos_of_pos hT) 0 hJ (flatCoefficient_smooth T hJ hB)).comp
-      (contDiff_snd.prodMk contDiff_fst).contDiffOn (fun _ hp => ⟨hp.2, hp.1⟩))
 
 @[simp] theorem primitiveFactor_zero (T : ℝ) (B : Field) (η : ℝ) :
     primitiveFactor T B (0, η) = 0 := by simp [primitiveFactor]
@@ -251,43 +228,8 @@ theorem weightedPrimitive_factorization {T : ℝ} (hT : 0 < T) (κ : ℝ) (B : F
   dsimp [FlatPrimitive.scale, primitiveFactor]
   field_simp [(stepDenominator_pos T p.1).ne']
 
-/-- The basic quantitative estimate is uniform as `κ` tends to zero and in
-the ramp length: its constant is only a bound for the reference coefficient. -/
-theorem weightedPrimitive_bound {T κ M y : ℝ} (hT : 0 < T) (hκ : κ ≤ 1)
-    (hM : 0 ≤ M) (hy : 0 ≤ y) (B : Field) (η : ℝ)
-    (hB : ∀ t ∈ Icc (0 : ℝ) y, |B (t, η)| ≤ M) :
-    |weightedPrimitive T κ B (y, η)| ≤ M * y * activation T κ y := by
-  have hb : ∀ t ∈ uIoc (0 : ℝ) y,
-      ‖activation T κ t * B (t, η)‖ ≤ M * activation T κ y := by
-    intro t ht
-    have ht' : t ∈ Ioc (0 : ℝ) y := by simpa only [uIoc_of_le hy] using ht
-    rw [norm_mul, Real.norm_eq_abs, Real.norm_eq_abs,
-      abs_of_nonneg (activation_nonneg T κ t hκ)]
-    calc
-      _ ≤ activation T κ t * M := mul_le_mul_of_nonneg_left (hB t ⟨ht'.1.le, ht'.2⟩)
-        (activation_nonneg T κ t hκ)
-      _ ≤ activation T κ y * M := mul_le_mul_of_nonneg_right (activation_monotone hT hκ ht'.2) hM
-      _ = _ := mul_comm _ _
-  have hi := intervalIntegral.norm_integral_le_of_norm_le_const hb
-  simpa only [weightedPrimitive, primitive, weightedField, Real.norm_eq_abs,
-    sub_zero, abs_of_nonneg hy, mul_assoc, mul_left_comm, mul_comm] using hi
 
-theorem controlled_difference_factorization {T : ℝ} (hT : 0 < T) (κ : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {F : Field}
-    (hF : ContDiffOn ℝ ∞ F (logDomain J hJ).carrier) (y : ℝ) {η : ℝ} (hη : η ∈ J) :
-    controlled T κ F (y, η) - F (y, η) =
-      y * activation T κ y * (-primitiveFactor T (radialPartial F) (y, η)) := by
-  rw [controlled_sub T κ hJ hF y hη, weightedPrimitive_factorization hT]
-  ring
 
-theorem weightedPrimitive_scale (T κ : ℝ) (B : Field) (p : Point) :
-    weightedPrimitive T κ B p = (1 - κ) * weightedPrimitive T 0 B p := by
-  unfold weightedPrimitive primitive weightedField activation
-  rw [← intervalIntegral.integral_const_mul]
-  apply intervalIntegral.integral_congr
-  intro t _
-  dsimp only
-  ring
 
 noncomputable def meanExp (x : ℝ) : ℝ :=
   average (fun p : Point => Real.exp p.1) (x, 0)
@@ -353,16 +295,6 @@ noncomputable def relativeFactor (T κ : ℝ) (L : Field) (p : Point) : ℝ :=
 @[simp] theorem relativeFactor_zero (T κ : ℝ) (L : Field) (η : ℝ) :
     relativeFactor T κ L (0, η) = 0 := by simp [relativeFactor]
 
-theorem angular_relative_difference {T : ℝ} (hT : 0 < T) (κ : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {L : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier) (y : ℝ) {η : ℝ} (hη : η ∈ J) :
-    activatedAngular T κ L (y, η) / referenceAngular L (y, η) - 1 =
-      y * activation T κ y * relativeFactor T κ L (y, η) := by
-  rw [activatedAngular, referenceAngular, ← Real.exp_sub,
-    controlled_sub T κ hJ hL y hη, exp_sub_one]
-  unfold relativeFactor
-  rw [weightedPrimitive_factorization hT]
-  ring
 
 theorem controlled_eq_reference_before {T : ℝ} (hT : 0 < T) (κ : ℝ)
     {J : Set ℝ} (hJ : IsOpen J) {F : Field}
@@ -382,33 +314,7 @@ noncomputable def relativeFamily (T : ℝ) (L : Field) (q : FamilyPoint) : ℝ :
 noncomputable def differenceFamily (T : ℝ) (F : Field) (q : FamilyPoint) : ℝ :=
   -primitiveFactor T (radialPartial F) (q.1.2, q.2)
 
-theorem relativeFamily_smooth {T : ℝ} (hT : 0 < T) {J : Set ℝ} (hJ : IsOpen J)
-    {L : Field} (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (relativeFamily T L) ((univ : Set (ℝ × ℝ)) ×ˢ J) := by
-  have hD := radialPartial_smooth (logDomain J hJ) hL
-  have hp := primitiveFactor_smooth hT hJ hD
-  have hw := weightedPrimitive_smooth T 0 hJ hD
-  intro q hq
-  have hm : ContDiffAt ℝ ∞ (fun z : FamilyPoint => (z.1.2, z.2)) q :=
-    contDiffAt_fst.snd.prodMk contDiffAt_snd
-  have hp' := (hp.contDiffAt ((logDomain J hJ).isOpen.mem_nhds
-    (show (q.1.2, q.2) ∈ (logDomain J hJ).carrier from ⟨mem_univ _, hq.2⟩))).comp q hm
-  have hw' := (hw.contDiffAt ((logDomain J hJ).isOpen.mem_nhds
-    (show (q.1.2, q.2) ∈ (logDomain J hJ).carrier from ⟨mem_univ _, hq.2⟩))).comp q hm
-  have hh : ContDiffAt ℝ ∞
-      (fun z : FamilyPoint => -primitiveFactor T (radialPartial L) (z.1.2, z.2) *
-        meanExp (-((1 - z.1.1) * weightedPrimitive T 0 (radialPartial L) (z.1.2, z.2)))) q :=
-    hp'.neg.mul (meanExp_smooth.contDiffAt.comp q
-      ((contDiffAt_const.sub contDiffAt_fst.fst).mul hw').neg)
-  convert! hh.contDiffWithinAt using 1
-  funext z
-  simp only [relativeFamily, relativeFactor, weightedPrimitive_scale T z.1.1]
 
-theorem differenceFamily_smooth {T : ℝ} (hT : 0 < T) {J : Set ℝ} (hJ : IsOpen J)
-    {F : Field} (hF : ContDiffOn ℝ ∞ F (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (differenceFamily T F) ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-  ((primitiveFactor_smooth hT hJ (radialPartial_smooth (logDomain J hJ) hF)).neg).comp
-    (contDiff_fst.snd.prodMk contDiff_snd).contDiffOn (fun _ hp => ⟨mem_univ _, hp.2⟩)
 
 /-- Compactness bounds the genuine η derivatives of a jointly smooth family.
 In particular the compact κ range contains zero; inverse powers of κ cannot enter. -/
@@ -434,29 +340,6 @@ theorem compact_parameter_jet_bound {J K : Set ℝ} (hJ : IsOpen J)
   rw [norm_iteratedFDeriv_eq_norm_iteratedDeriv, Real.norm_eq_abs] at hb
   exact hb.trans (le_max_left _ _)
 
-theorem scaled_family_jet_bound {T : ℝ} (_hT : 0 < T) {J K : Set ℝ}
-    (hJ : IsOpen J) (hK : IsCompact K) (hKJ : K ⊆ J)
-    {H : FamilyPoint → ℝ} (hH : ContDiffOn ℝ ∞ H ((univ : Set (ℝ × ℝ)) ×ˢ J))
-    {E : ℝ → ℝ → ℝ → ℝ}
-    (hE : ∀ κ y, ∀ η ∈ J, E κ y η = y * activation T κ y * H ((κ, y), η))
-    (n : ℕ) :
-    ∃ M : ℝ, 0 ≤ M ∧ ∀ κ ∈ Icc (0 : ℝ) 1, ∀ y ∈ Icc (0 : ℝ) T, ∀ η ∈ K,
-      |iteratedDeriv n (E κ y) η| ≤ M * y * activation T κ y := by
-  obtain ⟨M, hM, hbound⟩ := compact_parameter_jet_bound hJ hK hKJ hH T n
-  refine ⟨M, hM, ?_⟩
-  intro κ hκ y hy η hη
-  have heq : E κ y =ᶠ[𝓝 η] (fun ξ => y * activation T κ y * H ((κ, y), ξ)) := by
-    filter_upwards [hJ.mem_nhds (hKJ hη)] with ξ hξ
-    exact hE κ y ξ hξ
-  rw [heq.iteratedDeriv_eq n]
-  have hh : ContDiffAt ℝ ∞ (fun ξ => H ((κ, y), ξ)) η :=
-    (hH.contDiffAt ((isOpen_univ.prod hJ).mem_nhds ⟨mem_univ _, hKJ hη⟩)).comp η
-      (contDiffAt_const.prodMk contDiffAt_id)
-  rw [iteratedDeriv_const_mul (n := n) _ (hh.of_le (WithTop.coe_le_coe.mpr le_top)), abs_mul,
-    abs_of_nonneg (mul_nonneg hy.1 (activation_nonneg T κ y hκ.2))]
-  have hb := mul_le_mul_of_nonneg_left (hbound κ hκ y hy η hη)
-    (mul_nonneg hy.1 (activation_nonneg T κ y hκ.2))
-  nlinarith
 
 
 
@@ -472,26 +355,7 @@ noncomputable def familyPrimitiveFactor (T : ℝ) (B : FamilyPoint → ℝ)
     ParametricFlatFactor.factor (T ^ 2) 0 (familyFlatCoefficient T B)
       ((q.1.1, q.2), q.1.2)
 
-theorem familyPrimitiveFactor_eq (T : ℝ) (B : FamilyPoint → ℝ) (κ y η : ℝ) :
-    familyPrimitiveFactor T B ((κ, y), η) =
-      primitiveFactor T (fun p => B ((κ, p.1), p.2)) (y, η) := rfl
 
-theorem familyPrimitiveFactor_smooth {T : ℝ} (hT : 0 < T) {J : Set ℝ} (hJ : IsOpen J)
-    {B : FamilyPoint → ℝ}
-    (hB : ContDiffOn ℝ ∞ B ((univ : Set (ℝ × ℝ)) ×ˢ J)) :
-    ContDiffOn ℝ ∞ (familyPrimitiveFactor T B) ((univ : Set (ℝ × ℝ)) ×ˢ J) := by
-  have hb : ContDiffOn ℝ ∞ (familyFlatCoefficient T B) ((univ ×ˢ J) ×ˢ (univ : Set ℝ)) :=
-    (hB.comp (s := (univ ×ˢ J) ×ˢ (univ : Set ℝ))
-      (t := (univ : Set (ℝ × ℝ)) ×ˢ J)
-      ((contDiff_fst.fst.prodMk contDiff_snd).prodMk contDiff_fst.snd).contDiffOn
-      (fun _ hp => ⟨mem_univ _, hp.1.2⟩)).div
-        ((stepDenominator_smooth T).comp contDiff_snd).contDiffOn
-        (fun q _ => (stepDenominator_pos T q.2).ne')
-  have hf := flatFactor_local (sq_pos_of_pos hT) 0 (isOpen_univ.prod hJ) hb
-  exact ((contDiff_fst.snd.pow 2).mul
-    ((stepDenominator_smooth T).comp contDiff_fst.snd)).contDiffOn.mul
-      (hf.comp ((contDiff_fst.fst.prodMk contDiff_snd).prodMk contDiff_fst.snd).contDiffOn
-        (fun _ hp => ⟨⟨mem_univ _, hp.2⟩, mem_univ _⟩))
 
 
 /-! ## The five actual pressure and moment histories -/
@@ -548,64 +412,19 @@ theorem logHistory_smooth (X0 : ℝ) (initial : HistoryRow → ℝ → ℝ)
 
 noncomputable def fieldFamily (F : Field) (q : FamilyPoint) : ℝ := F (q.1.2, q.2)
 
-theorem fieldFamily_smooth {J : Set ℝ} (hJ : IsOpen J) {F : Field}
-    (hF : ContDiffOn ℝ ∞ F (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (fieldFamily F) ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-  hF.comp (contDiff_fst.snd.prodMk contDiff_snd).contDiffOn
-    (fun _ hp => ⟨mem_univ _, hp.2⟩)
 
 noncomputable def controlledFamily (T : ℝ) (F : Field) (q : FamilyPoint) : ℝ :=
   controlled T q.1.1 F (q.1.2, q.2)
 
-theorem controlledFamily_smooth (T : ℝ) {J : Set ℝ} (hJ : IsOpen J) {F : Field}
-    (hF : ContDiffOn ℝ ∞ F (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (controlledFamily T F) ((univ : Set (ℝ × ℝ)) ×ˢ J) := by
-  have hw := fieldFamily_smooth hJ
-    (weightedPrimitive_smooth T 0 hJ (radialPartial_smooth (logDomain J hJ) hF))
-  have hc : ContDiffOn ℝ ∞
-      (fun q : FamilyPoint => fieldFamily F q -
-        (1 - q.1.1) * fieldFamily (weightedPrimitive T 0 (radialPartial F)) q)
-      ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-    (fieldFamily_smooth hJ hF).sub
-      ((contDiffOn_const.sub contDiffOn_fst.fst).mul hw)
-  apply hc.congr
-  intro q hq
-  have he := controlled_sub T q.1.1 hJ hF q.1.2 hq.2
-  rw [weightedPrimitive_scale] at he
-  dsimp only [controlledFamily, fieldFamily]
-  linarith
 
 noncomputable def angularFamily (T : ℝ) (L : Field) (q : FamilyPoint) : ℝ :=
   activatedAngular T q.1.1 L (q.1.2, q.2)
 
-theorem angularFamily_smooth (T : ℝ) {J : Set ℝ} (hJ : IsOpen J) {L : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (angularFamily T L) ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-  (controlledFamily_smooth T hJ hL).exp
 
 noncomputable def angularDifferenceFamily (T : ℝ) (L : Field) (q : FamilyPoint) : ℝ :=
   fieldFamily (referenceAngular L) q * relativeFamily T L q
 
-theorem angularDifferenceFamily_smooth {T : ℝ} (hT : 0 < T)
-    {J : Set ℝ} (hJ : IsOpen J) {L : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier) :
-    ContDiffOn ℝ ∞ (angularDifferenceFamily T L) ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-  (fieldFamily_smooth hJ hL.exp).mul (relativeFamily_smooth hT hJ hL)
 
-theorem angular_difference_factorization {T : ℝ} (hT : 0 < T) (κ : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {L : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier) (y : ℝ) {η : ℝ} (hη : η ∈ J) :
-    activatedAngular T κ L (y, η) - referenceAngular L (y, η) =
-      y * activation T κ y * angularDifferenceFamily T L ((κ, y), η) := by
-  have hr : referenceAngular L (y, η) ≠ 0 := (Real.exp_pos _).ne'
-  calc
-    _ = referenceAngular L (y, η) *
-        (activatedAngular T κ L (y, η) / referenceAngular L (y, η) - 1) := by
-      field_simp
-    _ = _ := by
-      rw [angular_relative_difference hT κ hJ hL y hη]
-      dsimp only [angularDifferenceFamily, fieldFamily, relativeFamily]
-      ring
 
 noncomputable def densityDifferenceFamily (T X0 : ℝ) (L U : Field)
     (r : HistoryRow) (q : FamilyPoint) : ℝ :=
@@ -623,120 +442,24 @@ noncomputable def densityDifferenceFamily (T X0 : ℝ) (L U : Field)
   | .energy => x * (du * (ua + ur) - x * df * (fa + fr))
   | .pressure => x * df * (fa + fr)
 
-theorem densityDifferenceFamily_smooth {T : ℝ} (hT : 0 < T) (X0 : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier) (r : HistoryRow) :
-    ContDiffOn ℝ ∞ (densityDifferenceFamily T X0 L U r)
-      ((univ : Set (ℝ × ℝ)) ×ˢ J) := by
-  have hx := ((radius_smooth X0).comp contDiff_fst.snd).contDiffOn
-    (s := ((univ : Set (ℝ × ℝ)) ×ˢ J))
-  have hdf := angularDifferenceFamily_smooth hT hJ hL
-  have hdu := differenceFamily_smooth hT hJ hU
-  have hfa := angularFamily_smooth T hJ hL
-  have hfr := fieldFamily_smooth hJ hL.exp
-  have hua := controlledFamily_smooth T hJ hU
-  have hur := fieldFamily_smooth hJ hU
-  cases r with
-  | mass => exact hx.mul hdu
-  | angular => exact (contDiffOn_const.mul (hx.pow 2)).mul hdf
-  | transport =>
-    exact (contDiffOn_const.mul (hx.pow 2)).mul ((hdf.mul hua).add (hfr.mul hdu))
-  | energy => exact hx.mul ((hdu.mul (hua.add hur)).sub ((hx.mul hdf).mul (hfa.add hfr)))
-  | pressure => exact (hx.mul hdf).mul (hfa.add hfr)
 
-theorem density_difference_factorization {T : ℝ} (hT : 0 < T) (κ X0 : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier)
-    (r : HistoryRow) (y : ℝ) {η : ℝ} (hη : η ∈ J) :
-    logDensity X0 (activatedAngular T κ L) (controlled T κ U) r (y, η) -
-      logDensity X0 (referenceAngular L) U r (y, η) =
-        y * activation T κ y * densityDifferenceFamily T X0 L U r ((κ, y), η) := by
-  have hf := angular_difference_factorization hT κ hJ hL y hη
-  have hu := controlled_difference_factorization hT κ hJ hU y hη
-  have hf' : angularFamily T L ((κ, y), η) = fieldFamily (referenceAngular L) ((κ, y), η) +
-      y * activation T κ y * angularDifferenceFamily T L ((κ, y), η) := by
-    dsimp only [angularFamily, fieldFamily]
-    linarith
-  have hu' : controlledFamily T U ((κ, y), η) = fieldFamily U ((κ, y), η) +
-      y * activation T κ y * differenceFamily T U ((κ, y), η) := by
-    dsimp only [controlledFamily, fieldFamily, differenceFamily]
-    linarith
-  change radius X0 y * radialDensity r (radius X0 y) (angularFamily T L ((κ, y), η))
-      (controlledFamily T U ((κ, y), η)) -
-    radius X0 y * radialDensity r (radius X0 y) (fieldFamily (referenceAngular L) ((κ, y), η))
-      (fieldFamily U ((κ, y), η)) = _
-  cases r <;> dsimp only [radialDensity, densityDifferenceFamily] <;>
-    simp only [hf', hu'] <;> ring
 
 noncomputable def historyIntegrandFamily (T X0 : ℝ) (L U : Field)
     (r : HistoryRow) (q : FamilyPoint) : ℝ :=
   q.1.2 * densityDifferenceFamily T X0 L U r q
 
-theorem historyIntegrandFamily_smooth {T : ℝ} (hT : 0 < T) (X0 : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier) (r : HistoryRow) :
-    ContDiffOn ℝ ∞ (historyIntegrandFamily T X0 L U r)
-      ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-  contDiffOn_fst.snd.mul (densityDifferenceFamily_smooth hT X0 hJ hL hU r)
 
-theorem history_difference_integral {T : ℝ} (hT : 0 < T) (κ X0 : ℝ)
-    (initial : HistoryRow → ℝ → ℝ) {J : Set ℝ} (hJ : IsOpen J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier)
-    (r : HistoryRow) (y : ℝ) {η : ℝ} (hη : η ∈ J) :
-    logHistory X0 initial (activatedAngular T κ L) (controlled T κ U) r (y, η) -
-      logHistory X0 initial (referenceAngular L) U r (y, η) =
-        weightedPrimitive T κ (fun p => historyIntegrandFamily T X0 L U r ((κ, p.1), p.2))
-          (y, η) := by
-  have ha := radial_slice_intervalIntegrable (logDomain J hJ)
-    (logDensity_smooth X0 hJ (activatedAngular_smooth T κ hJ hL)
-      (controlled_smooth T κ hJ hU) r) (p := (y, η)) ⟨mem_univ _, hη⟩
-  have hr := radial_slice_intervalIntegrable (logDomain J hJ)
-    (logDensity_smooth X0 hJ hL.exp hU r) (p := (y, η)) ⟨mem_univ _, hη⟩
-  change IntervalIntegrable
-    (fun t => logDensity X0 (activatedAngular T κ L) (controlled T κ U) r (t, η)) volume 0 y at ha
-  change IntervalIntegrable (fun t => logDensity X0 (referenceAngular L) U r (t, η)) volume 0 y at hr
-  dsimp only [logHistory, primitive]
-  rw [add_sub_add_left_eq_sub, ← intervalIntegral.integral_sub ha hr]
-  unfold weightedPrimitive primitive weightedField
-  apply intervalIntegral.integral_congr
-  intro t _
-  dsimp only
-  rw [density_difference_factorization hT κ X0 hJ hL hU r t hη]
-  dsimp only [historyIntegrandFamily]
-  ring
 
 noncomputable def historyDifferenceFamily (T X0 : ℝ) (L U : Field)
     (r : HistoryRow) : FamilyPoint → ℝ :=
   familyPrimitiveFactor T (historyIntegrandFamily T X0 L U r)
 
-theorem historyDifferenceFamily_smooth {T : ℝ} (hT : 0 < T) (X0 : ℝ)
-    {J : Set ℝ} (hJ : IsOpen J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier) (r : HistoryRow) :
-    ContDiffOn ℝ ∞ (historyDifferenceFamily T X0 L U r)
-      ((univ : Set (ℝ × ℝ)) ×ˢ J) :=
-  familyPrimitiveFactor_smooth hT hJ (historyIntegrandFamily_smooth hT X0 hJ hL hU r)
 
 @[simp] theorem historyDifferenceFamily_zero (T X0 : ℝ) (L U : Field)
     (r : HistoryRow) (κ η : ℝ) :
     historyDifferenceFamily T X0 L U r ((κ, 0), η) = 0 := by
   simp [historyDifferenceFamily, familyPrimitiveFactor]
 
-theorem history_difference_factorization {T : ℝ} (hT : 0 < T) (κ X0 : ℝ)
-    (initial : HistoryRow → ℝ → ℝ) {J : Set ℝ} (hJ : IsOpen J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier)
-    (r : HistoryRow) (y : ℝ) {η : ℝ} (hη : η ∈ J) :
-    logHistory X0 initial (activatedAngular T κ L) (controlled T κ U) r (y, η) -
-      logHistory X0 initial (referenceAngular L) U r (y, η) =
-        y * activation T κ y * historyDifferenceFamily T X0 L U r ((κ, y), η) := by
-  rw [history_difference_integral hT κ X0 initial hJ hL hU r y hη,
-    weightedPrimitive_factorization hT]
-  rfl
 
 
 /-! ## Identification with the physical `ProfileHistories` integrals -/
@@ -1056,18 +779,6 @@ theorem reference_histories_log_formula {δ : ℝ} (hδ : 0 < δ) (hδT : 2 * δ
   · intro t
     exact refU_logPullback N hδ hδT t hη
 
-/-- The five *physical* histories inherit the constructed smooth factor. -/
-theorem histories_difference_factorization {T δ : ℝ} (hT : 0 < T) (hδ : 0 < δ)
-    (hδT : 2 * δ < rampLimit) (κ : ℝ) (P0 : ℝ → ℝ) (hP0 : ContDiff ℝ ∞ P0)
-    (r : HistoryRow) (y : ℝ) {η : ℝ} (hη : η ∈ parameterInterval) :
-    profileHistory (histories N hT hδ hδT κ P0 hP0) r (radius N.endpoint y, η) -
-      profileHistory (N.histories hδ hδT P0 hP0) r (radius N.endpoint y, η) =
-        y * activation T κ y *
-          historyDifferenceFamily T N.endpoint (refLog N δ) (refAxial N δ) r ((κ, y), η) := by
-  rw [histories_log_formula N hT hδ hδT κ P0 hP0 r y hη,
-    reference_histories_log_formula N hδ hδT P0 hP0 r y hη]
-  exact history_difference_factorization hT κ N.endpoint _ parameterInterval_open
-    (refLog_smooth N hδ hδT) (refAxial_smooth N hδ hδT) r y hη
 
 
 theorem angular_equation {T δ : ℝ} (hT : 0 < T) (hδ : 0 < δ)

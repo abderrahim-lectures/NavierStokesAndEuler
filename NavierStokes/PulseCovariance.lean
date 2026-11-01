@@ -21,9 +21,6 @@ namespace NavierStokes.PulseCovariance
 open Set MeasureTheory Filter
 open scoped Topology
 
-private theorem inverse_length_mass (r u v : ℝ) (hr : r ≠ 0) :
-    (u / r ^ 2) * (v * r) = u * v / r := by
-  field_simp
 
 private theorem normalize_mass_product (u k r : ℝ) (hk : k ≠ 0) :
     u * r ^ 2 = (u / k) * r * (k * r) := by
@@ -453,45 +450,14 @@ theorem radiusProfile_lipschitz (s t : ℝ) :
 `h = c₀ sqrt(1+s²)`. -/
 noncomputable def modelDirection (c₀ s : ℝ) : Vec2 := ![c₀ * radiusProfile s, -s]
 
-theorem modelDirection_lipschitz (c₀ s t : ℝ) (i : Fin 2) :
-    |modelDirection c₀ s i - modelDirection c₀ t i| ≤ (|c₀| + 1) * |s - t| := by
-  fin_cases i
-  · change |c₀ * radiusProfile s - c₀ * radiusProfile t| ≤ _
-    rw [← mul_sub, abs_mul]
-    calc
-      |c₀| * |radiusProfile s - radiusProfile t| ≤ |c₀| * |s - t| :=
-        mul_le_mul_of_nonneg_left (radiusProfile_lipschitz s t) (abs_nonneg _)
-      _ ≤ (|c₀| + 1) * |s - t| := by nlinarith [abs_nonneg (s - t)]
-  · change |(-s) - (-t)| ≤ _
-    have he : |(-s) - (-t)| = |s - t| := by
-      calc
-        |(-s) - (-t)| = |-(s - t)| := congrArg abs (by ring)
-        _ = |s - t| := abs_neg _
-    rw [he]
-    nlinarith [mul_nonneg (abs_nonneg c₀) (abs_nonneg (s - t))]
 
 noncomputable def affineSlope (s₀ slope r v : ℝ) : ℝ :=
   s₀ + slope * (v - r ^ 2 / 2) / r ^ 2
 
 
-theorem hasDerivAt_affineSlope (s₀ slope r v : ℝ) :
-    HasDerivAt (affineSlope s₀ slope r) (slope / r ^ 2) v := by
-  unfold affineSlope
-  simpa only [id_eq, mul_one] using
-    (((hasDerivAt_id v).sub_const (r ^ 2 / 2)).const_mul slope).div_const (r ^ 2) |>.const_add s₀
 
 
-theorem affineSlope_distance (s₀ slope r v : ℝ) :
-    |affineSlope s₀ slope r v - s₀| = |slope| * |v - r ^ 2 / 2| / r ^ 2 := by
-  simp only [affineSlope, add_sub_cancel_left, abs_div, abs_mul,
-    abs_of_nonneg (sq_nonneg r)]
 
-theorem modelDirection_affine_drift (c₀ s₀ slope r v : ℝ) (i : Fin 2) :
-    |modelDirection c₀ (affineSlope s₀ slope r v) i - modelDirection c₀ s₀ i| ≤
-      ((|c₀| + 1) * |slope|) * |v - r ^ 2 / 2| / r ^ 2 := by
-  have hi := modelDirection_lipschitz c₀ (affineSlope s₀ slope r v) s₀ i
-  rw [affineSlope_distance] at hi
-  exact hi.trans_eq (by ring)
 
 noncomputable def actualColumn (ci : ℝ) (ψ x : ℝ → ℝ) (t : ℝ → Vec2) : Vec2 :=
   fun i => ci * ∫ v : ℝ, ψ v ^ 2 * x v * t v i
@@ -527,43 +493,12 @@ theorem actualColumn_factorization (ci : ℝ) (t : ℝ → Vec2) :
   exact (mul_div_cancel_right₀
     (ci * (∫ v : ℝ, weight ψ x v * (t v i / x v))) h.mass_pos.ne').symm.trans (by ring)
 
-theorem actualColumn_eq_intervalIntegral (ci : ℝ) (t : ℝ → Vec2) (i : Fin 2) :
-    actualColumn ci ψ x t i = ci * ∫ v in (0 : ℝ)..r ^ 2, ψ v ^ 2 * x v * t v i := by
-  unfold actualColumn
-  congr 1
-  rw [intervalIntegral.integral_of_le (sq_nonneg r)]
-  symm
-  apply setIntegral_eq_integral_of_forall_compl_eq_zero
-  intro v hv
-  have hout : v ∉ Icc (r ^ 2 / 6) (5 * r ^ 2 / 6) := by
-    intro hin
-    apply hv
-    have hr2 : 0 < r ^ 2 := sq_pos_of_pos h.radius_pos
-    constructor <;> nlinarith [hin.1, hin.2]
-  simp [h.cutoff_zero v hout]
 
 theorem ratio_continuousOn {t : ℝ → Vec2}
     (ht : ∀ i, ContinuousOn (fun v => t v i) (Icc 0 (r ^ 2))) (i : Fin 2) :
     ContinuousOn (fun v => t v i / x v) (Icc 0 (r ^ 2)) :=
   (ht i).div h.component_continuous.continuousOn (fun _ hv => (h.component_pos hv).ne')
 
-/-- Directional concentration for actual fundamental tangent components.
-The sole tangent estimate assumed is the pointwise ODE approximation to
-`h(v)N-s(v)K`, with affine `s` and the exact square-root profile `h`. -/
-theorem normalizedColumn_error {t : ℝ → Vec2}
-    (ht : ∀ i, ContinuousOn (fun v => t v i) (Icc 0 (r ^ 2)))
-    {E c₀ s₀ slope : ℝ} (hE : 0 ≤ E)
-    (htmodel : ∀ v ∈ Icc 0 (r ^ 2), ∀ i,
-      |t v i / x v - modelDirection c₀ (affineSlope s₀ slope r v) i| ≤ E / r ^ 2)
-    (i : Fin 2) :
-    |normalizedColumn ψ x t i - modelDirection c₀ s₀ i| ≤
-      (E + ((|c₀| + 1) * |slope|) * concentrationConstant a A b B) / r := by
-  apply h.averagedDirection_error_order (h.ratio_continuousOn ht i) hE
-    (mul_nonneg (by positivity) (abs_nonneg _))
-  intro v hv
-  exact (abs_sub_le (t v i / x v)
-    (modelDirection c₀ (affineSlope s₀ slope r v) i) (modelDirection c₀ s₀ i)).trans
-      (add_le_add (htmodel v hv i) (modelDirection_affine_drift c₀ s₀ slope r v i))
 
 
 end PulseBounds
@@ -599,16 +534,6 @@ theorem signedModel_strictCone {c₀ u m t : ℝ} (hc₀ : c₀ < 0) (hu : 0 < u
   exact SmoothCovariance.signed_model_strictCone (Covariance.normalMagnitude_pos hc₀)
     hu zero_lt_one zero_lt_one hcone
 
-theorem signedModel_continuousOn {X : Type*} [TopologicalSpace X] {K : Set X}
-    {c₀ u : X → ℝ} (hc₀ : ContinuousOn c₀ K) (hu : ContinuousOn u K) (i j : Fin 2) :
-    ContinuousOn (fun p => signedModel (c₀ p) (u p) i j) K := by
-  have hn : ContinuousOn (fun p => c₀ p * Real.sqrt (1 + u p ^ 2)) K :=
-    hc₀.mul (Real.continuous_sqrt.comp_continuousOn (continuousOn_const.add (hu.pow 2)))
-  fin_cases i <;> fin_cases j
-  · simpa [signedModel, modelDirection, signedSlopes, radiusProfile] using hn
-  · simpa [signedModel, modelDirection, signedSlopes, radiusProfile] using hn
-  · simpa [signedModel, modelDirection, signedSlopes] using hu.fun_neg
-  · simpa [signedModel, modelDirection, signedSlopes] using hu
 
 abbrev SignedPulsePair (r a A b B c₀ u E : ℝ) :=
   (j : Fin 2) → TangentPulse r a A b B c₀ (signedSlopes u j) (signedSlopes u j) E
@@ -625,49 +550,10 @@ noncomputable def columnScales {r a A b B c₀ u E : ℝ}
     (pulses : SignedPulsePair r a A b B c₀ u E) (ci : Vec2) : Vec2 :=
   fun j => ci j * mass (pulses j).cutoff (pulses j).component
 
-theorem signedSlopes_abs (u : ℝ) (j : Fin 2) : |signedSlopes u j| = |u| := by
-  fin_cases j <;> simp [signedSlopes]
 
-theorem actualMatrix_factorization {r a A b B c₀ u E : ℝ}
-    (pulses : SignedPulsePair r a A b B c₀ u E) (ci : Vec2) :
-    actualMatrix pulses ci = FlatCovariance.columns (normalizedMatrix pulses) (columnScales pulses ci) := by
-  ext i j
-  exact congrFun ((pulses j).bounds.actualColumn_factorization (ci j) (pulses j).tangent) i
 
-theorem columnScales_pos {r a A b B c₀ u E : ℝ}
-    (pulses : SignedPulsePair r a A b B c₀ u E) {ci : Vec2} (hci : ∀ j, 0 < ci j)
-    (j : Fin 2) : 0 < columnScales pulses ci j :=
-  mul_pos (hci j) (pulses j).bounds.mass_pos
 
-theorem normalizedMatrix_entry_error {r a A b B c₀ u E : ℝ}
-    (pulses : SignedPulsePair r a A b B c₀ u E) (hE : 0 ≤ E) (i j : Fin 2) :
-    |normalizedMatrix pulses i j - signedModel c₀ u i j| ≤
-      (E + ((|c₀| + 1) * |u|) * concentrationConstant a A b B) / r := by
-  have hi := (pulses j).bounds.normalizedColumn_error
-    (pulses j).tangent_continuous hE (pulses j).tangent_model i
-  unfold normalizedMatrix signedModel
-  simpa only [signedSlopes_abs] using hi
 
-theorem actualMatrix_positive_of_normalized {r a A b B c₀ u E : ℝ}
-    (pulses : SignedPulsePair r a A b B c₀ u E) {ci : Vec2} (hci : ∀ j, 0 < ci j)
-    (T : Vec2) (hdet : (normalizedMatrix pulses).det ≠ 0)
-    (hw : ∀ i, 0 < SmoothCovariance.weights (normalizedMatrix pulses) T i) :
-    (actualMatrix pulses ci).det ≠ 0 ∧
-      (∀ i, 0 < SmoothCovariance.weights (actualMatrix pulses ci) T i) ∧
-      (∀ i, 0 < SmoothCovariance.amplitudes (actualMatrix pulses ci) T i) := by
-  have hs : ∀ j, 0 < columnScales pulses ci j := columnScales_pos pulses hci
-  have hsn : ∀ j, columnScales pulses ci j ≠ 0 := fun j => (hs j).ne'
-  have hT : FlatCovariance.scaledTarget 1 T = T := by
-    ext i
-    simp [FlatCovariance.scaledTarget]
-  rw [actualMatrix_factorization]
-  have hweight : ∀ i, 0 < SmoothCovariance.weights
-      (FlatCovariance.columns (normalizedMatrix pulses) (columnScales pulses ci)) T i := by
-    intro i
-    rw [← hT, FlatCovariance.weights_columns _ _ _ _ hdet hsn]
-    exact mul_pos (div_pos zero_lt_one (hs i)) (hw i)
-  exact ⟨FlatCovariance.columns_det_ne_zero hdet hsn, hweight,
-    fun i => Real.sqrt_pos.mpr (hweight i)⟩
 
 /- This is the same entrywise norm used by SmoothCovariance's compact
 perturbation theorem. -/
@@ -677,89 +563,6 @@ local instance : NormedAddCommGroup Mat2 :=
 local instance : NormedSpace ℝ Mat2 :=
   inferInstanceAs (NormedSpace ℝ (Fin 2 → Fin 2 → ℝ))
 
-/-- A uniform slot threshold for the actual signed pulse pair over a compact
-strict-cone family.  Its matrix approximation is a conclusion of the Gaussian
-moment and pointwise tangent estimates in `TangentPulse`, not a hypothesis. -/
-theorem compact_actual_positive_inverse
-    {X : Type*} [TopologicalSpace X] {K : Set X} (hK : IsCompact K)
-    {c₀ u : X → ℝ} {T : X → Vec2}
-    (hmodel : ∀ i j, ContinuousOn (fun p => signedModel (c₀ p) (u p) i j) K)
-    (hT : ∀ i, ContinuousOn (fun p => T p i) K)
-    (hcone : ∀ p ∈ K, SmoothCovariance.StrictCone (signedModel (c₀ p) (u p)) (T p))
-    {a A b B E C U : ℝ} (hE : 0 ≤ E) (hC : 0 ≤ C) (hU : 0 ≤ U)
-    (hc₀ : ∀ p ∈ K, |c₀ p| ≤ C) (hu : ∀ p ∈ K, |u p| ≤ U) :
-    ∃ R : ℝ, 1 ≤ R ∧ ∀ p ∈ K, ∀ r : ℝ, R ≤ r →
-      ∀ pulses : SignedPulsePair r a A b B (c₀ p) (u p) E,
-      ∀ ci : Vec2, (∀ j, 0 < ci j) →
-        (actualMatrix pulses ci).det ≠ 0 ∧
-        (∀ i, 0 < SmoothCovariance.weights (actualMatrix pulses ci) (T p) i) ∧
-        (∀ i, 0 < SmoothCovariance.amplitudes (actualMatrix pulses ci) (T p) i) := by
-  obtain ⟨ρ, hρ, hstable⟩ := SmoothCovariance.compact_family_perturbation_stability
-    hK hmodel hT hcone
-  let Q : ℝ := E + ((C + 1) * U) * |concentrationConstant a A b B|
-  have hQ : 0 ≤ Q := by
-    dsimp [Q]
-    positivity
-  refine ⟨max 1 (Q / ρ), le_max_left _ _, ?_⟩
-  intro p hp r hr pulses ci hci
-  have hr1 : 1 ≤ r := (le_max_left _ _).trans hr
-  have hrp : 0 < r := lt_of_lt_of_le zero_lt_one hr1
-  have hsmall : Q / r ≤ ρ := by
-    apply (div_le_iff₀ hrp).mpr
-    have hR : Q / ρ ≤ r := (le_max_right _ _).trans hr
-    nlinarith [(div_le_iff₀ hρ).mp hR]
-  have hentry (i j : Fin 2) :
-      |normalizedMatrix pulses i j - signedModel (c₀ p) (u p) i j| ≤ ρ := by
-    apply (normalizedMatrix_entry_error pulses hE i j).trans
-    apply le_trans _ hsmall
-    apply div_le_div_of_nonneg_right _ hrp.le
-    dsimp [Q]
-    apply add_le_add_right
-    have hf : (|c₀ p| + 1) * |u p| ≤ (C + 1) * U :=
-      mul_le_mul (add_le_add_left (hc₀ p hp) 1) (hu p hp)
-        (abs_nonneg _) (by linarith)
-    exact mul_le_mul hf (le_abs_self _)
-      (pulses j).bounds.concentrationConstant_nonneg
-      (mul_nonneg (by linarith) hU)
-  have hdist : dist (normalizedMatrix pulses, T p) (signedModel (c₀ p) (u p), T p) ≤ ρ := by
-    rw [dist_prod_same_right]
-    apply (dist_pi_le_iff hρ.le).mpr
-    intro i
-    apply (dist_pi_le_iff hρ.le).mpr
-    intro j
-    simpa only [Real.dist_eq] using hentry i j
-  obtain ⟨hd, hw, _⟩ := hstable p hp (normalizedMatrix pulses) (T p) hdist
-  exact actualMatrix_positive_of_normalized pulses hci (T p) hd hw
 
-/-- Scalar cone inequalities and continuity of the four scalar model data
-suffice.  Compactness supplies both the uniform cone tolerance and the uniform
-bounds on `c₀,u`, hence one slot threshold for every actual pulse pair. -/
-theorem compact_actual_positive_inverse_of_scalar_cone
-    {X : Type*} [TopologicalSpace X] {K : Set X} (hK : IsCompact K)
-    {c₀ u m t : X → ℝ} (hc₀ : ContinuousOn c₀ K) (hu : ContinuousOn u K)
-    (hm : ContinuousOn m K) (ht : ContinuousOn t K)
-    (hc₀neg : ∀ p ∈ K, c₀ p < 0) (hupos : ∀ p ∈ K, 0 < u p)
-    (hcone : ∀ p ∈ K, |Covariance.normalMagnitude (c₀ p) (u p) * t p| < u p * m p)
-    {a A b B E : ℝ} (hE : 0 ≤ E) :
-    ∃ R : ℝ, 1 ≤ R ∧ ∀ p ∈ K, ∀ r : ℝ, R ≤ r →
-      ∀ pulses : SignedPulsePair r a A b B (c₀ p) (u p) E,
-      ∀ ci : Vec2, (∀ j, 0 < ci j) →
-        (actualMatrix pulses ci).det ≠ 0 ∧
-        (∀ i, 0 < SmoothCovariance.weights (actualMatrix pulses ci) (Covariance.target (m p) (t p)) i) ∧
-        (∀ i, 0 < SmoothCovariance.amplitudes (actualMatrix pulses ci) (Covariance.target (m p) (t p)) i) := by
-  obtain ⟨C, hC⟩ := hK.exists_bound_of_continuousOn hc₀
-  obtain ⟨U, hU⟩ := hK.exists_bound_of_continuousOn hu
-  have htarget : ∀ i, ContinuousOn (fun p => Covariance.target (m p) (t p) i) K := by
-    intro i
-    fin_cases i
-    · simpa [Covariance.target] using hm.fun_neg
-    · simpa [Covariance.target] using ht
-  apply compact_actual_positive_inverse hK (signedModel_continuousOn hc₀ hu) htarget
-    (fun p hp => signedModel_strictCone (hc₀neg p hp) (hupos p hp) (hcone p hp)) hE
-    (le_max_left 0 C) (le_max_left 0 U)
-  · intro p hp
-    exact (show |c₀ p| ≤ C by simpa only [Real.norm_eq_abs] using hC p hp).trans (le_max_right _ _)
-  · intro p hp
-    exact (show |u p| ≤ U by simpa only [Real.norm_eq_abs] using hU p hp).trans (le_max_right _ _)
 
 end NavierStokes.PulseCovariance

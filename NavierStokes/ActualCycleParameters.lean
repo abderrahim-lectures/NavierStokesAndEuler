@@ -69,27 +69,7 @@ noncomputable def reindexParameters {ι κ : Type} (e : κ ≃ ι)
     (x : CycleState ι) :
     (reindexState e x).coefficients.residualBand = x.coefficients.residualBand := rfl
 
-theorem reindexCoefficients_symm {ι κ : Type} (e : κ ≃ ι)
-    (v : CycleCoefficients ι) :
-    reindexCoefficients e.symm (reindexCoefficients e v) = v := by
-  classical
-  rcases v with ⟨labels, blocks, gaussian, aliasCoefficients, residualBand⟩
-  simp only [reindexCoefficients]
-  congr 1
-  · funext n
-    ext l
-    simp
-  · funext l
-    simp
-  · funext l
-    simp
-  · funext l
-    simp
 
-theorem reindexState_symm {ι κ : Type} (e : κ ≃ ι)
-    (x : CycleState ι) : reindexState e.symm (reindexState e x) = x := by
-  rcases x with ⟨state, coefficients, axis⟩
-  simp only [reindexState, reindexCoefficients_symm]
 
 
 
@@ -194,7 +174,6 @@ noncomputable def bandFloor (B N0 : ℕ) : ℕ := (ActualPrimary.choice B N0).pr
 
 noncomputable def sourceBand {B N0 : ℕ} (l : Index B N0) : ℕ := BaseChartJets.cellBand l.1
 
-theorem bandFloor_ge (B N0 : ℕ) : N0 ≤ bandFloor B N0 := ActualPrimary.threshold B N0
 
 
 
@@ -280,14 +259,6 @@ theorem signed_tangent_carrier {B N0 : ℕ} (l : Index B N0)
   exact ⟨hs.frequency.trans hp.frequency.symm, hs.phase.trans hp.phase.symm,
     hs.angular.trans hp.angular.symm⟩
 
-theorem parameters_signed_carrier {B N0 : ℕ} (x : CycleState (Index B N0))
-    (c : Context CyclePoint) (l : Index B N0)
-    (H : SameCarrier (x.coefficients.blocks l) (ActualInitialization.tangentBlock l)) :
-    SameCarrier (x.coefficients.blocks l)
-      ((parameters x).signedBlock x.coefficients c x.state l) := by
-  have hs := signed_tangent_carrier l (parameters x).strip
-    ((parameters x).signedRequest x.coefficients c x.state)
-  exact ⟨hs.frequency.trans H.frequency, hs.phase.trans H.phase, hs.angular.trans H.angular⟩
 
 
 

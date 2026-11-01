@@ -216,24 +216,6 @@ theorem harmonic_theta_periodic (k : ℝ) (j m : ℤ) (ε p pz x0 : ℝ)
   exact harmonic_angularShift_two_pi k j m ε p pz x0 F G (s, (θ, v)) hkp
 
 
-/-- The actual cylindrical normal is jointly `C∞` away from the axis. -/
-theorem contDiffAt_phaseNormal (ε p pz x0 : ℝ) (F G : Slow → ℝ) (q : Slot)
-    (hR : q.1.1 ≠ 0) (hF : ContDiff ℝ ∞ F) (hG : ContDiff ℝ ∞ G) :
-    ContDiffAt ℝ ∞ (phaseNormal ε p pz x0 F G) q := by
-  have hD : ContDiff ℝ ∞ (fderiv ℝ (phase ε p pz x0 F G)) :=
-    (contDiff_phase ε p pz x0 F G hF hG).fderiv_right (by simp)
-  have hp (w : Slot) : ContDiff ℝ ∞ (fun z => fderiv ℝ (phase ε p pz x0 F G) z w) :=
-    hD.clm_apply contDiff_const
-  apply (EuclideanSpace.equiv (Fin 3) ℝ).comp_contDiffAt_iff.mp
-  apply contDiffAt_pi.mpr
-  intro i
-  fin_cases i
-  · change ContDiffAt ℝ ∞ (fun z => fderiv ℝ (phase ε p pz x0 F G) z eR) q
-    exact (hp eR).contDiffAt
-  · change ContDiffAt ℝ ∞ (fun z => fderiv ℝ (phase ε p pz x0 F G) z eTheta / z.1.1) q
-    exact (hp eTheta).contDiffAt.div contDiffAt_fst.fst hR
-  · change ContDiffAt ℝ ∞ (fun z => ε * fderiv ℝ (phase ε p pz x0 F G) z eZ) q
-    exact contDiffAt_const.mul (hp eZ).contDiffAt
 
 /-- The exact fast-slot derivative of `nΦ` used by the tangent ODE. -/
 def normalSlotDerivative (ε p pz : ℝ) (F G : Slow → ℝ) (s : Slow) : Vec3 :=
@@ -262,32 +244,7 @@ theorem vec3_norm_sq (w : Vec3) :
     ‖w‖ ^ 2 = (w 0) ^ 2 + (w 1) ^ 2 + (w 2) ^ 2 := by
   simp only [EuclideanSpace.real_norm_sq_eq, Fin.sum_univ_three]
 
-/-- A unit tangential direction forces the reference vector to have norm at least `B`. -/
-theorem referenceNormal_norm_ge (B s Kθ Kz : ℝ)
-    (hK : Kθ ^ 2 + Kz ^ 2 = 1) :
-    B ≤ ‖referenceNormal B s Kθ Kz‖ := by
-  have hn : ‖referenceNormal B s Kθ Kz‖ ^ 2 =
-      (B * s) ^ 2 + (B * Kθ) ^ 2 + (B * Kz) ^ 2 := by
-    simpa [referenceNormal] using vec3_norm_sq (referenceNormal B s Kθ Kz)
-  have htan : (B * Kθ) ^ 2 + (B * Kz) ^ 2 = B ^ 2 := by
-    calc
-      (B * Kθ) ^ 2 + (B * Kz) ^ 2 = B ^ 2 * (Kθ ^ 2 + Kz ^ 2) := by ring
-      _ = B ^ 2 := by rw [hK, mul_one]
-  have hsq : B ^ 2 ≤ ‖referenceNormal B s Kθ Kz‖ ^ 2 := by
-    nlinarith [sq_nonneg (B * s)]
-  nlinarith [norm_nonneg (referenceNormal B s Kθ Kz)]
 
-/-- An explicit reference-vector error bound gives a quantitative lower bound
-for the actual phase normal. The comparison estimate itself is a hypothesis. -/
-theorem phaseNormal_norm_lower (ε p pz x0 B s Kθ Kz δ : ℝ)
-    (F G : Slow → ℝ) (q : Slot) (hK : Kθ ^ 2 + Kz ^ 2 = 1)
-    (hclose : ‖phaseNormal ε p pz x0 F G q - referenceNormal B s Kθ Kz‖ ≤ δ) :
-    B - δ ≤ ‖phaseNormal ε p pz x0 F G q‖ := by
-  have href := referenceNormal_norm_ge B s Kθ Kz hK
-  have htriangle := norm_sub_norm_le (referenceNormal B s Kθ Kz)
-    (phaseNormal ε p pz x0 F G q)
-  rw [norm_sub_rev] at htriangle
-  linarith
 
 
 end NavierStokes.PhaseCalculus

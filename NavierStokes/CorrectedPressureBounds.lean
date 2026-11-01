@@ -55,11 +55,6 @@ theorem relative_abs_le_two_norm (c : Coeff) (t : ℝ) : |relative c t| ≤ 2 * 
       (mul_le_mul h1 (hb 1) (abs_nonneg _) (norm_nonneg _))
     _ = _ := by ring
 
-theorem relative_coefficient_bound {d : TailData} {K : ℝ}
-    (w : ResetWitness d K) (eta t : ℝ) :
-    |relative (w.coefficients eta) t| ≤ 2 * editSize d K :=
-  (relative_abs_le_two_norm _ _).trans
-    (mul_le_mul_of_nonneg_left (w.coefficient_bound eta) (by norm_num))
 
 theorem relative_eta_hasDerivAt {d : TailData} {K : ℝ}
     (w : ResetWitness d K) (eta t : ℝ) :
@@ -134,10 +129,6 @@ theorem editDensity_eq {d : TailData} {K : ℝ} (w : ResetWitness d K) (t eta : 
   unfold modifiedE
   ring
 
-theorem editDensity_zero_outside {d : TailData} {K : ℝ}
-    (w : ResetWitness d K) (eta : ℝ) {t : ℝ}
-    (ht : t ∉ Ioo (d.releaseStart - 4) d.releaseStart) : editDensity w (t, eta) = 0 := by
-  rw [editDensity, correctedAngular_unchanged d w.coefficients eta ht, sub_self]
 
 noncomputable def editDensityEta {d : TailData} {K : ℝ}
     (w : ResetWitness d K) (p : ℝ × ℝ) : ℝ :=
@@ -173,34 +164,6 @@ theorem editDensityEta_continuous_t {d : TailData} {K : ℝ}
   · exact (relative_contDiff (deriv w.coefficients eta)).continuous.comp
       (continuous_id.sub continuous_const)
 
-theorem editDensity_abs_le {d : TailData} {K : ℝ}
-    (w : ResetWitness d K) (t eta : ℝ) :
-    |editDensity w (t, eta)| ≤ 5 * editSize d K * Real.exp 5 * releaseSquare d := by
-  have hR := releaseSquare_pos d
-  by_cases ht : t ∈ Ioo (d.releaseStart - 4) d.releaseStart
-  · have hs := (w.small_jets eta (t - correctionCenter d)).1
-    have hr := relative_coefficient_bound w eta (t - correctionCenter d)
-    have hsize := editSize_nonneg w
-    have hprod : |(1 + relative (w.coefficients eta) (t - correctionCenter d)) ^ 2 - 1| ≤
-        5 * editSize d K := by
-      rw [show (1 + relative (w.coefficients eta) (t - correctionCenter d)) ^ 2 - 1 =
-        relative (w.coefficients eta) (t - correctionCenter d) *
-          (2 + relative (w.coefficients eta) (t - correctionCenter d)) by ring, abs_mul]
-      have ha : |2 + relative (w.coefficients eta) (t - correctionCenter d)| ≤ 5 / 2 := by
-        have h := abs_add_le (2 : ℝ) (relative (w.coefficients eta) (t - correctionCenter d))
-        norm_num at h
-        linarith
-      have hh := mul_le_mul hr ha (abs_nonneg _) (by positivity : 0 ≤ 2 * editSize d K)
-      nlinarith
-    rw [editDensity_eq, abs_mul, abs_of_nonneg (sq_nonneg _)]
-    have hbase : baseE d.core.lam (referenceAmplitude d) t ^ 2 ≤ Real.exp 5 * releaseSquare d := by
-      rw [← original_matches_reference d eta ⟨ht.1.le, ht.2.le⟩]
-      exact (window_square_bounds d ⟨ht.1.le, ht.2.le⟩ eta).2
-    have hb := mul_le_mul hbase hprod (abs_nonneg _) (by positivity : 0 ≤ Real.exp 5 * releaseSquare d)
-    nlinarith
-  · rw [editDensity_zero_outside w eta ht, abs_zero]
-    exact mul_nonneg (mul_nonneg (mul_nonneg (by norm_num) (editSize_nonneg w))
-      (Real.exp_pos _).le) (releaseSquare_pos d).le
 
 theorem editDensityEta_abs_le {d : TailData} {K : ℝ}
     (w : ResetWitness d K) (t eta : ℝ) :
@@ -293,56 +256,10 @@ theorem pressureChange_zero_after {d : TailData} {K : ℝ}
     (w : ResetWitness d K) {y : ℝ} (hy : d.releaseStart ≤ y) (eta : ℝ) :
     pressureChange w y eta = 0 := by rw [pressureChange, correctedPi_eq_after w hy, sub_self]
 
-/-- Joint smoothness of a finite integral with a variable upper limit. -/
-theorem intervalPrimitive_contDiff {f : ℝ × ℝ → ℝ} (hf : ContDiff ℝ ∞ f) (a : ℝ) :
-    ContDiff ℝ ∞ (fun p : ℝ × ℝ => ∫ t in a..p.1, f (t, p.2)) := by
-  let g : (ℝ × ℝ) × ℝ → ℝ := fun z => f (a + (z.1.1 - a) * z.2, z.1.2)
-  have hg : ContDiff ℝ ∞ g := hf.comp
-    ((contDiff_const.add ((contDiff_fst.fst.sub contDiff_const).mul contDiff_snd)).prodMk
-      contDiff_fst.snd)
-  have heq : (fun p : ℝ × ℝ => ∫ t in a..p.1, f (t, p.2)) =
-      fun p : ℝ × ℝ => (p.1 - a) * ∫ u in (0 : ℝ)..1, g (p, u) := by
-    funext p
-    have h := intervalIntegral.smul_integral_comp_mul_add
-      (f := fun t => f (t, p.2)) (a := (0 : ℝ)) (b := 1) (p.1 - a) a
-    simpa [g, smul_eq_mul, add_comm] using h.symm
-  rw [heq]
-  exact (contDiff_fst.sub contDiff_const).mul
-    (TransportPrimitive.parameterIntegral_contDiff hg 0 1)
-
-theorem cleanPi_joint_contDiff (d : TailData) :
-    ContDiff ℝ ∞ (fun p : ℝ × ℝ => Pi d p.1 p.2) := by
-  have heq : (fun p : ℝ × ℝ => Pi d p.1 p.2) = fun p : ℝ × ℝ =>
-      Pi d 0 p.2 + (1 / 2) * ∫ t in (0 : ℝ)..p.1, finalAngular d (t, p.2) ^ 2 := by
-    funext p
-    exact Pi_increment d 0 p.1 p.2
-  rw [heq]
-  exact ((Pi_contDiff_eta d 0).comp contDiff_snd).add
-    (contDiff_const.mul (intervalPrimitive_contDiff ((finalAngular_contDiff d).pow 2) 0))
-
-theorem pressureChange_joint_contDiff {d : TailData} {K : ℝ} (w : ResetWitness d K) :
-    ContDiff ℝ ∞ (fun p : ℝ × ℝ => pressureChange w p.1 p.2) := by
-  have heq : (fun p : ℝ × ℝ => pressureChange w p.1 p.2) = fun p : ℝ × ℝ =>
-      (1 / 2) * ∫ t in (d.releaseStart - 4)..p.1, editDensity w (t, p.2) := by
-    funext p
-    exact pressureChange_eq_partial w p.1 p.2
-  rw [heq]
-  exact contDiff_const.mul (intervalPrimitive_contDiff (editDensity_contDiff w) _)
 
 
-theorem correctedPi_hasDerivAt_y {d : TailData} {K : ℝ}
-    (w : ResetWitness d K) (y eta : ℝ) :
-    HasDerivAt (fun t => correctedPi w t eta)
-      ((1 / 2) * correctedAngular d w.coefficients (y, eta) ^ 2) y := by
-  have hc : Continuous (fun t => correctedAngular d w.coefficients (t, eta) ^ 2) :=
-    (((correctedAngular_contDiff d w.coefficients w.smooth).continuous.comp
-      (continuous_id.prodMk continuous_const)).pow 2)
-  have heq : (fun t => correctedPi w t eta) = fun t => correctedPi w 0 eta +
-      (1 / 2) * primitive (fun v => correctedAngular d w.coefficients (v, eta) ^ 2) t := by
-    funext t
-    exact correctedPi_increment w 0 t eta
-  rw [heq]
-  exact ((primitive_hasDerivAt hc y).const_mul (1 / 2)).const_add _
+
+
 
 theorem pressureChange_hasDerivAt_eta {d : TailData} {K : ℝ}
     (w : ResetWitness d K) (y eta : ℝ) :
@@ -436,24 +353,6 @@ theorem half_partial_integral_abs_le {f : ℝ → ℝ} {B r y : ℝ}
   rw [abs_of_nonneg (by norm_num : (0 : ℝ) ≤ 1 / 2)]
   nlinarith [mul_le_mul_of_nonneg_left hlen hB]
 
-theorem pressureChange_abs_le {d : TailData} {K : ℝ}
-    (w : ResetWitness d K) (y eta : ℝ) :
-    |pressureChange w y eta| ≤ 10 * editSize d K * Real.exp 5 * releaseSquare d := by
-  have hsize := editSize_nonneg w
-  have hR := releaseSquare_pos d
-  by_cases hl : y ≤ d.releaseStart - 4
-  · rw [pressureChange_zero_before w hl, abs_zero]
-    positivity
-  by_cases hr : d.releaseStart ≤ y
-  · rw [pressureChange_zero_after w hr, abs_zero]
-    positivity
-  rw [pressureChange_eq_partial]
-  have h := half_partial_integral_abs_le
-    (B := 5 * editSize d K * Real.exp 5 * releaseSquare d)
-    (by positivity) ⟨(le_of_not_ge hl), (le_of_not_ge hr)⟩
-    (fun t => editDensity_abs_le w t eta)
-  convert! h using 1
-  ring
 
 theorem pressureChange_deriv_abs_le {d : TailData} {K : ℝ}
     (w : ResetWitness d K) (y eta : ℝ) :
@@ -606,22 +505,6 @@ theorem corrected_bounds_of_small {d : TailData} {K : ℝ}
       (mul_le_mul_of_nonneg_right hderiv (sq_nonneg _))⟩
 
 
-theorem releaseSquare_le_core_endpoint (d : TailData) {eta : ℝ} (heta : |eta| ≤ 1) :
-    releaseSquare d ≤ (4 * Real.exp (6 / 5)) * finalAngular d (d.core.endpoint, eta) ^ 2 := by
-  have hER : d.core.endpoint ≤ d.releaseStart :=
-    ((flattenEnd_gt_core d).trans (releaseStart_gt_flattenEnd d)).le
-  have hclock := clock_future_bound d (SchedulePressure.endpoint_pos d).le hER
-  have hexp : Real.exp (-(4 / 5) * (d.releaseStart - d.core.endpoint)) ≤ 1 := by
-    apply Real.exp_le_one_iff.mpr
-    exact mul_nonpos_of_nonpos_of_nonneg (by norm_num) (sub_nonneg.mpr hER)
-  change SchedulePressure.clockWeight d d.releaseStart ≤ _
-  calc
-    _ ≤ SchedulePressure.clockWeight d d.core.endpoint * Real.exp (6 / 5) :=
-      hclock.trans (mul_le_of_le_one_right
-        (mul_nonneg (SchedulePressure.clockWeight_pos d _).le (Real.exp_pos _).le) hexp)
-    _ ≤ (4 * finalAngular d (d.core.endpoint, eta) ^ 2) * Real.exp (6 / 5) :=
-      mul_le_mul_of_nonneg_right (clock_le_four_angular_square d _ heta) (Real.exp_pos _).le
-    _ = _ := by ring
 
 
 /-- Canonical forward pressure with the unchanged whole-axis pressure datum. -/

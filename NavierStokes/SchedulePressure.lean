@@ -171,10 +171,6 @@ theorem axisPressure_contDiff (d : TailData) : ContDiff ℝ ∞ (axisPressure d)
   exact PressureDatum.pressure_neg _ _ _
 
 
-theorem positive_exponent_mass (d : TailData) :
-    0 < ∫ y, clockWeight d y * shapeExponent d y :=
-  PressureDatum.exponent_mass_pos_of_ideal_prefix (admissible d) d.core.P_pos
-    (fun _ hy => clockWeight_ideal d hy) (fun _ hy => shapeExponent_ideal d hy)
 
 
 

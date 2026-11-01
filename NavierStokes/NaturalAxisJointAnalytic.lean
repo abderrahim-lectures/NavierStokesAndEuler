@@ -101,23 +101,7 @@ theorem CoefficientProfile.natural_analytic {h j σ Λ C : ℝ} {P0 : ℝ → �
     affineProfile_analytic hU hB (1 / Λ) Λ,
     affineProfile_analytic hP0 hP (1 / Λ) Λ⟩
 
-/-- Actual pressure data supplies its analyticity; it is not an additional
-hypothesis of the end-to-end natural-axis theorem. -/
-theorem pressureDatum_analytic {g a : ℝ → ℝ} {cap : ℝ} (hp : PressureDatum.Admissible g a cap) :
-    AnalyticOnNhd ℝ (PressureDatum.pressure g a) univ := by
-  intro η _
-  have hc := PressureDatum.complexPressure_analytic hp (η : ℂ) (PressureDatum.real_mem_strip η)
-  have hr : AnalyticAt ℝ (fun x : ℝ => (PressureDatum.complexPressure g a (x : ℂ)).re) η :=
-    (Complex.reCLM.analyticAt _).comp_of_eq
-      (hc.restrictScalars.comp (Complex.ofRealCLM.analyticAt η)) rfl
-  simpa only [PressureDatum.complexPressure_ofReal, Complex.ofReal_re] using hr
 
-/-- One common neighborhood of the printed closed scaled rectangle works
-for every scale and amplitude covered by the natural-axis construction. -/
-theorem printed_rectangle_subset_strip :
-    Icc (0 : ℝ) (41 / 10) ×ˢ Icc (-1 : ℝ) 1 ⊆ AxisEvaluation.strip window 20 := by
-  intro p hp
-  exact ⟨by constructor <;> linarith [hp.1.1, hp.1.2], original_interval_interior hp.2⟩
 
 
 end NavierStokes.NaturalEntrance

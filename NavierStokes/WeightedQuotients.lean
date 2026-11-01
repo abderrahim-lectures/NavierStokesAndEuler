@@ -257,9 +257,6 @@ theorem rpow_comp_jets_bound {f : E → ℝ} {s : Set E} (hs : IsOpen s)
 
 def chooseSum (n : ℕ) : ℝ := ∑ i ∈ Finset.range (n + 1), (n.choose i : ℝ)
 
-theorem chooseSum_nonneg (n : ℕ) : 0 ≤ chooseSum n := by
-  unfold chooseSum
-  positivity
 
 /-- A common bound for each input jet yields the usual Leibniz bound. -/
 theorem mul_jets_bound {f g : E → ℝ} {s : Set E} (hs : IsOpen s)
@@ -434,112 +431,9 @@ def envelope (w g r : E → ℝ) (n : ℕ) (x : E) : ℝ :=
   1 + w x / g x + ∑ i ∈ Finset.range (n + 1),
     (‖iteratedFDeriv ℝ i g x‖ / w x + ‖iteratedFDeriv ℝ i r x‖ / w x)
 
-theorem envelope_bounds {w g r : E → ℝ} {x : E} (hw : 0 < w x) (hg : 0 < g x) (n : ℕ) :
-    1 ≤ envelope w g r n x ∧ w x / envelope w g r n x ≤ g x ∧
-      (∀ i ≤ n, ‖iteratedFDeriv ℝ i g x‖ ≤ w x * envelope w g r n x) ∧
-      (∀ i ≤ n, ‖iteratedFDeriv ℝ i r x‖ ≤ w x * envelope w g r n x) := by
-  have hterm (i : ℕ) : 0 ≤ ‖iteratedFDeriv ℝ i g x‖ / w x +
-      ‖iteratedFDeriv ℝ i r x‖ / w x := by positivity
-  have hsum : 0 ≤ ∑ i ∈ Finset.range (n + 1),
-      (‖iteratedFDeriv ℝ i g x‖ / w x + ‖iteratedFDeriv ℝ i r x‖ / w x) :=
-    Finset.sum_nonneg (fun i _ => hterm i)
-  have hB : 1 ≤ envelope w g r n x := by
-    dsimp only [envelope]
-    have hfrac : 0 ≤ w x / g x := (div_pos hw hg).le
-    linarith
-  have hlow : w x / g x ≤ envelope w g r n x := by
-    dsimp only [envelope]
-    linarith
-  have hlow' : w x / envelope w g r n x ≤ g x := by
-    apply (div_le_iff₀ (zero_lt_one.trans_le hB)).2
-    simpa only [mul_comm] using (div_le_iff₀ hg).mp hlow
-  have hi (i : ℕ) (hin : i ≤ n) :
-      ‖iteratedFDeriv ℝ i g x‖ / w x + ‖iteratedFDeriv ℝ i r x‖ / w x ≤
-        envelope w g r n x := by
-    have ht := Finset.single_le_sum
-      (f := fun i => ‖iteratedFDeriv ℝ i g x‖ / w x + ‖iteratedFDeriv ℝ i r x‖ / w x)
-      (fun i _ => hterm i) (Finset.mem_range.mpr (Nat.lt_succ_of_le hin))
-    dsimp only [envelope]
-    have hlo : 0 ≤ w x / g x := (div_pos hw hg).le
-    linarith
-  refine ⟨hB, hlow', ?_, ?_⟩
-  · intro i hin
-    have hnonneg : 0 ≤ ‖iteratedFDeriv ℝ i r x‖ / w x := by positivity
-    have h : ‖iteratedFDeriv ℝ i g x‖ / w x ≤ envelope w g r n x := by linarith [hi i hin]
-    simpa only [mul_comm] using (div_le_iff₀ hw).mp h
-  · intro i hin
-    have hnonneg : 0 ≤ ‖iteratedFDeriv ℝ i g x‖ / w x := by positivity
-    have h : ‖iteratedFDeriv ℝ i r x‖ / w x ≤ envelope w g r n x := by linarith [hi i hin]
-    simpa only [mul_comm] using (div_le_iff₀ hw).mp h
 
-theorem envelope_polyBound {s : Set E} {S T w g r : E → ℝ}
-    (hS : ∀ x ∈ s, 1 ≤ S x) (hT : ∀ x ∈ s, 1 ≤ T x)
-    (hlower : PolyBound s S T (fun x => w x / g x))
-    (hg : ∀ n, PolyBound s S T (fun x => ‖iteratedFDeriv ℝ n g x‖ / w x))
-    (hr : ∀ n, PolyBound s S T (fun x => ‖iteratedFDeriv ℝ n r x‖ / w x)) (n : ℕ) :
-    PolyBound s S T (envelope w g r n) := by
-  apply PolyBound.add hS hT (PolyBound.add hS hT polyBound_one hlower)
-  exact PolyBound.sum (Finset.range (n + 1)) _ hS hT
-    (fun i _ => PolyBound.add hS hT (hg i) (hr i))
 
-/-- All input jets carry `w`; the square root and arbitrary signed quotient
-carry exactly `sqrt w`, with only polynomial changes in the allowed scales. -/
-theorem weighted_half_control {s : Set E} {S T w g r : E → ℝ}
-    (hs : IsOpen s) (hS : ∀ x ∈ s, 1 ≤ S x) (hT : ∀ x ∈ s, 1 ≤ T x)
-    (hw : ∀ x ∈ s, 0 < w x) (hpos : ∀ x ∈ s, 0 < g x)
-    (hg : ContDiffOn ℝ ∞ g s) (hr : ContDiffOn ℝ ∞ r s)
-    (hlower : PolyBound s S T (fun x => w x / g x))
-    (hgj : ∀ n, PolyBound s S T (fun x => ‖iteratedFDeriv ℝ n g x‖ / w x))
-    (hrj : ∀ n, PolyBound s S T (fun x => ‖iteratedFDeriv ℝ n r x‖ / w x)) :
-    (∀ n, PolyBound s S T (fun x =>
-      ‖iteratedFDeriv ℝ n (fun y => Real.sqrt (g y)) x‖ / Real.sqrt (w x))) ∧
-    (∀ n, PolyBound s S T (fun x =>
-      ‖iteratedFDeriv ℝ n (fun y => r y / (2 * Real.sqrt (g y))) x‖ / Real.sqrt (w x))) := by
-  have henv (n : ℕ) := envelope_polyBound hS hT hlower hgj hrj n
-  have hnonneg (n : ℕ) (x : E) (hx : x ∈ s) : 0 ≤ envelope w g r n x :=
-    zero_le_one.trans (envelope_bounds (hw x hx) (hpos x hx) n).1
-  constructor
-  · intro n
-    have hc : 0 ≤ (n.factorial : ℝ) * coeffBound (1 / 2) n :=
-      mul_nonneg (Nat.cast_nonneg _) (coeffBound_nonneg _ _)
-    apply ((henv n).pow hS hT (hnonneg n) (2 * n + 1)).const_mul hS hT hc |>.mono
-    intro x hx
-    obtain ⟨hB, hlo, hG, hR⟩ := envelope_bounds (hw x hx) (hpos x hx) n
-    have h := sqrt_jet_bound hs hg hpos hx (hw x hx) hB n hlo hG
-    apply (div_le_iff₀ (Real.sqrt_pos.mpr (hw x hx))).2
-    simpa only [mul_assoc, mul_left_comm, mul_comm] using h
-  · intro n
-    have hc : 0 ≤ chooseSum n * orderBound (-(1 / 2 : ℝ)) n / 2 :=
-      div_nonneg (mul_nonneg (chooseSum_nonneg n) (orderBound_nonneg _ _)) (by norm_num)
-    apply ((henv n).pow hS hT (hnonneg n) (2 * n + 2)).const_mul hS hT hc |>.mono
-    intro x hx
-    obtain ⟨hB, hlo, hG, hR⟩ := envelope_bounds (hw x hx) (hpos x hx) n
-    have h := signed_jet_bound hs hg hr hpos hx (hw x hx) hB n hlo hG hR
-    apply (div_le_iff₀ (Real.sqrt_pos.mpr (hw x hx))).2
-    simpa only [mul_assoc, mul_left_comm, mul_comm] using h
 
-omit [NormedAddCommGroup E] [NormedSpace ℝ E] in
-/-- An explicit weighted lower estimate supplies the reciprocal envelope.
-This assumption is pointwise, with no normalized smooth factor. -/
-theorem polyBound_of_lower {s : Set E} {S T w g : E → ℝ}
-    (hS : ∀ x ∈ s, 1 ≤ S x) (hT : ∀ x ∈ s, 1 ≤ T x)
-    (hg : ∀ x ∈ s, 0 < g x) {c₀ : ℝ} (hc₀ : 0 < c₀) (K N : ℕ)
-    (hlower : ∀ x ∈ s, c₀ * w x / (S x ^ K * T x ^ N) ≤ g x) :
-    PolyBound s S T (fun x => w x / g x) := by
-  refine ⟨c₀⁻¹ + 1, by have := inv_pos.mpr hc₀; linarith, K, N, ?_⟩
-  intro x hx
-  have hP : 0 < S x ^ K * T x ^ N :=
-    mul_pos (pow_pos (zero_lt_one.trans_le (hS x hx)) _)
-      (pow_pos (zero_lt_one.trans_le (hT x hx)) _)
-  have h := (div_le_iff₀ hP).mp (hlower x hx)
-  apply (div_le_iff₀ (hg x hx)).2
-  calc
-    w x = c₀⁻¹ * (c₀ * w x) := by rw [← mul_assoc, inv_mul_cancel₀ hc₀.ne', one_mul]
-    _ ≤ c₀⁻¹ * (g x * (S x ^ K * T x ^ N)) :=
-      mul_le_mul_of_nonneg_left h (inv_pos.mpr hc₀).le
-    _ ≤ (c₀⁻¹ + 1) * (g x * (S x ^ K * T x ^ N)) := by
-      exact mul_le_mul_of_nonneg_right (by linarith) (mul_pos (hg x hx) hP).le
-    _ = _ := by ring
 
 omit [NormedAddCommGroup E] [NormedSpace ℝ E] in
 /-- Convert the usual weighted upper inequality to the envelope notation. -/
@@ -604,25 +498,6 @@ theorem WeightedJets.of_bounds {c : ℝ} {U : Set E} {S : E × ℝ → ℝ} {f :
   simp only [div_eq_mul_inv, inv_pow]
   ring
 
-theorem weighted_half_jets {c : ℝ} {U : Set E} (hU : IsOpen U)
-    {S g r : E × ℝ → ℝ} (hS : ∀ p ∈ edgeStrip U, 1 ≤ S p)
-    (hpos : ∀ p ∈ U ×ˢ Ioi (0 : ℝ), 0 < g p)
-    (hg : ContDiffOn ℝ ∞ g (U ×ˢ Ioi 0)) (hr : ContDiffOn ℝ ∞ r (U ×ˢ Ioi 0))
-    (hlower : PolyBound (edgeStrip U) S (fun p => p.2⁻¹)
-      (fun p => FlatCutoff.edge c p.2 / g p))
-    (hgj : WeightedJets c U S g) (hrj : WeightedJets c U S r) :
-    WeightedJets (c / 2) U S (fun p => Real.sqrt (g p)) ∧
-      WeightedJets (c / 2) U S (fun p => r p / (2 * Real.sqrt (g p))) := by
-  have hsub : edgeStrip U ⊆ U ×ˢ Ioi (0 : ℝ) := fun p hp => ⟨hp.1, hp.2.1⟩
-  have h := weighted_half_control (hU.prod isOpen_Ioo) hS
-    (fun p hp => inverse_distance_one_le hp)
-    (fun p hp => FlatCutoff.edge_pos c hp.2.1) (fun p hp => hpos p (hsub hp))
-    (hg.mono hsub) (hr.mono hsub) hlower hgj hrj
-  constructor
-  · intro n
-    simpa only [sqrt_edge] using h.1 n
-  · intro n
-    simpa only [sqrt_edge] using h.2 n
 
 theorem WeightedJets.localGaussian {c : ℝ} {U : Set E} {S f : E × ℝ → ℝ}
     (hS : ∀ p ∈ edgeStrip U, 1 ≤ S p) (hscale : LocallyBoundedScale U S)
@@ -648,37 +523,6 @@ theorem WeightedJets.localGaussian {c : ℝ} {U : Set E} {S f : E × ℝ → ℝ
       simp only [div_eq_mul_inv, inv_pow]
       ring
 
-/-- Joint smooth zero extension, and vanishing of every full edge tensor,
-derived solely from weighted input-jet inequalities and a positive lower bound. -/
-theorem weighted_zero_extension {c : ℝ} (hc : 0 < c) {U : Set E} (hU : IsOpen U)
-    {S g r : E × ℝ → ℝ} (hS : ∀ p ∈ edgeStrip U, 1 ≤ S p)
-    (hscale : LocallyBoundedScale U S)
-    (hpos : ∀ p ∈ U ×ˢ Ioi (0 : ℝ), 0 < g p)
-    (hg : ContDiffOn ℝ ∞ g (U ×ˢ Ioi 0)) (hr : ContDiffOn ℝ ∞ r (U ×ˢ Ioi 0))
-    (hlower : PolyBound (edgeStrip U) S (fun p => p.2⁻¹)
-      (fun p => FlatCutoff.edge c p.2 / g p))
-    (hgj : WeightedJets c U S g) (hrj : WeightedJets c U S r) :
-    ContDiffOn ℝ ∞ (FlatZeroExtension.zeroExtension (fun p => Real.sqrt (g p))) (U ×ˢ univ) ∧
-    ContDiffOn ℝ ∞ (FlatZeroExtension.zeroExtension (fun p => r p / (2 * Real.sqrt (g p))))
-      (U ×ˢ univ) ∧
-    ∀ n : ℕ, ∀ x ∈ U,
-      iteratedFDeriv ℝ n (FlatZeroExtension.zeroExtension (fun p => Real.sqrt (g p))) (x, 0) = 0 ∧
-      iteratedFDeriv ℝ n (FlatZeroExtension.zeroExtension
-        (fun p => r p / (2 * Real.sqrt (g p)))) (x, 0) = 0 := by
-  obtain ⟨ha, hb⟩ := weighted_half_jets hU hS hpos hg hr hlower hgj hrj
-  have haB := ha.localGaussian hS hscale
-  have hbB := hb.localGaussian hS hscale
-  have has : ContDiffOn ℝ ∞ (fun p => Real.sqrt (g p)) (U ×ˢ Ioi (0 : ℝ)) :=
-    hg.sqrt (fun p hp => (hpos p hp).ne')
-  have hbs : ContDiffOn ℝ ∞ (fun p => r p / (2 * Real.sqrt (g p))) (U ×ˢ Ioi (0 : ℝ)) :=
-    hr.div (contDiffOn_const.mul has) (fun p hp =>
-      mul_ne_zero (by norm_num) (Real.sqrt_pos.mpr (hpos p hp)).ne')
-  have hc2 : 0 < c / 2 := by linarith
-  refine ⟨FlatZeroExtension.contDiffOn_zeroExtension hc2 hU has haB,
-    FlatZeroExtension.contDiffOn_zeroExtension hc2 hU hbs hbB, ?_⟩
-  intro n x hx
-  exact ⟨FlatZeroExtension.iteratedFDeriv_zeroExtension_edge hc2 hU has haB n hx,
-    FlatZeroExtension.iteratedFDeriv_zeroExtension_edge hc2 hU hbs hbB n hx⟩
 
 
 

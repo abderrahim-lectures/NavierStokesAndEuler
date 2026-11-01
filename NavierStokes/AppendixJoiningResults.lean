@@ -13,13 +13,6 @@ open scoped ContDiff
 open NaturalAxisCoefficients NaturalProfile ProfileHistories ReferenceBounds
 
 
-/-- The apparent quadratic parameter contributions cancel in the complete
-constant angular source. This keeps its margin on the full printed range. -/
-theorem axis_base_source_identity (h j η : ℝ) :
-    -NaturalAxisData.W h j η - h * (1 - 2 * η * NaturalAxisData.U j η) =
-      3 - h + j * η := by
-  unfold NaturalAxisData.W NaturalAxisData.U NaturalAxisData.d NaturalAxisData.D
-  ring
 
 
 /-- The real denominator remains positive on the existing enlarged window

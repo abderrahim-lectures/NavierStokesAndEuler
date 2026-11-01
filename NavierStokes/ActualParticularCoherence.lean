@@ -47,8 +47,6 @@ noncomputable def cylinderParameter (z : Cylinder) : Parameter := (waveEquiv z).
 noncomputable def cylinderDomain (V : Set Plane) : Set Cylinder :=
   {z | (cylinderParameter z).2 ∈ V}
 
-theorem cylinderDomain_open {V : Set Plane} (hV : IsOpen V) : IsOpen (cylinderDomain V) :=
-  hV.preimage waveEquiv.continuous.fst.fst.snd
 
 /-- The target operator is the literal common-cover graph at the target
 band.  This identification is independent of the current source. -/
@@ -74,72 +72,7 @@ theorem targetChart (x : CorrectionStep.CycleState (Label B N0))
       ActualReferenceRebase.associatedContext_frame]
     rfl
 
-theorem corrected_amplitude_chart (x : CorrectionStep.CycleState (Label B N0))
-    (l : Label B N0) (j : ℤ) (n : ℕ) :
-    (fun z => (corrected x l j).amplitude n (waveEquiv z)) =
-      CurlClassBounds.realizedCoefficient ((j : ℝ) * (x.coefficients.blocks l).frequency n)
-        PhysicalResidualBridge.ScaledGraph.radius
-        (PhysicalResidualBridge.commonGraph (ChartScales.Q n) h (CommonWindow.index h n)).radial
-        PhysicalResidualBridge.ScaledGraph.angular
-        (PhysicalResidualBridge.commonGraph (ChartScales.Q n) h (CommonWindow.index h n)).axial
-        (fun z => (ActualReferenceRebase.actualCoefficients x l j).phase n (waveEquiv z))
-        (fun z => (ActualReferenceRebase.actualCoefficients x l j).amplitude n (waveEquiv z)) := by
-  have hp := ActualParticularRealization.realizedCoefficient_pull waveEquiv
-    ((j : ℝ) * (x.coefficients.blocks l).frequency n)
-    ((ActualParticularStageControls.assembly x l).background.radius n)
-    ((ActualReferenceRebase.actualCoefficients x l j).phase n)
-    ((ActualParticularStageControls.assembly x l).directions.radialField n)
-    (fun _ => (ActualParticularStageControls.assembly x l).directions.angular)
-    ((ActualParticularStageControls.assembly x l).directions.axialField
-      (CorrectionStep.ParticularParameters.nativeStrip ActualParticularStageControls.associatedStrip) n)
-    ((ActualReferenceRebase.actualCoefficients x l j).amplitude n)
-  rw [(targetChart x l n).radius, (targetChart x l n).radial,
-    (targetChart x l n).angular, (targetChart x l n).axial] at hp
-  exact hp.symm
 
-/-- Local agreement of the two primitive inputs propagates through the
-entire curl correction, including all cutoff derivatives. -/
-theorem corrected_eq_band_of_germs (x : CorrectionStep.CycleState (Label B N0))
-    (l : Label B N0) (j : ℤ) (n : ℕ) (z : Cylinder)
-    (ha : (fun y => (ActualReferenceRebase.actualCoefficients x l j).amplitude n (waveEquiv y))
-      =ᶠ[𝓝 z] bandRaw (ActualReferenceRebase.nativeAssembly x l) h (ChartScales.Q_pos n)
-        (ChartScales.Q_pos (BaseChartJets.cellBand l.2)) (ActualParticularStageControls.gap l n)
-        ((j : ℝ) * (x.coefficients.blocks l).frequency n) j)
-    (hphi : (fun y => (ActualReferenceRebase.actualCoefficients x l j).phase n (waveEquiv y))
-      =ᶠ[𝓝 z] bandPhase (ActualReferenceRebase.nativeAssembly x l) h (ChartScales.Q n)
-        (ChartScales.Q (BaseChartJets.cellBand l.2)) (ActualParticularStageControls.gap l n)
-        ((j : ℝ) * (x.coefficients.blocks l).frequency n) j) :
-    vectorMode ((corrected x l j).frequency n) ((corrected x l j).phase n)
-      ((corrected x l j).amplitude n) (waveEquiv z) =
-      bandVelocity (ActualReferenceRebase.nativeAssembly x l) h (ChartScales.Q_pos n)
-        (ChartScales.Q_pos (BaseChartJets.cellBand l.2)) (CommonWindow.index h n)
-        (ActualParticularStageControls.gap l n)
-        ((j : ℝ) * (x.coefficients.blocks l).frequency n) j z := by
-  have hg := ParticularWaveAssembly.realizedCoefficient_germ ha
-    ((j : ℝ) * (x.coefficients.blocks l).frequency n)
-    PhysicalResidualBridge.ScaledGraph.radius
-    (PhysicalResidualBridge.commonGraph (ChartScales.Q n) h (CommonWindow.index h n)).radial
-    PhysicalResidualBridge.ScaledGraph.angular
-    (PhysicalResidualBridge.commonGraph (ChartScales.Q n) h (CommonWindow.index h n)).axial
-    (fun y => (ActualReferenceRebase.actualCoefficients x l j).phase n (waveEquiv y))
-  have hq := ActualParticularRealization.realizedCoefficient_phase_germ hphi
-    ((j : ℝ) * (x.coefficients.blocks l).frequency n)
-    PhysicalResidualBridge.ScaledGraph.radius
-    (PhysicalResidualBridge.commonGraph (ChartScales.Q n) h (CommonWindow.index h n)).radial
-    PhysicalResidualBridge.ScaledGraph.angular
-    (PhysicalResidualBridge.commonGraph (ChartScales.Q n) h (CommonWindow.index h n)).axial
-    (bandRaw (ActualReferenceRebase.nativeAssembly x l) h (ChartScales.Q_pos n)
-      (ChartScales.Q_pos (BaseChartJets.cellBand l.2)) (ActualParticularStageControls.gap l n)
-      ((j : ℝ) * (x.coefficients.blocks l).frequency n) j)
-  have hv := congrFun (corrected_amplitude_chart x l j n) z
-  rw [(hg.trans hq).eq_of_nhds] at hv
-  funext i
-  change (corrected x l j).amplitude n (waveEquiv z) i *
-    carrier ((j : ℝ) * (x.coefficients.blocks l).frequency n)
-      ((ActualReferenceRebase.actualCoefficients x l j).phase n) (waveEquiv z) = _
-  rw [hv]
-  exact congrArg₂ (· * ·) rfl (PhysicalCurlCovariance.carrier_eq_of_products
-    (congrArg (((j : ℝ) * (x.coefficients.blocks l).frequency n) * ·) hphi.eq_of_nhds))
 
 
 /-! ## Composition of the actual primitive copy data

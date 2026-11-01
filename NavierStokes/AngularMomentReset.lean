@@ -486,9 +486,6 @@ theorem modifiedE_sub_support (lam e0 y0 : ℝ) (c : Coeff) :
   have hs := relative_support c hn
   constructor <;> linarith [hs.1, hs.2]
 
-theorem modifiedE_sub_hasCompactSupport (lam e0 y0 : ℝ) (c : Coeff) :
-    HasCompactSupport (modifiedE lam e0 y0 c - baseE lam e0) :=
-  HasCompactSupport.of_support_subset_isCompact isCompact_Icc (modifiedE_sub_support lam e0 y0 c)
 
 /-- Choosing `y0 = T - 3` places the whole edit strictly inside `(T - 4, T)`. -/
 theorem modifiedE_sub_tsupport (lam e0 y0 : ℝ) (c : Coeff) :

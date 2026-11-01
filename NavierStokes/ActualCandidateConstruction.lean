@@ -69,15 +69,6 @@ theorem cycle_representation (B N0 j : ℕ) :
 
 
 
-theorem cycle_base_error (B N0 j : ℕ) :
-    (cycle B N0 j).state.errors.base = ActualInitialization.baseError B := by
-  induction j with
-  | zero => exact (ActualInitialization.initialState_error_components B N0).1
-  | succ j ih =>
-      change ((parameters B N0).next (cycle B N0 j).coefficients (commonContext B)
-        (cycle B N0 j).state).errors.base = _
-      rw [CycleParameters.next_base_error]
-      exact ih
 
 
 noncomputable def initialTemporalAlias (B N0 : ℕ) : Oscillation Point :=
@@ -95,8 +86,6 @@ noncomputable def firstBand (B N0 : ℕ) : ℕ := max 4 (ActualCycleParameters.b
 theorem firstBand_four (B N0 : ℕ) : 4 ≤ firstBand B N0 := le_max_left _ _
 
 
-theorem firstBand_ge_choice (B N0 : ℕ) :
-    ActualCycleParameters.bandFloor B N0 ≤ firstBand B N0 := le_max_right _ _
 
 
 noncomputable def qbig (B N0 : ℕ) : ℝ := ChartScales.Q (firstBand B N0)
@@ -108,8 +97,6 @@ theorem qbig_pos (B N0 : ℕ) : 0 < qbig B N0 := ChartScales.Q_pos _
 inside the original raw field's validity domain. -/
 noncomputable def residualBand (B N0 : ℕ) : ℕ := firstBand B N0 + 1
 
-theorem residualBand_four (B N0 : ℕ) : 4 ≤ residualBand B N0 :=
-  (firstBand_four B N0).trans (Nat.le_succ _)
 
 theorem firstBand_le_residualBand (B N0 : ℕ) : firstBand B N0 ≤ residualBand B N0 := Nat.le_succ _
 
@@ -184,11 +171,6 @@ noncomputable def chartDirectStages (B N0 : ℕ) (a : ℝ) (i : PolarCharts.Inde
     (ActualInitialization.initialCycleState B N0) a i (graph n) n
 
 
-theorem chart_pressure_prefix (B N0 : ℕ) (a : ℝ) (i : PolarCharts.Index) (n J : ℕ) :
-    DiagonalJetBounds.uncutPrefix (chartPressureStages B N0 a i n) (J + 1) =
-      chartPressure B N0 a i n J :=
-  CyclePhysicalPrefixes.pressure_prefix (parameterSequence B N0) (commonContext B)
-    (ActualInitialization.initialCycleState B N0) a i (graph n) n (basePressure B n) J
 
 
 /-! The global physical representatives need only agree with an individual
@@ -202,45 +184,8 @@ theorem uncutPrefix_eqOn {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
   intro z hz
   exact Finset.sum_congr rfl (fun j _ => hf j hz)
 
-theorem chart_velocity_of_stage_realizations (B N0 : ℕ) (a : ℝ)
-    (i : PolarCharts.Index) (n : ℕ) {U : Set SpaceTime} (hU : IsOpen U)
-    (AP BP : ℕ → VelocityField) (hA : ∀ k, DifferentiableOn ℝ (AP k) U)
-    (hcurl : ∀ k, EqOn (SpatialCurl.spatialCurl (AP k))
-      (chartPotentialParts B N0 a i n k) U)
-    (hB : ∀ k, EqOn (BP k) (chartDirectStages B N0 a i n k) U) (J : ℕ) :
-    EqOn (MixedDiagonalResidual.uncutVelocity AP BP J) (chartVelocity B N0 a i n J) U := by
-  intro z hz
-  change SpatialCurl.spatialCurl (DiagonalJetBounds.uncutPrefix AP (J + 1)) z +
-    DiagonalJetBounds.uncutPrefix BP (J + 1) z = _
-  rw [uncutPrefix_eqOn hB (J + 1) hz]
-  exact CyclePhysicalPrefixes.mixedVelocity_prefix (parameterSequence B N0) (commonContext B)
-    (ActualInitialization.initialCycleState B N0) a i (graph n) n hU AP hA hcurl J hz
 
-theorem chart_pressure_of_stage_realizations (B N0 : ℕ) (a : ℝ)
-    (i : PolarCharts.Index) (n : ℕ) {U : Set SpaceTime} (PP : ℕ → PressureField)
-    (hP : ∀ k, EqOn (PP k) (chartPressureStages B N0 a i n k) U) (J : ℕ) :
-    EqOn (DiagonalJetBounds.uncutPrefix PP (J + 1)) (chartPressure B N0 a i n J) U := by
-  rw [← chart_pressure_prefix B N0 a i n J]
-  exact uncutPrefix_eqOn hP (J + 1)
 
-theorem chart_residual_of_stage_realizations (B N0 : ℕ) (a : ℝ)
-    (i : PolarCharts.Index) (n : ℕ) {U : Set SpaceTime} (hU : IsOpen U)
-    (AP BP : ℕ → VelocityField) (PP : ℕ → PressureField)
-    (hA : ∀ k, DifferentiableOn ℝ (AP k) U)
-    (hcurl : ∀ k, EqOn (SpatialCurl.spatialCurl (AP k))
-      (chartPotentialParts B N0 a i n k) U)
-    (hB : ∀ k, EqOn (BP k) (chartDirectStages B N0 a i n k) U)
-    (hP : ∀ k, EqOn (PP k) (chartPressureStages B N0 a i n k) U) (J : ℕ) :
-    EqOn (fun z => navierStokesResidual (MixedDiagonalResidual.uncutVelocity AP BP J)
-      (DiagonalJetBounds.uncutPrefix PP (J + 1)) z.1 z.2)
-      (fun z => navierStokesResidual (chartVelocity B N0 a i n J)
-        (chartPressure B N0 a i n J) z.1 z.2) U := by
-  intro z hz
-  apply ResidualRegularity.residual_congr
-  · exact eventually_of_mem (hU.mem_nhds hz) (fun _ hy =>
-      chart_velocity_of_stage_realizations B N0 a i n hU AP BP hA hcurl hB J hy)
-  · exact eventually_of_mem (hU.mem_nhds hz) (fun _ hy =>
-      chart_pressure_of_stage_realizations B N0 a i n PP hP J hy)
 
 
 /-! ## The actual mean fields, with one common physical representative
@@ -263,24 +208,9 @@ noncomputable def meanAngularField (B N0 : ℕ) (degree : ℝ)
   fun w => meanField B N0 degree f w •
     PhysicalMeanJetBounds.angularVector (PhysicalGraphBounds.radialProjection w)
 
-theorem meanField_add (B N0 : ℕ) (degree : ℝ) (f g : ActualMeanPhysicalData.Scalar) :
-    meanField B N0 degree (f + g) = meanField B N0 degree f + meanField B N0 degree g := by
-  funext w
-  exact congrFun ((meanAtlas B N0).physical_add standardRegion.carrier degree f g)
-    (PhysicalMeanJetBounds.physicalPoint h w)
-
-theorem meanField_sub (B N0 : ℕ) (degree : ℝ) (f g : ActualMeanPhysicalData.Scalar) :
-    meanField B N0 degree (f - g) = meanField B N0 degree f - meanField B N0 degree g := by
-  funext w
-  exact congrFun ((meanAtlas B N0).physical_sub standardRegion.carrier degree f g)
-    (PhysicalMeanJetBounds.physicalPoint h w)
 
 
-theorem meanAngularField_sub (B N0 : ℕ) (degree : ℝ) (f g : ActualMeanPhysicalData.Scalar) :
-    meanAngularField B N0 degree (f - g) =
-      meanAngularField B N0 degree f - meanAngularField B N0 degree g := by
-  funext w
-  simp only [meanAngularField, meanField_sub, Pi.sub_apply, sub_smul]
+
 
 noncomputable def angularNativeStages (B N0 : ℕ) : ℕ → ActualMeanPhysicalData.Scalar :=
   fun k => Nat.casesOn k (cycle B N0 0).state.mean.angular

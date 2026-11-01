@@ -231,30 +231,8 @@ theorem shrinkingSupport_of_normalized_annulus {V : Type*} [Zero V]
   obtain ⟨n, ha, hq⟩ := hf w ht hn
   exact radius_le_of_scaled_annulus ha hq
 
-/-- An adapter from the already constructed scalar physical wave family.
-This uses its actual amplitude support and its actual slow mask. -/
-theorem regularFamily_term_support {H : ℕ} {f : PhysicalWaveSum.WaveFamily H}
-    {a b h r0 Z : ℝ} {Δ : ℕ}
-    (hf : PhysicalWaveSum.RegularFamily f a b h r0 Z Δ)
-    (I : PhysicalWaveSum.WaveIndex H) :
-    ShrinkingSupport h (2 * b * Real.sqrt 2) (f.term a h r0 I) := by
-  apply shrinkingSupport_of_normalized_annulus
-  intro w ht hn
-  exact ⟨I.1.val.1, (hf.geometry_support I w
-    (PhysicalWaveSum.globalWave_ne_zero_amp hn)).1,
-    (PhysicalWaveSum.labelRegion_active_relation (hf.term_support I w ht hn)).2⟩
 
 
-/-- The complete physical copy-and-label sum has the same outer support.
-The support witness keeps the individual copy and its own carrier center. -/
-theorem copyFamily_sum_support {H Δ : ℕ} {K : Type*}
-    {f : PhysicalCopyBounds.CopyFamily H K} {a b h r0 Z : ℝ}
-    (hf : PhysicalCopyBounds.RegularFamily f a b h r0 Z Δ) :
-    ShrinkingSupport h (2 * b * Real.sqrt 2) (f.sum a h r0) := by
-  apply shrinkingSupport_of_normalized_annulus
-  intro w ht hn
-  obtain ⟨I, _, _, ha, hm⟩ := hf.sum_support ht hn
-  exact ⟨I.1.val.1, ha, (PhysicalWaveSum.labelRegion_active_relation hm).2⟩
 
 
 
@@ -356,13 +334,6 @@ noncomputable def addZeroExtension {f g : SpaceTime → V} {x : Space}
     rw [hg ⟨hw.1.2, hw.2⟩, add_zero]
     exact e.agrees ⟨hw.1.1, hw.2⟩
 
-theorem add_supported_extension {h C : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {f g : SpaceTime → V} {x : Space}
-    (e : JointResidualLimits.OneSidedExtension f x) (hg : ShrinkingSupport h C g)
-    (hx : x ≠ 0) (hz : x 2 = 0) :
-    Nonempty (JointResidualLimits.OneSidedExtension (fun w => f w + g w) x) := by
-  obtain ⟨U, hU, hxU, hgU⟩ := exists_zero_neighborhood hh hh1 hg hx hz
-  exact ⟨addZeroExtension e hU hxU hgU⟩
 
 end Extensions
 
@@ -401,42 +372,6 @@ end Curl
 
 section Diagonal
 
-/-- One neighborhood kills both complete diagonal sums, their actual
-curl, and every joint derivative.  The scalar cutoffs are arbitrary. -/
-theorem diagonal_sums_zero_near_terminal {h C : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {A : ℕ → SpaceTime → Space} {p : ℕ → SpaceTime → ℝ}
-    (hA : ∀ j, ShrinkingSupport h C (A j)) (hp : ∀ j, ShrinkingSupport h C (p j))
-    (a : ℕ → ℝ) (q : SpaceTime → ℝ) {x : Space} (hx : x ≠ 0) (hz : x 2 = 0) :
-    ∃ U : Set SpaceTime, IsOpen U ∧ (1, x) ∈ U ∧
-      EqOn (SolenoidalDiagonal.potentialSum a q A) (fun _ => 0)
-        (U ∩ SpacetimeEndpoint.openPast 1) ∧
-      EqOn (SolenoidalDiagonal.potentialSum a q p) (fun _ => 0)
-        (U ∩ SpacetimeEndpoint.openPast 1) ∧
-      EqOn (SolenoidalDiagonal.velocitySum a q A) (fun _ => 0)
-        (U ∩ SpacetimeEndpoint.openPast 1) ∧
-      ∀ m : ℕ,
-        EqOn (iteratedFDeriv ℝ m (SolenoidalDiagonal.potentialSum a q A)) (fun _ => 0)
-          (U ∩ SpacetimeEndpoint.openPast 1) ∧
-        EqOn (iteratedFDeriv ℝ m (SolenoidalDiagonal.potentialSum a q p)) (fun _ => 0)
-          (U ∩ SpacetimeEndpoint.openPast 1) ∧
-        EqOn (iteratedFDeriv ℝ m (SolenoidalDiagonal.velocitySum a q A)) (fun _ => 0)
-          (U ∩ SpacetimeEndpoint.openPast 1) := by
-  obtain ⟨U, hU, hxU, hsep⟩ := exists_separating_neighborhood hh hh1 C hx hz
-  have hAS := ShrinkingSupport.potentialSum hA a q
-  have hpS := ShrinkingSupport.potentialSum hp a q
-  have hvS := hAS.spatialCurl hh hh1
-  have hAz : EqOn (SolenoidalDiagonal.potentialSum a q A) (fun _ => 0)
-      (U ∩ SpacetimeEndpoint.openPast 1) :=
-    fun w hw => hAS.zero_of_separated hw.2.1 (hsep w hw.1 hw.2.1)
-  have hpz : EqOn (SolenoidalDiagonal.potentialSum a q p) (fun _ => 0)
-      (U ∩ SpacetimeEndpoint.openPast 1) :=
-    fun w hw => hpS.zero_of_separated hw.2.1 (hsep w hw.1 hw.2.1)
-  have hvz : EqOn (SolenoidalDiagonal.velocitySum a q A) (fun _ => 0)
-      (U ∩ SpacetimeEndpoint.openPast 1) :=
-    fun w hw => hvS.zero_of_separated hw.2.1 (hsep w hw.1 hw.2.1)
-  exact ⟨U, hU, hxU, hAz, hpz, hvz, fun m =>
-    ⟨jets_zero_of_eqOn hU hAz m, jets_zero_of_eqOn hU hpz m,
-      jets_zero_of_eqOn hU hvz m⟩⟩
 
 /-- Add the actual diagonal sum before taking any velocity derivative. -/
 noncomputable def diagonalAddition {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
@@ -444,44 +379,7 @@ noncomputable def diagonalAddition {V : Type*} [NormedAddCommGroup V] [NormedSpa
     (F : ℕ → SpaceTime → V) (w : SpaceTime) : V :=
   f w + SolenoidalDiagonal.potentialSum a q F w
 
-theorem diagonal_addition_extension {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
-    {h C : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {f : SpaceTime → V} {F : ℕ → SpaceTime → V}
-    (hF : ∀ j, ShrinkingSupport h C (F j)) (a : ℕ → ℝ) (q : SpaceTime → ℝ)
-    {x : Space} (hx : x ≠ 0) (hz : x 2 = 0) (e : JointResidualLimits.OneSidedExtension f x) :
-    Nonempty (JointResidualLimits.OneSidedExtension (diagonalAddition f a q F) x) :=
-  add_supported_extension hh hh1 e (ShrinkingSupport.potentialSum hF a q) hx hz
 
-/-- Exact local agreement includes the concrete nonlinear Cartesian
-residual, without an assumed residual estimate. -/
-theorem diagonal_addition_germs {h C : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (A0 : SpaceTime → Space) (p0 : SpaceTime → ℝ)
-    {A : ℕ → SpaceTime → Space} {p : ℕ → SpaceTime → ℝ}
-    (hA : ∀ j, ShrinkingSupport h C (A j)) (hp : ∀ j, ShrinkingSupport h C (p j))
-    (a : ℕ → ℝ) (q : SpaceTime → ℝ) {x : Space} (hx : x ≠ 0) (hz : x 2 = 0) :
-    ∃ U : Set SpaceTime, IsOpen U ∧ (1, x) ∈ U ∧
-      ∀ w ∈ U, w.1 < 1 →
-        diagonalAddition A0 a q A =ᶠ[𝓝 w] A0 ∧
-        SpatialCurl.spatialCurl (diagonalAddition A0 a q A) =ᶠ[𝓝 w]
-          SpatialCurl.spatialCurl A0 ∧
-        diagonalAddition p0 a q p =ᶠ[𝓝 w] p0 ∧
-        (fun z => ProblemStatement.navierStokesResidual
-          (SpatialCurl.spatialCurl (diagonalAddition A0 a q A))
-          (diagonalAddition p0 a q p) z.1 z.2) =ᶠ[𝓝 w]
-        (fun z => ProblemStatement.navierStokesResidual
-          (SpatialCurl.spatialCurl A0) p0 z.1 z.2) := by
-  obtain ⟨U, hU, hxU, hAz, hpz, _, _⟩ :=
-    diagonal_sums_zero_near_terminal hh hh1 hA hp a q hx hz
-  refine ⟨U, hU, hxU, ?_⟩
-  intro w hw ht
-  have hAg : diagonalAddition A0 a q A =ᶠ[𝓝 w] A0 := by
-    filter_upwards [zero_germ_of_eqOn hU hAz hw ht] with y hy
-    simp only [diagonalAddition, hy, add_zero]
-  have hpg : diagonalAddition p0 a q p =ᶠ[𝓝 w] p0 := by
-    filter_upwards [zero_germ_of_eqOn hU hpz hw ht] with y hy
-    simp only [diagonalAddition, hy, add_zero]
-  have hvg := SolenoidalDiagonal.spatialCurl_eventuallyEq hAg
-  exact ⟨hAg, hvg, hpg, ResidualRegularity.residual_eventuallyEq hvg hpg⟩
 
 end Diagonal
 

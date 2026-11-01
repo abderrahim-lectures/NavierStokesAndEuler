@@ -302,20 +302,6 @@ theorem angularSum_axis (a : ℕ → ℝ) (q : SpaceTime → ℝ) (b : ℕ → C
   simp only [angularSum, SolenoidalDiagonal.potentialSum, SolenoidalDiagonal.cutStage,
     angularField_axis _ _ _ h0 h1, smul_zero, tsum_zero]
 
-theorem angularSum_axis_zero_germ {U : Set Slow} (hU : IsOpen U) (D : ℕ → AngularData U)
-    {a : ℕ → ℝ} (ha : Tendsto a atTop atTop) {q : SpaceTime → ℝ}
-    {x : SpaceTime} (hq : ContinuousAt q x) (hpos : 0 < q x) (hx : x ∈ physicalDomain U)
-    (haxis : radius x = 0) :
-    angularSum a q (fun j => (D j).scalar) =ᶠ[𝓝 x] fun _ => 0 := by
-  obtain ⟨N, hN⟩ := angularSum_eventuallyEq_partial ha hq hpos (fun j => (D j).scalar)
-  have hz (j : ℕ) : (fun y => SolenoidalDiagonal.cutStage a q
-      (fun j => angularField (D j).scalar) j y) =ᶠ[𝓝 x] fun _ => 0 := by
-    filter_upwards [(D j).field_zero_germ hU hx (haxis ▸ (D j).inner_pos _ hx)] with y hy
-    simp only [SolenoidalDiagonal.cutStage, hy, smul_zero]
-  have hsum : angularPartial a q (fun j => (D j).scalar) N =ᶠ[𝓝 x] fun _ => 0 := by
-    filter_upwards [(Filter.eventually_all_finset (Finset.range N)).2 (fun j _ => hz j)] with y hy
-    exact Finset.sum_eq_zero hy
-  exact hN.trans hsum
 
 /-! ## Curl potentials plus direct angular velocity -/
 
@@ -324,28 +310,7 @@ noncomputable def mixedVelocity (a : ℕ → ℝ) (q : SpaceTime → ℝ)
   fun x => SolenoidalDiagonal.velocitySum a q A x + angularSum a q b x
 
 
-theorem mixedVelocity_divergence {U : Set Slow} (hU : IsOpen U) (D : ℕ → AngularData U)
-    {a : ℕ → ℝ} (ha : Tendsto a atTop atTop) (q : Coefficient)
-    (hq : ContDiffOn ℝ ∞ q (positiveDomain U))
-    (hqp : ContDiffOn ℝ ∞ (fun x => q (cylPoint x)) (physicalDomain U))
-    (hpos : ∀ x ∈ physicalDomain U, 0 < q (cylPoint x))
-    {A : ℕ → VelocityField} (hA : ∀ j, ContDiffOn ℝ ∞ (A j) (physicalDomain U))
-    {x : SpaceTime} (hx : x ∈ physicalDomain U) :
-    spatialDivergence (mixedVelocity a (fun x => q (cylPoint x)) A (fun j => (D j).scalar)) x.1 x.2 = 0 := by
-  have hmem := (physicalDomain_open hU).mem_nhds hx
-  have hc := (SolenoidalDiagonal.velocitySum_contDiffOn ha (physicalDomain_open hU) hpos hqp hA).contDiffAt hmem
-  have hd := (angularSum_smooth hU D ha hqp hpos).contDiffAt hmem
-  unfold mixedVelocity
-  rw [ResidualCalculus.spatialDivergence_add _ _ _ _
-    ((hc.comp x.2 (contDiffAt_const.prodMk contDiffAt_id)).differentiableAt (by simp))
-    ((hd.comp x.2 (contDiffAt_const.prodMk contDiffAt_id)).differentiableAt (by simp)),
-    SolenoidalDiagonal.divergence_velocitySum_on ha (physicalDomain_open hU) hpos hqp hA x hx,
-    angularSum_divergence hU D ha q hq hqp hpos hx, add_zero]
 
-theorem mixedVelocity_axis (a : ℕ → ℝ) (q : SpaceTime → ℝ) (A : ℕ → VelocityField)
-    (b : ℕ → Coefficient) (t : ℝ) (x : Space) (h0 : x 0 = 0) (h1 : x 1 = 0) :
-    mixedVelocity a q A b (t, x) = SolenoidalDiagonal.velocitySum a q A (t, x) := by
-  rw [mixedVelocity, angularSum_axis a q b t x h0 h1, add_zero]
 
 /-! ## The actual similarity cutoff -/
 
@@ -355,8 +320,6 @@ theorem preterminalSlow_open : IsOpen preterminalSlow := isOpen_lt continuous_fs
 
 noncomputable def qCoefficient (h : ℝ) : Coefficient := SimilarityProfile.q h
 
-theorem qCoefficient_physical (h : ℝ) (w : SpaceTime) :
-    qCoefficient h (cylPoint w) = PhysicalWaveSum.physicalQ h w := rfl
 
 
 theorem qCoefficient_smooth {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2) :
@@ -368,12 +331,6 @@ theorem physicalQ_smooth {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2) :
   fun _ hw => (PhysicalWaveSum.physicalQ_smoothAt hh hh1 hw).contDiffWithinAt
 
 
-theorem actual_diagonal_smooth {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (D : ℕ → AngularData preterminalSlow) {a : ℕ → ℝ} (ha : Tendsto a atTop atTop) :
-    ContDiffOn ℝ ∞ (angularSum a (PhysicalWaveSum.physicalQ h) (fun j => (D j).scalar))
-      PhysicalWaveSum.preterminal :=
-  angularSum_smooth preterminalSlow_open D ha (physicalQ_smooth hh hh1)
-    (fun _ hx => PhysicalWaveSum.physicalQ_pos hh hh1 hx)
 
 
 /-! ## The existing Cartesian spatial cutoff is axisymmetric -/
@@ -420,18 +377,6 @@ theorem spatialCut_angularSum_divergence {U : Set Slow} (hU : IsOpen U) (D : ℕ
   exact angularSum_divergence hU
     (fun j => (D j).multiply spatialProfile spatialProfile_smooth.contDiffOn) ha q hq hqp hpos hx
 
-theorem actual_spatialCut_diagonal_divergence {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (D : ℕ → AngularData preterminalSlow) {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
-    (t : ℝ) (ht : t < 1) (x : Space) :
-    spatialDivergence (SpatialLocalization.cutPotential
-      (angularSum a (PhysicalWaveSum.physicalQ h) (fun j => (D j).scalar))) t x = 0 := by
-  have hqp : ContDiffOn ℝ ∞ (fun w => qCoefficient h (cylPoint w)) (physicalDomain preterminalSlow) := by
-    simpa only [qCoefficient_physical] using physicalQ_smooth hh hh1
-  have hpos : ∀ w ∈ physicalDomain preterminalSlow, 0 < qCoefficient h (cylPoint w) :=
-    fun _ hw => PhysicalWaveSum.physicalQ_pos hh hh1 hw
-  have he := spatialCut_angularSum_divergence preterminalSlow_open D ha (qCoefficient h)
-    (qCoefficient_smooth hh hh1) hqp hpos (x := (t, x)) ht
-  simpa only [qCoefficient_physical] using he
 
 /-! ## Actual full-fiber means restricted to a physical graph -/
 
@@ -451,18 +396,7 @@ noncomputable def graphPoint (G : PhysicalResidualBridge.ScaledGraph) (p : CylPo
 noncomputable def graphCoefficient (G : PhysicalResidualBridge.ScaledGraph) (f : Lift → ℝ) : Coefficient :=
   fun p => G.velocityScale * f (graphPoint G p)
 
-theorem graphPoint_actual (G : PhysicalResidualBridge.ScaledGraph) (p : CylPoint) (theta : ℝ) :
-    graphPoint G p = PhysicalResidualTZ.swapSlow
-      (G.map (p.1, AxisymmetricResidual.pack p.2.1 theta p.2.2)).1 := by
-  simp only [graphPoint, graphSlow, slowOfCyl, PhysicalResidualTZ.swapSlow_apply,
-    PhysicalResidualBridge.ScaledGraph.map, AxisymmetricResidual.pack_zero,
-    AxisymmetricResidual.pack_one, AxisymmetricResidual.pack_two]
 
-theorem graphCoefficient_actual (G : PhysicalResidualBridge.ScaledGraph) (f : Lift → ℝ)
-    (p : CylPoint) (theta : ℝ) :
-    graphCoefficient G f p = G.velocityScale *
-      f (PhysicalResidualTZ.swapSlow (G.map (p.1, AxisymmetricResidual.pack p.2.1 theta p.2.2)).1) := by
-  rw [graphCoefficient, graphPoint_actual G p theta]
 
 theorem graphSlow_smooth (G : PhysicalResidualBridge.ScaledGraph) : ContDiff ℝ ∞ (graphSlow G) :=
   (contDiff_const.mul (contDiff_const.sub contDiff_fst)).prodMk (contDiff_const.mul contDiff_snd)
@@ -553,25 +487,7 @@ noncomputable def nativeGraphData (h : ℝ) (n : ℕ) : PhysicalResidualBridge.S
   radialVector := PhysicalGraphBounds.radialDirection
   temporalVector := PhysicalGraphBounds.timeDirection
 
-theorem native_graphPoint (h : ℝ) (n : ℕ) (w : SpaceTime) :
-    graphPoint (nativeGraphData h n) (cylPoint w) = OffplaneCorrectionExtensions.physicalLift h n w := by
-  simp only [graphPoint, nativeGraphData, cylPoint, graphSlow, slowOfCyl, one_mul,
-    OffplaneCorrectionExtensions.physicalLift, OffplaneCorrectionExtensions.physicalSlow,
-    PhysicalGraphBounds.nativeGraph_eq, PhysicalGraphBounds.radialProfile,
-    PhysicalGraphBounds.radiusPower_eq, smul_smul]
-  rfl
 
-/-- This is the direct continuation field, with no curl applied. -/
-theorem native_angularField (h : ℝ) (n : ℕ) (f : Lift → ℝ) :
-    angularField (graphCoefficient (nativeGraphData h n) f) =
-      OffplaneCorrectionExtensions.angularField h n f := by
-  funext w
-  simp only [angularField, graphCoefficient]
-  rw [native_graphPoint]
-  simp only [nativeGraphData, one_mul,
-    OffplaneCorrectionExtensions.angularField, OffplaneCorrectionExtensions.azimuthalPotential,
-    OffplaneCorrectionExtensions.physicalScalar, Function.comp_apply]
-  rfl
 
 noncomputable def continuationAngularData {coord a b : ℝ}
     {W : OffplaneCorrectionExtensions.Window coord a b} {f : Lift → ℝ}
@@ -599,20 +515,6 @@ theorem potentialSum_zero_germ {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
   filter_upwards [(Filter.eventually_all_finset (Finset.range N)).2 (fun j _ => hz j)] with y hy
   exact Finset.sum_eq_zero hy
 
-/-- If the actual potentials vanish near the axis, adding the direct
-angular diagonal preserves the entire axis germ, hence every axis jet. -/
-theorem mixedVelocity_axis_zero_germ {U : Set Slow} (hU : IsOpen U) (D : ℕ → AngularData U)
-    {a : ℕ → ℝ} (ha : Tendsto a atTop atTop) {q : SpaceTime → ℝ}
-    {x : SpaceTime} (hq : ContinuousAt q x) (hpos : 0 < q x) (hx : x ∈ physicalDomain U)
-    (haxis : radius x = 0) (A : ℕ → VelocityField) (hA : ∀ j, A j =ᶠ[𝓝 x] fun _ => 0) :
-    mixedVelocity a q A (fun j => (D j).scalar) =ᶠ[𝓝 x] fun _ => 0 := by
-  have hc := SolenoidalDiagonal.spatialCurl_eventuallyEq (potentialSum_zero_germ ha hq hpos A hA)
-  have hd := angularSum_axis_zero_germ hU D ha hq hpos hx haxis
-  filter_upwards [hc, hd] with y hy hdy
-  change SpatialCurl.spatialCurl (SolenoidalDiagonal.potentialSum a q A) y +
-    angularSum a q (fun j => (D j).scalar) y = 0
-  rw [hy, hdy]
-  simp [SpatialCurl.spatialCurl, SpatialCurl.curl]
 
 
 end NavierStokes.DirectAngularDiagonal

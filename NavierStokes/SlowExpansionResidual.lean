@@ -616,21 +616,6 @@ theorem omega_finite_expansion {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     omegaCoefficient] using transport_finiteProfile (e := 0) hh hh1 N (-(1 / 2)) 0
       f.flux f.axial f.flux (fun _ _ => 0) hp hs hf
 
-/-- Equation (21) is the exact divergence coefficient at every retained order. -/
-theorem divergence_finite_expansion {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (N : ℕ) (f : SlowProfiles) {p : ProfilePoint} (hp : p.1 < 1)
-    (hv : ∀ n ≤ N, DifferentiableAt ℝ (f.flux n) (SimilarityProfile.inner h p))
-    (hu : ∀ n ≤ N, DifferentiableAt ℝ (f.axial n) (SimilarityProfile.inner h p)) :
-    partialS (slowFlux N h f) p + partialZ (slowAxial N h f) p =
-      finiteSeries N (SimilarityProfile.q h p) h (-1)
-        (fun n => divergenceCoefficient h f n (SimilarityProfile.inner h p)) := by
-  unfold slowFlux slowAxial
-  rw [partialS_finiteProfile hh hh1 N f.flux hp hv,
-    partialZ_finiteProfile hh hh1 N f.axial hp hu]
-  rw [show axialExponent h - CoordinateAlgebra.D h = -1 by
-    unfold axialExponent CoordinateAlgebra.A CoordinateAlgebra.D; ring]
-  simp only [zero_sub, finiteProfile_value, divergenceCoefficient]
-  exact (finiteSeries_add _ _ _ _ _ _).symm
 
 theorem pressure_series_identity {q X : ℝ} (hq : 0 < q) (hX : X ≠ 0)
     (N : ℕ) (h C tail : ℝ) (phi px omega : ℕ → ℝ) :
@@ -751,14 +736,6 @@ theorem pressure_finite_expansion {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     (fun n => partialX (f.pressure n) (SimilarityProfile.inner h p))
     (fun n => omegaCoefficient h f n (SimilarityProfile.inner h p))
 
-/-- The first differential equation in (21), with the actual inner derivative. -/
-theorem divergenceCoefficient_eq_zero_iff (h : ℝ) (f : SlowProfiles)
-    (n : ℕ) (w : InnerPoint) :
-    divergenceCoefficient h f n w = 0 ↔
-      partialX (f.flux n) w =
-        -Z h (axialExponent h + slowOrder h n) (f.axial n) w := by
-  unfold divergenceCoefficient
-  constructor <;> intro he <;> linarith
 
 /-- The angular row of (22). `previous` makes the missing order `-1` equal zero. -/
 theorem angularCoefficient_eq_zero_iff (h : ℝ) (f : SlowProfiles)
@@ -811,15 +788,6 @@ theorem omegaCoefficient_eq (h : ℝ) (f : SlowProfiles) (n : ℕ) (w : InnerPoi
   rw [hk]
   ring
 
-/-- The pressure row of (22), including the preceding radial acceleration. -/
-theorem pressureCoefficient_eq_zero_iff (h C : ℝ) (f : SlowProfiles)
-    (n : ℕ) (w : InnerPoint) :
-    pressureCoefficient h C f n w = 0 ↔
-      partialX (f.pressure n) w =
-        C⁻¹ ^ 2 * convolution (fun i j => f.phi i w * f.phi j w) n -
-          previous (fun j => omegaCoefficient h f j w) n / (2 * w.1) := by
-  unfold pressureCoefficient
-  constructor <;> intro he <;> linarith
 
 /-- The angular coefficient in Cartesian coordinates has the opposite sign
 because it multiplies `(y,-x,0)` in the residual formula. -/
@@ -863,28 +831,6 @@ theorem slowVelocity_components (N : ℕ) (h C : ℝ) (f : SlowProfiles)
       profilePoint] <;> ring
 
 
-/-- The finite field's divergence is exactly its finite divergence-coefficient
-sum. This assertion uses the actual Euclidean divergence, away from the axis. -/
-theorem divergence_slowVelocity {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (N : ℕ) (C : ℝ) (f : SlowProfiles) {t : ℝ} {x : ProblemStatement.Space}
-    (ht : t < 1) (hs : 0 < radialEnergy x)
-    (hv : ∀ n ≤ N, DifferentiableAt ℝ (f.flux n)
-      (SimilarityProfile.inner h (profilePoint t x)))
-    (hf : ∀ n ≤ N, DifferentiableAt ℝ (f.phi n)
-      (SimilarityProfile.inner h (profilePoint t x)))
-    (hu : ∀ n ≤ N, DifferentiableAt ℝ (f.axial n)
-      (SimilarityProfile.inner h (profilePoint t x))) :
-    ProblemStatement.spatialDivergence (slowVelocity N h C f) t x =
-      finiteSeries N (SimilarityProfile.q h (profilePoint t x)) h (-1)
-        (fun n => divergenceCoefficient h f n (SimilarityProfile.inner h (profilePoint t x))) := by
-  have hV := finiteProfile_differentiableAt (e := 0) hh hh1 N f.flux ht hv
-  have hF := (finiteProfile_differentiableAt (e := angularExponent h) hh hh1 N f.phi ht hf).const_mul C⁻¹
-  have hU := finiteProfile_differentiableAt (e := axialExponent h) hh hh1 N f.axial ht hu
-  change ProblemStatement.spatialDivergence
-    (AxisymmetricResidual.velocity (RadialFluxResidual.radialB (slowFlux N h f))
-      (slowSwirl N h C f) (slowAxial N h f)) t x = _
-  exact (RadialFluxResidual.divergence_radialB hV hF hU hs).trans
-    (divergence_finite_expansion hh hh1 N f ht hv hu)
 
 theorem finiteSeries_eq_zero (N : ℕ) (q h e : ℝ) (a : ℕ → ℝ)
     (ha : ∀ n ≤ N, a n = 0) : finiteSeries N q h e a = 0 := by

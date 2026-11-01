@@ -66,20 +66,6 @@ noncomputable def primaryCovariance (sys : SlotSystem D h vr vt)
     assembledTangent (P x) hdet (physicalOuter h N) (physicalViscosity h N)
       (chartTarget h (q x) N (target x)) (q x) (position x) i Y θ)
 
-omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
-theorem primaryCovariance_eqOn (sys : SlotSystem D h vr vt)
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (N : ℕ) (hN : 1 ≤ N)
-    (P : X → (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (q : X → ℝ) (position : X → SlotColoring.Position) (target : X → Vec2)
-    {Ω : Set X} (hq : ∀ x ∈ Ω, 0 < q x) (hupper : ∀ x ∈ Ω, q x ≤ ChartScales.Q N)
-    (hcone : ∀ x ∈ Ω, ∀ U, mask D (tailLabel N U) (q x) (position x) ≠ 0 →
-      SmoothCovariance.StrictCone (P x U).matrix (chartTarget h (q x) N (target x) U))
-    (i : Fin 2) :
-    EqOn (primaryCovariance sys hdet N P q position target i)
-      (fun x => q x ^ (-velocityExponent h - 1 / 2) * target x i) Ω := by
-  intro x hx
-  exact physical_primary_covariance sys hdet N hN (P x) (hq x hx) (hupper x hx)
-    (position x) (target x) (hcone x hx) i
 
 
 end Partition
@@ -130,36 +116,6 @@ noncomputable def linearResidual (p : PrimaryPiece X) : ℕ → X → Fin 3 → 
   fun n x i => (p.exactCoefficients.harmonicResidual p.strip p.directions n x i).re
 
 
-/-- These are the cumulative primary bounds, proved from the tangent
-coefficient and the actual curl remainder. -/
-theorem cumulative_bounds (p : PrimaryPiece X) {P : ℕ → X → ℝ}
-    (hp : InputBounds p.strip P (1 / 2) ChartScales.kappa p.directions p.coefficients)
-    (hcut : UnweightedClass p.strip 0 p.cutoff) {R : X → ℝ}
-    (hR : p.coefficients.radius = fun _ => R)
-    (hN : PhaseJetBounds.PolynomialJets (CurlClassBounds.phaseDomain p.strip)
-      (p.coefficients.normal p.strip p.directions)) {b M : ℝ} (hb : 0 < b)
-    (hlo : ∀ n x, x ∈ p.strip.domain → b ≤ ‖p.coefficients.normal p.strip p.directions n x‖)
-    (hhi : ∀ n x, x ∈ p.strip.domain → ‖p.coefficients.normal p.strip p.directions n x‖ ≤ M)
-    (hK : BandBound p.strip (1 / 2) (fun n => 1 / p.coefficients.frequency n)) :
-    (∀ i, WaveClass p.strip P (1 / 2) (fun n x => p.exactCoefficients.amplitude n x i)) ∧
-    WaveClass p.strip P (17 / 25)
-      (fun n x => p.exactCoefficients.amplitude n x -
-        (p.coefficients.withCutoff p.cutoff).amplitude n x) ∧
-    WaveClass p.strip P 1 p.exactCoefficients.pressure := by
-  have hκ : ChartScales.kappa ≤ (1 / 2 : ℝ) := by norm_num [ChartScales.kappa]
-  have hc := (hp.with_cutoff hcut).curlCorrection_class hR hN hb hlo hhi hK
-  have hci i := CurlClassBounds.class_component hc i
-  have hall := (hp.with_cutoff hcut).add_curl_amplitude hκ hci
-  refine ⟨hall.amplitude, ?_, ?_⟩
-  · have hdiff : (fun n x => p.exactCoefficients.amplitude n x -
-        (p.coefficients.withCutoff p.cutoff).amplitude n x) =
-      (p.coefficients.withCutoff p.cutoff).curlCorrection p.strip p.directions := by
-      funext n x
-      simp [exactCoefficients, WaveCoefficients.corrected, WaveCoefficients.addAmplitude]
-    rw [hdiff]
-    exact hc.mono_exponent (by norm_num [ChartScales.kappa])
-  · convert! (hp.with_cutoff hcut).pressure using 1
-    norm_num
 
 end PrimaryPiece
 
@@ -206,21 +162,7 @@ theorem tangentVelocity_tsupport_subset (p : PrimaryPiece X) (n : ℕ) :
   funext i
   simp [tangentVelocity, vectorMode, mode, ha]
 
-theorem exactAmplitude_tsupport_subset (p : PrimaryPiece X) (n : ℕ) :
-    tsupport (p.exactCoefficients.amplitude n) ⊆ tsupport (p.cutoff n) := by
-  have hcut : tsupport ((p.coefficients.withCutoff p.cutoff).amplitude n) ⊆
-      tsupport (p.cutoff n) := tsupport_smul_subset_left _ _
-  exact (tsupport_add _ _).trans (union_subset hcut
-    ((curlCorrection_tsupport_subset _ p.strip p.directions n).trans hcut))
 
-theorem velocity_tsupport_subset (p : PrimaryPiece X) (n : ℕ) :
-    tsupport (p.velocity n) ⊆ tsupport (p.cutoff n) := by
-  apply Set.Subset.trans _ (p.exactAmplitude_tsupport_subset n)
-  apply closure_mono
-  intro x hx ha
-  apply hx
-  funext i
-  simp [velocity, vectorMode, mode, ha]
 
 
 
@@ -262,17 +204,6 @@ noncomputable def piece (a : WaveCoefficients X) (s : StripData X)
     (cutoff : ℕ → X → ℝ) (j : Fin 2) : PrimaryPiece X :=
   ⟨s, d, coefficients a s d H T mask v Ndot A j, cutoff⟩
 
-theorem amplitude_eq_primary (a : WaveCoefficients X) (s : StripData X)
-    (d : GraphDirections X) (H : ℕ → X → SmoothCovariance.Mat2)
-    (T : ℕ → X → SmoothCovariance.Vec2) (mask : ℕ → X → ℝ)
-    (v Ndot : ℕ → X → PrimaryODE.Space)
-    (A : ℕ → X → PrimaryODE.Space →L[ℝ] PrimaryODE.Space) (j : Fin 2)
-    (n : ℕ) (x : X) (hc : SmoothCovariance.StrictCone (H n x) (T n x)) :
-    (coefficients a s d H T mask v Ndot A j).amplitude n x =
-      PrimaryPulseBounds.primaryCoefficient s H T mask v j n x := by
-  simp only [coefficients, SignedWaveUpdate.coefficients, SignedWaveUpdate.homogeneousCoefficients,
-    SignedWaveUpdate.signedVector, SignedWaveUpdate.signedScalar, increment_twice_target hc,
-    map_smul, PrimaryPulseBounds.primaryCoefficient, PartitionedCovariance.amplitude]
 
 theorem twice_target_class {s : StripData X} {T : ℕ → X → SmoothCovariance.Vec2}
     (hT : ∀ i, MeanClass s 0 (fun n x => T n x i)) (i : Fin 2) :
@@ -784,24 +715,6 @@ theorem native_inputBounds {U : PhaseJetBounds.Domain ℕ PhaseCalculus.Slow}
     (fun n x hx => (native_normal_range (F j) s d χ b 0 0 frequency hχ hV heps n hx).1)
     (fun n x hx => (native_normal_range (F j) s d χ b 0 0 frequency hχ hV heps n hx).2) hK j
 
-theorem native_amplitude_eq_uncut {U : PhaseJetBounds.Domain ℕ PhaseCalculus.Slow}
-    (F : Fin 2 → PrimaryPulseBounds.PhaseConstruction U) (pref : Fin 2 → ℕ → ℝ)
-    (s : StripData X) (d : GraphDirections X) (χ : ℕ → X → PhaseCalculus.Slot)
-    (b : ℕ → PhaseCalculus.Slow → ℝ) (frequency : ℕ → ℝ)
-    (T : ℕ → X → SmoothCovariance.Vec2) (mask : ℕ → X → ℝ) (j : Fin 2)
-    (n : ℕ) (x : X)
-    (hc : mask n x ≠ 0 → SmoothCovariance.StrictCone
-      (SignedWaveUpdate.phaseMatrix F pref (pulseCoordinates (F j) χ) n x) (T n x)) :
-    (nativeCoefficients F pref s d χ b frequency T mask j).amplitude n x =
-      PrimaryPulseBounds.uncutPrimaryWave s pref (fun k => (F k).frame)
-        (fun k => (F k).lam) (fun k => (F k).u) (fun k => (F k).L)
-        (pulseCoordinates (F j) χ) T mask j n x := by
-  by_cases hm : mask n x = 0
-  · simp [nativeCoefficients, coefficients, SignedWaveUpdate.coefficients,
-      SignedWaveUpdate.homogeneousCoefficients, SignedWaveUpdate.signedVector,
-      SignedWaveUpdate.signedScalar, PrimaryPulseBounds.uncutPrimaryWave,
-      PrimaryPulseBounds.primaryCoefficient, PartitionedCovariance.amplitude, hm]
-  · exact amplitude_eq_primary _ _ _ _ _ _ _ _ _ j n x (hc hm)
 
 
 theorem native_tangent {U : PhaseJetBounds.Domain ℕ PhaseCalculus.Slow}
@@ -1339,83 +1252,7 @@ open VariableGaugeMean
 
 variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S]
 
-/-- The band-dependent physical-gauge construction retains exactly the two
-current aliases. The base error cancels once and each primary Gaussian has
-zero actual angular mean. -/
-theorem initializedBands_meanGood (g : GaugeData S) (r : RankData S) (h : ℝ)
-    (index : ℕ → ℕ) (axial : S × PressureStream.Plane) (c : Context (Lift S))
-    (labels : ℕ → Finset ι) (pieces : ι → PrimaryPiece (Lift S × ℝ))
-    (baseError : Oscillation (Lift S))
-    (hb : CorrectionStep.AngularContinuous baseError)
-    (hg : ∀ n l, l ∈ labels n → ∀ x i,
-      Continuous (fun θ : ℝ => (pieces l).excluded n (x, θ) i))
-    (hz : ∀ n l, l ∈ labels n → ∀ x,
-      CorrectionStep.angularMeanVector (pieces l).excluded n x = 0) :
-    (initializedBands g r h index axial c labels pieces baseError).meanGoodResidual c =
-      (initializedBands g r h index axial c labels pieces baseError).reducedMeanResidual c -
-        (fun n x => temporalAliasState g h index c (primaryBands g c labels pieces baseError) n (x, 0) +
-          pressureAliasState g c (rankBands g r h index axial c labels pieces baseError) n (x, 0)) := by
-  let u := initializedBands g r h index axial c labels pieces baseError
-  obtain ⟨hb', hg', ha'⟩ := initializedBands_error_components g r h index axial c labels pieces baseError
-  have hgc : CorrectionStep.AngularContinuous u.errors.gaussian := by
-    rw [show u.errors.gaussian = _ from hg']
-    intro n x i
-    exact continuous_finsetSum (labels n) (fun l hl => hg n l hl x i)
-  have hac : CorrectionStep.AngularContinuous u.errors.aliasError := by
-    rw [show u.errors.aliasError = _ from ha']
-    intro n x i
-    change Continuous (fun _ : ℝ =>
-      temporalAliasState g h index c (primaryBands g c labels pieces baseError) n (x, 0) i +
-        pressureAliasState g c (rankBands g r h index axial c labels pieces baseError) n (x, 0) i)
-    exact continuous_const
-  have hgz : CorrectionStep.angularMeanVector u.errors.gaussian = 0 := by
-    rw [show u.errors.gaussian = _ from hg',
-      angularMeanVector_fieldSum labels (fun l => (pieces l).excluded) hg]
-    funext n x i
-    exact Finset.sum_eq_zero (fun l hl => congrFun (hz n l hl x) i)
-  have hbc : CorrectionStep.AngularContinuous u.errors.base := by
-    rwa [show u.errors.base = _ from hb']
-  rw [CorrectionStep.meanGoodResidual_exact_errors c u hbc hgc hac, hgz, sub_zero]
-  congr 1
-  funext n x i
-  rw [show u.errors.aliasError = _ from ha']
-  change HarmonicResidual.realAngularMean (fun _ : ℝ =>
-    temporalAliasState g h index c (primaryBands g c labels pieces baseError) n (x, 0) i +
-      pressureAliasState g c (rankBands g r h index axial c labels pieces baseError) n (x, 0) i) = _
-  exact HarmonicResidual.realAngularMean_const _
 
-/-- Bookkeeping for the two tangential estimates after the actual rank
-stage: no class estimate on either excluded alias is inserted. -/
-theorem initializedBands_meanResidualBounds
-    (g : GaugeData S) (r : RankData S) (h : ℝ) (index : ℕ → ℕ)
-    (axial : S × PressureStream.Plane) (c : Context (Lift S))
-    (labels : ℕ → Finset ι) (pieces : ι → PrimaryPiece (Lift S × ℝ))
-    (baseError : Oscillation (Lift S))
-    (hb : CorrectionStep.AngularContinuous baseError)
-    (hg : ∀ n l, l ∈ labels n → ∀ x i,
-      Continuous (fun θ : ℝ => (pieces l).excluded n (x, θ) i))
-    (hz : ∀ n l, l ∈ labels n → ∀ x,
-      CorrectionStep.angularMeanVector (pieces l).excluded n x = 0)
-    {s : WeightedClasses.StripData (Lift S)} {σ : ℝ}
-    (hθ : WeightedClasses.MeanClass s (1 + σ)
-      ((rankBands g r h index axial c labels pieces baseError).thetaResidual c))
-    (hz' : WeightedClasses.MeanClass s (1 + σ) (fun n x =>
-      (rankBands g r h index axial c labels pieces baseError).axialResidual c n x -
-        temporalAliasState g h index c (primaryBands g c labels pieces baseError) n (x, 0) 2)) :
-    MeanResidualBounds s σ c (initializedBands g r h index axial c labels pieces baseError) := by
-  have he := initializedBands_meanGood g r h index axial c labels pieces baseError hb hg hz
-  constructor
-  · apply MeanIncrementBounds.class_congr hθ
-    intro n x hx
-    rw [he]
-    simp [State.reducedMeanResidual, temporalAliasState, pressureAliasState,
-      initializedBands, retainPressureAlias]
-    rfl
-  · apply MeanIncrementBounds.class_congr hz'
-    intro n x hx
-    rw [he]
-    simp [State.reducedMeanResidual, pressureAliasState, initializedBands, retainPressureAlias]
-    rfl
 
 end GaugeInitialization
 
@@ -1453,29 +1290,7 @@ noncomputable def strip (s : StripData (D × ℝ)) : StripData D where
   zeta_smooth := s.zeta_smooth.comp (insert (D := D)).contDiff.contDiffOn (fun _ hx => hx)
   zeta_nonneg := fun x hx => s.zeta_nonneg (x, 0) hx
 
-/-- Restriction is a genuine linear pullback of every jet, with norm one. -/
-theorem class_restrict {s : StripData (D × ℝ)} {w : ℕ → D × ℝ → ℝ} {α : ℝ}
-    {f : ℕ → D × ℝ → E} (hf : MemClass s w α f) :
-    MemClass (strip s) (fun n x => w n (x, 0)) α (fun n x => f n (x, 0)) := by
-  refine ⟨fun n x hx => hf.weight_nonneg n (x, 0) hx,
-    fun n => (hf.smooth n).comp (insert (D := D)).contDiff.contDiffOn (fun _ hx => hx), ?_⟩
-  intro m
-  obtain ⟨C, hC, p, hb⟩ := hf.bounds m
-  refine ⟨C, hC, p, ?_⟩
-  intro n x hx j hj
-  have hl := PhysicalGraphBounds.norm_jet_comp_linear s.isOpen_domain (hf.smooth n)
-    (insert (D := D)) hx j
-  calc
-    ‖iteratedFDeriv ℝ j (fun x => f n (x, 0)) x‖ ≤
-        ‖iteratedFDeriv ℝ j (f n) (x, 0)‖ * ‖insert (D := D)‖ ^ j := hl
-    _ ≤ ‖iteratedFDeriv ℝ j (f n) (x, 0)‖ :=
-      mul_le_of_le_one_right (norm_nonneg _) (pow_le_one₀ (norm_nonneg _) norm_insert_le)
-    _ ≤ _ := hb n (x, 0) hx j hj
 
-theorem waveClass_restrict {s : StripData (D × ℝ)} {P : ℕ → D × ℝ → ℝ} {α : ℝ}
-    {f : ℕ → D × ℝ → E} (hf : WaveClass s P α f) :
-    WaveClass (strip s) (fun n x => P n (x, 0)) α (fun n x => f n (x, 0)) :=
-  class_restrict hf
 
 end AngularRestriction
 
@@ -1519,20 +1334,7 @@ theorem conjugatePair_class {s : StripData D} {P : ℕ → D → ℝ} {α : ℝ}
   intro n x _
   rfl
 
-theorem block_coefficient_class {s : StripData (D × ℝ)} {P : ℕ → D × ℝ → ℝ} {α : ℝ}
-    (a : LinearWaveBounds.WaveCoefficients (D × ℝ))
-    (Φ : ℕ → D → ℝ) (kp : ℕ → ℤ)
-    (ha : ∀ i, WaveClass s P α (fun n x => a.amplitude n x i)) (i : Fin 3) (j : ℤ) :
-    WaveClass (AngularRestriction.strip s) (fun n x => P n (x, 0)) α
-      (fun n x => (block a Φ kp).velocity n i j x) :=
-  conjugatePair_class _ (AngularRestriction.waveClass_restrict (ha i)) 1 j
 
-theorem block_pressure_class {s : StripData (D × ℝ)} {P : ℕ → D × ℝ → ℝ} {α : ℝ}
-    (a : LinearWaveBounds.WaveCoefficients (D × ℝ))
-    (Φ : ℕ → D → ℝ) (kp : ℕ → ℤ) (ha : WaveClass s P α a.pressure) (j : ℤ) :
-    WaveClass (AngularRestriction.strip s) (fun n x => P n (x, 0)) α
-      (fun n x => (block a Φ kp).pressure n j x) :=
-  conjugatePair_class _ (AngularRestriction.waveClass_restrict ha) 1 j
 
 omit [NormedAddCommGroup D] [NormedSpace ℝ D] in
 theorem block_velocity_represents (a : LinearWaveBounds.WaveCoefficients (D × ℝ))
@@ -4286,9 +4088,6 @@ theorem rawPressure_jets (B N0 : ℕ) (j : Fin 2) :
   rw [he] at hp
   exact hp.congr (fun L x _ => phasePressure_eq_raw B N0 j L x)
 
-theorem gaussian_jets (B N0 : ℕ) :
-    PolynomialJets (nativeChart B N0).native.toDomain (fun L => gaussian L) :=
-  (nativeReferenceBounds B N0).cutoff_jets
 
 
 
@@ -4602,20 +4401,7 @@ theorem outerRawPressure_core (j : Fin 2) (L : Label B N0) (x : ActualSignedGeom
     exact hx (by simp [outerRawPressure, hz])
   exact outerRawVelocity_core j L x (smul_ne_zero ho hu)
 
-theorem cutPressure_eq_outer (j : Fin 2) (L : Label B N0) (x : ActualSignedGeometry.Native) :
-    cutPressure j L x = gaussian L x • outerRawPressure j L x := by
-  simp only [cutPressure, gaussian, outerRawPressure, smul_smul,
-    PrimaryCopyBounds.profile_mul_outerCutoff]
 
-theorem periodicGaussian_outerPressure (j : Fin 2) (L : Label B N0) (p : PhaseCalculus.Slow)
-    (Y : TorusInverse.Plane) (k : TorusInverse.Frequency) :
-    periodicGaussian j L Y • outerRawPressure j L (p, (geometry j L).coordinates k Y) =
-      cutPressure j L (p, (geometry j L).coordinates k Y) := by
-  rw [cutPressure_eq_outer]
-  by_cases hz : outerRawPressure j L (p, (geometry j L).coordinates k Y) = 0
-  · simp [hz]
-  · rw [periodicGaussian_eq_on_core j L p Y k
-      (outerRawPressure_core (B := B) (N0 := N0) j L (p, (geometry j L).coordinates k Y) hz)]
 
 
 
@@ -5139,20 +4925,6 @@ open Set Function
 open scoped BigOperators
 variable {B N0 : ℕ}
 
-/-- The same periodic cutoff identity applies to a primary or signed native
-coefficient; only the actual native support is used. -/
-theorem periodic_cutoff_sum {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (j : Fin 2) (L : Label B N0) (p : PhaseCalculus.Slow) (Y : TorusInverse.Plane)
-    (f : TorusInverse.Frequency → E)
-    (hs : ∀ k, f k ≠ 0 → (geometry j L).coordinates k Y ∈ (clockWindow L).core) :
-    periodicGaussian j L Y • (∑' k, f k) =
-      ∑' k, gaussian L (p, (geometry j L).coordinates k Y) • f k := by
-  rw [← tsum_const_smul'']
-  apply tsum_congr
-  intro k
-  by_cases hz : f k = 0
-  · simp only [hz, smul_zero]
-  · rw [periodicGaussian_eq_on_core j L p Y k (hs k hz)]
 
 
 end SharedFactorization

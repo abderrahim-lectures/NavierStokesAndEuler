@@ -409,20 +409,6 @@ theorem history_scaled_factor {T : ℝ} (hT : T ≠ 0) (κ X0 : ℝ)
       dsimp only [scaledDistance, historyErrorFactor]
       ring
 
-theorem history_uniform_jets (X0 : ℝ) (initial : HistoryRow → ℝ → ℝ)
-    {J K : Set ℝ} (hJ : IsOpen J) (hK : IsCompact K) (hKJ : K ⊆ J) {L U : Field}
-    (hL : ContDiffOn ℝ ∞ L (logDomain J hJ).carrier)
-    (hU : ContDiffOn ℝ ∞ U (logDomain J hJ).carrier)
-    (T0 : ℝ) (r : HistoryRow) (n : ℕ) :
-    ∃ M : ℝ, 0 ≤ M ∧ ∀ T ∈ Ioc (0 : ℝ) T0, ∀ κ ∈ Icc (0 : ℝ) 1,
-      ∀ y ∈ Icc (0 : ℝ) T, ∀ η ∈ K,
-        |iteratedDeriv n (fun ξ =>
-          logHistory X0 initial (activatedAngular T κ L) (controlled T κ U) r (y, ξ) -
-            logHistory X0 initial (referenceAngular L) U r (y, ξ)) η| ≤
-              M * y * activation T κ y := by
-  apply width_uniform_jet_bound hJ hK hKJ (historyErrorFactor_smooth X0 hJ hL hU r)
-  intro κ T hT u η hη
-  exact history_scaled_factor hT.ne' κ X0 initial hJ hL hU r u hη
 
 /-! ## Genuine parameter differentiation of the scaled factors -/
 
@@ -473,46 +459,8 @@ theorem etaD_congr {J : Set ℝ} (hJ : IsOpen J) {H G : ScaledPoint → ℝ}
 
 /-! ## Independence of the continuation length on the natural overlap -/
 
-theorem continuation_radialPartial {R δ : ℝ} (hR : 0 < R) (hδ : 0 < δ)
-    (hδR : 2 * δ < R) {J : Set ℝ} (hJ : IsOpen J) {G : Field}
-    (hG : ContDiffOn ℝ ∞ G (ReferencePath.earlyStrip R hR J hJ).carrier)
-    {p : Point} (hη : p.2 ∈ J) :
-    radialPartial (ReferencePath.continuation δ G) p =
-      ReferencePath.slopeCutoff δ p.1 * radialPartial G p :=
-  (radialPartial_hasDerivAt (ReferencePath.fullStrip J hJ)
-    (ReferencePath.continuation_smooth hR hδ hδR hJ hG) (p := p) ⟨mem_univ _, hη⟩).unique
-      (ReferencePath.continuation_hasDerivAt hR hδ hδR hJ hG (p := p) hη)
 
-theorem controlled_continuation_independent {R δ₁ δ₂ : ℝ} (hR : 0 < R)
-    (hδ₁ : 0 < δ₁) (hδ₁R : 2 * δ₁ < R) (hδ₂ : 0 < δ₂) (hδ₂R : 2 * δ₂ < R)
-    {J : Set ℝ} (hJ : IsOpen J) {G : Field}
-    (hG : ContDiffOn ℝ ∞ G (ReferencePath.earlyStrip R hR J hJ).carrier)
-    (T κ : ℝ) {p : Point} (hη : p.2 ∈ J) (hp₁ : p.1 ≤ δ₁) (hp₂ : p.1 ≤ δ₂) :
-    controlled T κ (ReferencePath.continuation δ₁ G) p =
-      controlled T κ (ReferencePath.continuation δ₂ G) p := by
-  have hzero₁ := ReferencePath.continuation_eq_natural hR hδ₁ hδ₁R hJ hG
-    (p := (0, p.2)) hη hδ₁.le
-  have hzero₂ := ReferencePath.continuation_eq_natural hR hδ₂ hδ₂R hJ hG
-    (p := (0, p.2)) hη hδ₂.le
-  unfold controlled
-  rw [hzero₁, hzero₂]
-  congr 1
-  apply intervalIntegral.integral_congr
-  intro t ht
-  have ht₁ : t ≤ δ₁ := (mem_uIcc.mp ht).elim
-    (fun h => h.2.trans hp₁) (fun h => h.2.trans hδ₁.le)
-  have ht₂ : t ≤ δ₂ := (mem_uIcc.mp ht).elim
-    (fun h => h.2.trans hp₂) (fun h => h.2.trans hδ₂.le)
-  dsimp only
-  rw [continuation_radialPartial hR hδ₁ hδ₁R hJ hG (p := (t, p.2)) hη,
-    continuation_radialPartial hR hδ₂ hδ₂R hJ hG (p := (t, p.2)) hη,
-    ReferencePath.slopeCutoff_one hδ₁ ht₁, ReferencePath.slopeCutoff_one hδ₂ ht₂]
 
-theorem profileInitial_congr {D : RadialDomain} (P Q : Profiles D)
-    (h0 : ∀ η, P.pressure0 η = Q.pressure0 η) (r : HistoryRow) (η : ℝ) :
-    profileInitial P r η = profileInitial Q r η := by
-  cases r <;> simp only [profileInitial]
-  exact h0 η
 
 namespace NaturalOverlap
 
@@ -520,123 +468,12 @@ open ReferencePath
 
 variable (N : ReferencePath.Input)
 
-theorem f_independent {T δ₁ δ₂ : ℝ} (hT : 0 < T)
-    (hδ₁ : 0 < δ₁) (hδ₁R : 2 * δ₁ < rampLimit)
-    (hδ₂ : 0 < δ₂) (hδ₂R : 2 * δ₂ < rampLimit) (κ : ℝ)
-    {p : Point} (hη : p.2 ∈ parameterInterval)
-    (hp₁ : p.1 ≤ radius N.endpoint δ₁) (hp₂ : p.1 ≤ radius N.endpoint δ₂) :
-    FromReference.f N T κ δ₁ p = FromReference.f N T κ δ₂ p := by
-  by_cases hx : p.1 ≤ N.endpoint
-  · rw [FromReference.f_eq_reference N T κ δ₁ hx, FromReference.f_eq_reference N T κ δ₂ hx,
-      N.refF_eq_natural_initial δ₁ hx, N.refF_eq_natural_initial δ₂ hx]
-  · have hX : 0 < p.1 := N.endpoint_pos.trans (lt_of_not_ge hx)
-    rw [FromReference.f_eq_logtime N hT hδ₁ hδ₁R κ hη hX,
-      FromReference.f_eq_logtime N hT hδ₂ hδ₂R κ hη hX]
-    unfold activatedAngular FromReference.refLog
-    congr 1
-    exact controlled_continuation_independent rampLimit_pos hδ₁ hδ₁R hδ₂ hδ₂R
-      parameterInterval_open N.logF_smooth T κ (p := (N.logTime p.1, p.2)) hη
-        ((N.logTime_le_iff hX).2 hp₁) ((N.logTime_le_iff hX).2 hp₂)
 
-theorem U_independent {T δ₁ δ₂ : ℝ} (hT : 0 < T)
-    (hδ₁ : 0 < δ₁) (hδ₁R : 2 * δ₁ < rampLimit)
-    (hδ₂ : 0 < δ₂) (hδ₂R : 2 * δ₂ < rampLimit) (κ : ℝ)
-    {p : Point} (hη : p.2 ∈ parameterInterval)
-    (hp₁ : p.1 ≤ radius N.endpoint δ₁) (hp₂ : p.1 ≤ radius N.endpoint δ₂) :
-    FromReference.U N T κ δ₁ p = FromReference.U N T κ δ₂ p := by
-  by_cases hx : p.1 ≤ N.endpoint
-  · rw [FromReference.U_eq_reference N T κ δ₁ hx, FromReference.U_eq_reference N T κ δ₂ hx,
-      N.refU_eq_natural_initial δ₁ hx, N.refU_eq_natural_initial δ₂ hx]
-  · have hX : 0 < p.1 := N.endpoint_pos.trans (lt_of_not_ge hx)
-    rw [FromReference.U_eq_logtime N hT hδ₁ hδ₁R κ hη hX,
-      FromReference.U_eq_logtime N hT hδ₂ hδ₂R κ hη hX]
-    exact controlled_continuation_independent rampLimit_pos hδ₁ hδ₁R hδ₂ hδ₂R
-      parameterInterval_open N.logU_smooth T κ (p := (N.logTime p.1, p.2)) hη
-        ((N.logTime_le_iff hX).2 hp₁) ((N.logTime_le_iff hX).2 hp₂)
 
-/-- Equality is from the axis up to the comparison radius, so all recomputed
-histories are equal, not just their endpoint fields. -/
-theorem histories_independent {T δ₁ δ₂ : ℝ} (hT : 0 < T)
-    (hδ₁ : 0 < δ₁) (hδ₁R : 2 * δ₁ < rampLimit)
-    (hδ₂ : 0 < δ₂) (hδ₂R : 2 * δ₂ < rampLimit) (κ : ℝ)
-    (P0 : ℝ → ℝ) (hP0 : ContDiff ℝ ∞ P0) (r : HistoryRow)
-    {p : Point} (hη : p.2 ∈ parameterInterval) (hX : 0 ≤ p.1)
-    (hp₁ : p.1 ≤ radius N.endpoint δ₁) (hp₂ : p.1 ≤ radius N.endpoint δ₂) :
-    profileHistory (FromReference.histories N hT hδ₁ hδ₁R κ P0 hP0) r p =
-      profileHistory (FromReference.histories N hT hδ₂ hδ₂R κ P0 hP0) r p := by
-  let A := FromReference.histories N hT hδ₁ hδ₁R κ P0 hP0
-  let B := FromReference.histories N hT hδ₂ hδ₂R κ P0 hP0
-  have h0 : profileInitial A r p.2 = profileInitial B r p.2 :=
-    profileInitial_congr A B (fun _ => rfl) r p.2
-  have hf : ∀ x ∈ Icc (0 : ℝ) p.1, A.f (x, p.2) = B.f (x, p.2) := by
-    intro x hx
-    exact f_independent N hT hδ₁ hδ₁R hδ₂ hδ₂R κ (p := (x, p.2)) hη
-      (hx.2.trans hp₁) (hx.2.trans hp₂)
-  have hu : ∀ x ∈ Icc (0 : ℝ) p.1, A.U (x, p.2) = B.U (x, p.2) := by
-    intro x hx
-    exact U_independent N hT hδ₁ hδ₁R hδ₂ hδ₂R κ (p := (x, p.2)) hη
-      (hx.2.trans hp₁) (hx.2.trans hp₂)
-  exact profileHistory_congr_up_to A B r hX h0 hf hu
 
-theorem reference_histories_independent {δ₁ δ₂ : ℝ}
-    (hδ₁ : 0 < δ₁) (hδ₁R : 2 * δ₁ < rampLimit)
-    (hδ₂ : 0 < δ₂) (hδ₂R : 2 * δ₂ < rampLimit)
-    (P0 : ℝ → ℝ) (hP0 : ContDiff ℝ ∞ P0) (r : HistoryRow)
-    {p : Point} (hη : p.2 ∈ parameterInterval) (hX : 0 ≤ p.1)
-    (hp₁ : p.1 ≤ radius N.endpoint δ₁) (hp₂ : p.1 ≤ radius N.endpoint δ₂) :
-    profileHistory (N.histories hδ₁ hδ₁R P0 hP0) r p =
-      profileHistory (N.histories hδ₂ hδ₂R P0 hP0) r p := by
-  let A := N.histories hδ₁ hδ₁R P0 hP0
-  let B := N.histories hδ₂ hδ₂R P0 hP0
-  have h0 : profileInitial A r p.2 = profileInitial B r p.2 :=
-    profileInitial_congr A B (fun _ => rfl) r p.2
-  have hf : ∀ x ∈ Icc (0 : ℝ) p.1, A.f (x, p.2) = B.f (x, p.2) := by
-    intro x hx
-    exact (N.refF_eq_natural hδ₁ hδ₁R (p := (x, p.2)) hη (hx.2.trans hp₁)).trans
-      (N.refF_eq_natural hδ₂ hδ₂R (p := (x, p.2)) hη (hx.2.trans hp₂)).symm
-  have hu : ∀ x ∈ Icc (0 : ℝ) p.1, A.U (x, p.2) = B.U (x, p.2) := by
-    intro x hx
-    exact (N.refU_eq_natural hδ₁ hδ₁R (p := (x, p.2)) hη (hx.2.trans hp₁)).trans
-      (N.refU_eq_natural hδ₂ hδ₂R (p := (x, p.2)) hη (hx.2.trans hp₂)).symm
-  exact profileHistory_congr_up_to A B r hX h0 hf hu
 
-theorem radius_mono {s t : ℝ} (hst : s ≤ t) : radius N.endpoint s ≤ radius N.endpoint t :=
-  mul_le_mul_of_nonneg_left (Real.exp_le_exp.mpr hst) N.endpoint_pos.le
 
-theorem fixed_history_scaled_factor {T δ : ℝ} (hT : 0 < T)
-    (hδ : 0 < δ) (hδR : 2 * δ < rampLimit) (κ : ℝ)
-    (P0 : ℝ → ℝ) (hP0 : ContDiff ℝ ∞ P0) (r : HistoryRow)
-    (u : ℝ) {η : ℝ} (hη : η ∈ parameterInterval) :
-    profileHistory (FromReference.histories N hT hδ hδR κ P0 hP0) r
-        (radius N.endpoint (T * u), η) -
-      profileHistory (N.histories hδ hδR P0 hP0) r (radius N.endpoint (T * u), η) =
-        scaledDistance ((κ, T), (u, η)) *
-          historyErrorFactor N.endpoint (FromReference.refLog N δ) (FromReference.refAxial N δ) r
-            ((κ, T), (u, η)) := by
-  rw [FromReference.histories_log_formula N hT hδ hδR κ P0 hP0 r (T * u) hη,
-    FromReference.reference_histories_log_formula N hδ hδR P0 hP0 r (T * u) hη]
-  exact history_scaled_factor hT.ne' κ N.endpoint _ parameterInterval_open
-    (FromReference.refLog_smooth N hδ hδR) (FromReference.refAxial_smooth N hδ hδR) r u hη
 
-/-- The manuscript uses the same width for ACT and REF. Its first-ramp
-histories have the fixed-reference factors whenever `T ≤ δ0`. -/
-theorem diagonal_history_scaled_factor {T δ0 : ℝ} (hT : 0 < T)
-    (hTR : 2 * T < rampLimit) (hδ0 : 0 < δ0) (hδ0R : 2 * δ0 < rampLimit)
-    (hTδ0 : T ≤ δ0) (κ : ℝ) (P0 : ℝ → ℝ) (hP0 : ContDiff ℝ ∞ P0)
-    (r : HistoryRow) {u η : ℝ} (hu : u ∈ Icc (0 : ℝ) 1) (hη : η ∈ parameterInterval) :
-    profileHistory (FromReference.histories N hT hT hTR κ P0 hP0) r
-        (radius N.endpoint (T * u), η) -
-      profileHistory (N.histories hT hTR P0 hP0) r (radius N.endpoint (T * u), η) =
-        scaledDistance ((κ, T), (u, η)) *
-          historyErrorFactor N.endpoint (FromReference.refLog N δ0) (FromReference.refAxial N δ0) r
-            ((κ, T), (u, η)) := by
-  have hy : T * u ≤ T := mul_le_of_le_one_right hT.le hu.2
-  have hx : 0 ≤ radius N.endpoint (T * u) := (mul_pos N.endpoint_pos (Real.exp_pos _)).le
-  have hxT := radius_mono N hy
-  have hxδ0 := radius_mono N (hy.trans hTδ0)
-  rw [histories_independent N hT hT hTR hδ0 hδ0R κ P0 hP0 r hη hx hxT hxδ0,
-    reference_histories_independent N hT hTR hδ0 hδ0R P0 hP0 r hη hx hxT hxδ0]
-  exact fixed_history_scaled_factor N hT hδ0 hδ0R κ P0 hP0 r u hη
 
 
 end NaturalOverlap

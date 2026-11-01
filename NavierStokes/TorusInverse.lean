@@ -274,20 +274,6 @@ theorem norm_multiplier_le (d : Direction) (k : Frequency) :
 theorem Rapid.inverseCoeff {a : Frequency → ℂ} (ha : Rapid a) (d : Direction) :
     Rapid (inverseCoeff d a) := ha.mul_linear (6 * ‖omega⁻¹‖) (norm_multiplier_le d)
 
-/-- The coefficient estimate loses one polynomial frequency weight. -/
-theorem inverseCoeff_weighted_bound (d : Direction) (a : Frequency → ℂ)
-    (p : ℕ) (k : Frequency) :
-    weight k ^ p * ‖inverseCoeff d a k‖ ≤
-      (6 * ‖omega⁻¹‖) * (weight k ^ (p + 1) * ‖a k‖) := by
-  unfold inverseCoeff
-  rw [norm_mul]
-  calc
-    weight k ^ p * (‖multiplier d k‖ * ‖a k‖) ≤
-        weight k ^ p * (((6 * ‖omega⁻¹‖) * weight k) * ‖a k‖) :=
-      mul_le_mul_of_nonneg_left
-        (mul_le_mul_of_nonneg_right (norm_multiplier_le d k) (norm_nonneg _))
-        (pow_nonneg (weight_pos k).le p)
-    _ = _ := by rw [pow_succ]; ring
 
 theorem coefficient_cancel (d : Direction) {a : Frequency → ℂ} (hzero : a 0 = 0)
     (k : Frequency) : omega * (symbol d k : ℂ) * inverseCoeff d a k = a k := by
@@ -424,12 +410,6 @@ theorem integral_torusSeries {a : Frequency → ℂ} (ha : Rapid a) :
 def coeffSeminorm (p : ℕ) (a : Frequency → ℂ) : ℝ :=
   ∑' k, weight k ^ p * ‖a k‖
 
-theorem inverseCoeff_seminorm_le (d : Direction) {a : Frequency → ℂ}
-    (ha : Rapid a) (p : ℕ) :
-    coeffSeminorm p (inverseCoeff d a) ≤ (6 * ‖omega⁻¹‖) * coeffSeminorm (p + 1) a := by
-  have h := (ha.inverseCoeff d p).tsum_le_tsum (inverseCoeff_weighted_bound d a p)
-    ((ha (p + 1)).mul_left (6 * ‖omega⁻¹‖))
-  simpa only [coeffSeminorm, tsum_mul_left] using h
 
 theorem norm_series_le {a : Frequency → ℂ} (ha : Rapid a) (x : Plane) :
     ‖series a x‖ ≤ coeffSeminorm 0 a := by
@@ -522,15 +502,6 @@ theorem inverse_derivativeWord_bound (d : Direction) {a : Frequency → ℂ} (ha
 
 /-! ## Parameters and support -/
 
-theorem hasDerivAt_parameter_series (a a' : ℝ → Frequency → ℂ) (B : Frequency → ℝ)
-    (hderiv : ∀ k t, HasDerivAt (fun s => a s k) (a' t k) t)
-    (hB : Summable B) (hbound : ∀ k t, ‖a' t k‖ ≤ B k)
-    (t₀ : ℝ) (hinit : Rapid (a t₀)) (x : Plane) (t : ℝ) :
-    HasDerivAt (fun s => series (a s) x) (series (a' t) x) t := by
-  apply hasDerivAt_tsum hB
-    (fun k s => (hderiv k s).mul_const (mode k x)) _ (summable_terms hinit x) t
-  intro k s
-  simpa only [norm_mul, norm_mode, mul_one] using hbound k s
 
 
 /-- Inversion uses only the torus variable and preserves support in every

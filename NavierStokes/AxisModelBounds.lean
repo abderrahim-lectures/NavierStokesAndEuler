@@ -16,36 +16,8 @@ namespace NavierStokes.AxisModelBounds
 def model (z : ℝ) : ℝ := AxisSeries.profile 1 z
 
 
-/-- The cubic truncation is bounded below by its exact endpoint value. -/
-theorem cubicLower_ge_endpoint (t : ℝ) (ht : t ≤ 41 / 20) :
-    (305719 / 1152000 : ℝ) ≤ AxisProfile.cubicLower t := by
-  have hd : 0 ≤ 41 / 20 - t := sub_nonneg.mpr ht
-  have h2 : 0 ≤ (41 / 20 - t) ^ 2 := sq_nonneg _
-  have h3 : 0 ≤ (41 / 20 - t) ^ 3 := pow_nonneg hd _
-  have hidentity : AxisProfile.cubicLower t =
-      AxisProfile.cubicLower (41 / 20) +
-      (1 / 2 - (41 / 20) / 6 + (41 / 20) ^ 2 / 48) * (41 / 20 - t) +
-      (1 / 12 - (41 / 20) / 48) * (41 / 20 - t) ^ 2 +
-      (41 / 20 - t) ^ 3 / 144 := by
-    unfold AxisProfile.cubicLower
-    ring
-  norm_num [AxisProfile.cubicLower] at hidentity
-  unfold AxisProfile.cubicLower
-  nlinarith
 
-theorem bessel_one_lower (t : ℝ) (ht0 : 0 ≤ t) (ht : t ≤ 41 / 20) :
-    (305719 / 1152000 : ℝ) ≤ AxisSeries.bessel 1 t :=
-  (cubicLower_ge_endpoint t ht).trans (AxisSeries.cubic_lower_le_bessel t ht0 ht)
 
-/-- The full bounds hold uniformly for every `0 ≤ χ ≤ 1`. -/
-theorem profile_bounds (χ Y : ℝ) (hχ0 : 0 ≤ χ) (hχ1 : χ ≤ 1)
-    (hY0 : 0 ≤ Y) (hY1 : Y ≤ 41 / 10) :
-    (305719 / 1152000 : ℝ) ≤ AxisSeries.profile χ Y ∧
-      AxisSeries.profile χ Y ≤ 1 := by
-  have ht0 : 0 ≤ (χ / 2) * Y := mul_nonneg (div_nonneg hχ0 (by norm_num)) hY0
-  have ht : (χ / 2) * Y ≤ 41 / 20 := by nlinarith
-  exact ⟨bessel_one_lower _ ht0 ht,
-    AxisSeries.bessel_one_le_one _ ht0 (by linarith)⟩
 
 
 end NavierStokes.AxisModelBounds

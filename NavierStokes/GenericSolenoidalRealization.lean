@@ -94,16 +94,6 @@ theorem divergence_cut_direct {q : SpaceTime → ℝ} {B : VelocityField} {w : S
     rw [← Finset.mul_sum, htan, mul_zero]
   simpa only [mul_assoc] using ht
 
-/-- Tangency follows immediately when the scale depends only on the axial
-coordinate and the direct field has zero axial component. -/
-theorem tangent_of_axial_scale {q : SpaceTime → ℝ} {B : VelocityField} {w : SpaceTime}
-    (h0 : fderiv ℝ (fun x : Space => q (w.1, x)) w.2 (coordinateVector 0) = 0)
-    (h1 : fderiv ℝ (fun x : Space => q (w.1, x)) w.2 (coordinateVector 1) = 0)
-    (hB : B w 2 = 0) :
-    ∑ i : Fin 3, fderiv ℝ (fun x : Space => q (w.1, x)) w.2
-      (coordinateVector i) * B w i = 0 := by
-  rw [Fin.sum_univ_three, h0, h1, hB]
-  ring
 
 /-- An arbitrary locally finite direct diagonal remains solenoidal when its
 uncut terms are solenoidal and tangent to the scale level sets. -/

@@ -173,11 +173,6 @@ theorem spatialCurl_periodic {A : VelocityField} {times : Set ℝ}
 @[simp] theorem curl_zero (x : Space) : curl (fun _ => (0 : Space)) x = 0 := by
   simp [curl]
 
-theorem spatialCurl_eq_zero_of_timeSlice {A : VelocityField} {t : ℝ}
-    (hA : ∀ x : Space, A (t, x) = 0) (x : Space) : spatialCurl A (t, x) = 0 := by
-  change curl (fun y : Space => A (t, y)) x = 0
-  rw [funext hA]
-  exact curl_zero x
 
 
 theorem curl_eq_zero_of_not_mem_tsupport {A : Space → Space} {x : Space}
@@ -191,17 +186,11 @@ theorem tsupport_curl_subset (A : Space → Space) : tsupport (curl A) ⊆ tsupp
   by_contra h
   exact hx (curl_eq_zero_of_not_mem_tsupport h)
 
-theorem hasCompactSupport_curl {A : Space → Space} (hA : HasCompactSupport A) :
-    HasCompactSupport (curl A) :=
-  hA.fderiv ℝ |>.comp_left (g := curlLinear) (map_zero curlLinear)
 
 theorem tsupport_curl_cutoff_subset (χ : Space → ℝ) (A : Space → Space) :
     tsupport (curl (fun y => χ y • A y)) ⊆ tsupport χ :=
   (tsupport_curl_subset _).trans (tsupport_smul_subset_left χ A)
 
-theorem hasCompactSupport_curl_cutoff {χ : Space → ℝ} (hχ : HasCompactSupport χ)
-    (A : Space → Space) : HasCompactSupport (curl (fun y => χ y • A y)) :=
-  hasCompactSupport_curl hχ.smul_right
 
 
 

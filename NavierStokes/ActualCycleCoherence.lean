@@ -792,28 +792,7 @@ variable (B N0 : ℕ) (sigma : ℕ → ℝ) (S : Index B N0 → ℕ → Set Poin
     (hcover : ∀ l n z, z ∈ ActualInitialization.geometry.domain → z ∈ S l n →
       l ∈ activeLabels standardRegion B N0 n)
 
-include H W hS hcore hcover in
-/-- The geometric induction uses the same fixed recurrence and supplied
-analytic stage data; no sequence of coherent states is assumed. -/
-theorem iterate_coherent (j : ℕ) : Coherent (state B N0 j) := by
-  induction j with
-  | zero => exact initial B N0
-  | succ j ih =>
-    exact step (H j) (W j) ih
-      (fun l n z hz hs => by
-        change l ∈ (state B N0 j).coefficients.labels n
-        rw [state_labels]
-        exact hcover l n z hz hs) hS hcore
 
-include H W hS hcore hcover in
-theorem iterate_waves (j n m k : ℕ)
-    (hi : CommonWindow.index h n + k = CommonWindow.index h m) :
-    CycleStateCoherence.CycleWavesOn geometry (ActualCycleParameters.fixedParameters B N0)
-      (state B N0 j).coefficients (commonContext B) (state B N0 j).state (overlap n m) n m k :=
-  waves (H j) (W j) (iterate_coherent B N0 sigma S H W hS hcore hcover j)
-    (fun l n z hz hs => by
-      rw [state_labels]
-      exact hcover l n z hz hs) hS hcore n m k hi
 
 
 end Iteration

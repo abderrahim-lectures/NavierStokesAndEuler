@@ -649,22 +649,7 @@ theorem actAxial_real {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath.ram
     (StressActivation.FromReference.refAxial_smooth N hδ hδT)
     (fun x _ hη => E.refAxial_real hδ hδT x hη) x hη
 
-theorem refF_real {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath.rampLimit)
-    (x : ℝ) {η : ℝ} (hη : η ∈ ReferencePath.parameterInterval) :
-    E.refF δ (x,(η : ℂ)) = (N.refF δ (x,η) : ℂ) := by
-  by_cases hx : x ≤ N.endpoint
-  · simp only [refF,attach,ite_eq_left hx,ReferencePath.Input.refF,E.f_real]
-  · simp only [refF,attach,ite_eq_right hx,ReferencePath.Input.refF,logPoint]
-    rw [E.refLog_real hδ hδT _ hη,Complex.ofReal_exp]
-    rfl
 
-theorem refU_real {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath.rampLimit)
-    (x : ℝ) {η : ℝ} (hη : η ∈ ReferencePath.parameterInterval) :
-    E.refU δ (x,(η : ℂ)) = (N.refU δ (x,η) : ℂ) := by
-  by_cases hx : x ≤ N.endpoint
-  · simp only [refU,attach,ite_eq_left hx,ReferencePath.Input.refU,E.U_real]
-  · simp only [refU,attach,ite_eq_right hx,ReferencePath.Input.refU,logPoint]
-    exact E.refAxial_real hδ hδT _ hη
 
 theorem actF_real {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath.rampLimit)
     (T κ x : ℝ) {η : ℝ} (hη : η ∈ ReferencePath.parameterInterval) :
@@ -682,15 +667,6 @@ theorem actU_real {δ : ℝ} (hδ : 0 < δ) (hδT : 2*δ < ReferencePath.rampLim
   · simp only [actU,attach,ite_eq_right hx,StressActivation.FromReference.U,logPoint]
     exact E.actAxial_real hδ hδT T κ _ hη
 
-theorem actF_ne_zero (T κ δ : ℝ) {p : CPoint} (hx : 0 ≤ p.1) (hz : p.2 ∈ Ω) :
-    E.actF T κ δ p ≠ 0 := by
-  by_cases he : p.1 ≤ N.endpoint
-  · have hp := E.initial_half p.1 ⟨hx,he⟩ p.2 hz
-    rw [actF,attach,ite_eq_left he]
-    intro hn
-    simp only [hn,Complex.zero_re,lt_self_iff_false] at hp
-  · simp only [actF,attach,ite_eq_right he]
-    exact Complex.exp_ne_zero _
 
 end NaturalExtension
 

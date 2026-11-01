@@ -26,54 +26,12 @@ def cross {R : Type*} [CommRing R] (u v : Vec3 R) : Vec3 R :=
     u 2 * v 0 - u 0 * v 2,
     u 0 * v 1 - u 1 * v 0]
 
-theorem cross_perpendicular_left {R : Type*} [CommRing R] (u v : Vec3 R) :
-    dot u (cross u v) = 0 := by
-  simp only [dot, cross, Matrix.cons_val_zero, Matrix.cons_val_one,
-    Matrix.cons_val]
-  ring
 
 
-/-- The vector triple-product identity, before imposing tangency. -/
-theorem triple_product {R : Type*} [CommRing R] (n a : Vec3 R) :
-    cross n (cross n a) = dot n a • n - dot n n • a := by
-  funext j
-  fin_cases j <;> simp [cross, dot] <;> ring
 
-/-- Tangency is exactly the hypothesis eliminating the longitudinal term. -/
-theorem tangent_double_cross {R : Type*} [CommRing R] (n a : Vec3 R)
-    (ha : dot n a = 0) :
-    cross n (cross n a) = -(dot n n • a) := by
-  rw [triple_product, ha, zero_smul, zero_sub]
 
-theorem cross_smul {R : Type*} [CommRing R] (s t : R) (u v : Vec3 R) :
-    cross (s • u) (t • v) = (s * t) • cross u v := by
-  funext j
-  fin_cases j <;> simp [cross] <;> ring
 
-/-- A nonzero real normal has nonzero squared length, as required in (30). -/
-theorem real_dot_self_ne_zero {n : Vec3 ℝ} (hn : n ≠ 0) : dot n n ≠ 0 := by
-  intro h
-  have h0 : n 0 = 0 := by
-    dsimp [dot] at h
-    nlinarith [sq_nonneg (n 0), sq_nonneg (n 1), sq_nonneg (n 2)]
-  have h1 : n 1 = 0 := by
-    dsimp [dot] at h
-    nlinarith [sq_nonneg (n 0), sq_nonneg (n 1), sq_nonneg (n 2)]
-  have h2 : n 2 = 0 := by
-    dsimp [dot] at h
-    nlinarith [sq_nonneg (n 0), sq_nonneg (n 1), sq_nonneg (n 2)]
-  apply hn
-  funext j
-  fin_cases j <;> simp_all
 
-/-- The normalized double cross product displayed in Lemma 8.8. -/
-theorem normalized_double_cross {R : Type*} [Field R] (n a : Vec3 R)
-    (hn : dot n n ≠ 0) (ha : dot n a = 0) :
-    (-1 / dot n n) • cross n (cross n a) = a := by
-  rw [tangent_double_cross n a ha]
-  funext j
-  simp only [Pi.smul_apply, Pi.neg_apply, smul_eq_mul]
-  field_simp
 
 noncomputable def curlSymbol (ξ A : Vec3 ℂ) : Vec3 ℂ :=
   cross (Complex.I • ξ) A
@@ -83,26 +41,9 @@ factored out. `k` is its nonzero frequency and `n` its phase normal. -/
 noncomputable def potentialCoefficient (k : ℂ) (n a : Vec3 ℂ) : Vec3 ℂ :=
   (Complex.I / (k * dot n n)) • cross n a
 
-/-- The two factors of `i` and the vector triple product give the amplitude
-with the positive sign claimed in (30). -/
-theorem principal_symbol_realizes (k : ℂ) (n a : Vec3 ℂ)
-    (hk : k ≠ 0) (hn : dot n n ≠ 0) (ha : dot n a = 0) :
-    curlSymbol (k • n) (potentialCoefficient k n a) = a := by
-  unfold curlSymbol potentialCoefficient
-  rw [smul_smul, cross_smul]
-  have hs : (Complex.I * k) * (Complex.I / (k * dot n n)) =
-      -1 / dot n n := by
-    calc
-      _ = (Complex.I * Complex.I) * (k / (k * dot n n)) := by ring
-      _ = _ := by rw [Complex.I_mul_I]; field_simp
-  rw [hs]
-  exact normalized_double_cross n a hn ha
 
 def complexify (n : Vec3 ℝ) : Vec3 ℂ := fun j => (n j : ℂ)
 
-theorem complexify_dot_self (n : Vec3 ℝ) :
-    dot (complexify n) (complexify n) = ((dot n n : ℝ) : ℂ) := by
-  simp [complexify, dot]
 
 
 

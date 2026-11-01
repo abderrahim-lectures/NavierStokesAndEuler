@@ -36,59 +36,9 @@ variable {D : Type} [NormedAddCommGroup D] [NormedSpace ℝ D]
   (mask factor cutoff : ℕ → D → ℝ) (unit Ndot : ℕ → D → Space)
   (A : ℕ → D → Space →L[ℝ] Space) (j : Fin 2)
 
-theorem repartition_amplitude (n : ℕ) (x : D) :
-    ((SignedWaveUpdate.coefficients a s d H T R (fun n x => mask n x * factor n x)
-      unit Ndot A j).withCutoff cutoff).amplitude n x =
-    ((SignedWaveUpdate.coefficients a s d H T R mask unit Ndot A j).withCutoff
-      (fun n x => cutoff n x * factor n x)).amplitude n x := by
-  simp only [WaveCoefficients.withCutoff,
-    ActualPeriodizedSignedRealization.coefficients_amplitude_at,
-    ActualPeriodizedSignedRealization.signedScalar_mul_mask, mul_smul]
 
-theorem repartition_pressure (n : ℕ) (x : D) :
-    ((SignedWaveUpdate.coefficients a s d H T R (fun n x => mask n x * factor n x)
-      unit Ndot A j).withCutoff cutoff).pressure n x =
-    ((SignedWaveUpdate.coefficients a s d H T R mask unit Ndot A j).withCutoff
-      (fun n x => cutoff n x * factor n x)).pressure n x := by
-  simp only [WaveCoefficients.withCutoff,
-    ActualPeriodizedSignedRealization.coefficients_pressure_at,
-    ActualPeriodizedSignedRealization.signedScalar_mul_mask,
-    Complex.real_smul, Complex.ofReal_mul]
-  ring
 
-/-- Moving a scalar cutoff from the raw signed mask to the final cutoff
-preserves both coefficients, before any differentiation. -/
-theorem coefficients_repartition :
-    (SignedWaveUpdate.coefficients a s d H T R (fun n x => mask n x * factor n x)
-      unit Ndot A j).withCutoff cutoff =
-    (SignedWaveUpdate.coefficients a s d H T R mask unit Ndot A j).withCutoff
-      (fun n x => cutoff n x * factor n x) := by
-  let u := (SignedWaveUpdate.coefficients a s d H T R (fun n x => mask n x * factor n x)
-    unit Ndot A j).withCutoff cutoff
-  let v := (SignedWaveUpdate.coefficients a s d H T R mask unit Ndot A j).withCutoff
-    (fun n x => cutoff n x * factor n x)
-  have ha : u.amplitude = v.amplitude := funext fun n => funext fun x =>
-    repartition_amplitude a s d H T R mask factor cutoff unit Ndot A j n x
-  have hp : u.pressure = v.pressure := funext fun n => funext fun x =>
-    repartition_pressure a s d H T R mask factor cutoff unit Ndot A j n x
-  calc
-    u = {a with amplitude := u.amplitude, pressure := u.pressure} := rfl
-    _ = {a with amplitude := v.amplitude, pressure := v.pressure} := by rw [ha, hp]
-    _ = v := rfl
 
-/-- The outer bump is one on the Gaussian support, so it can be removed
-from the raw mask without changing the actual once-cutoff signed wave. -/
-theorem coefficients_outer (clock : ℕ → D → ℝ) :
-    (SignedWaveUpdate.coefficients a s d H T R
-      (fun n x => mask n x * PrimaryCopyBounds.outerCutoff (clock n x))
-      unit Ndot A j).withCutoff (fun n x => GaussianTailFlat.profile (clock n x)) =
-    (SignedWaveUpdate.coefficients a s d H T R mask unit Ndot A j).withCutoff
-      (fun n x => GaussianTailFlat.profile (clock n x)) := by
-  rw [coefficients_repartition]
-  have he : (fun n x => GaussianTailFlat.profile (clock n x) * PrimaryCopyBounds.outerCutoff (clock n x)) =
-      (fun n x => GaussianTailFlat.profile (clock n x)) :=
-    funext fun n => funext fun x => PrimaryCopyBounds.profile_mul_outerCutoff (clock n x)
-  rw [he]
 
 
 end Repartition
@@ -97,31 +47,7 @@ section Copies
 
 variable {D : Type} [NormedAddCommGroup D] [NormedSpace ℝ D] {K : Type}
 
-omit [NormedAddCommGroup D] [NormedSpace ℝ D] in
-/-- Equality of every actual localized copy is enough for equality of the
-whole common coefficients.  Summability is not assumed here. -/
-theorem common_eq_of_localized (f g : PeriodizedWaveBounds.CopyData D K)
-    (hb : f.background = g.background) (he : ∀ k, f.localized k = g.localized k) :
-    f.common = g.common := by
-  have ha : f.common.amplitude = g.common.amplitude := by
-    funext n x
-    change (∑' k, (f.localized k).amplitude n x) = ∑' k, (g.localized k).amplitude n x
-    exact tsum_congr fun k => congrArg (fun a : WaveCoefficients D => a.amplitude n x) (he k)
-  have hp : f.common.pressure = g.common.pressure := by
-    funext n x
-    change (∑' k, (f.localized k).pressure n x) = ∑' k, (g.localized k).pressure n x
-    exact tsum_congr fun k => congrArg (fun a : WaveCoefficients D => a.pressure n x) (he k)
-  calc
-    f.common = {f.background with amplitude := f.common.amplitude, pressure := f.common.pressure} := rfl
-    _ = {g.background with amplitude := g.common.amplitude, pressure := g.common.pressure} := by rw [hb, ha, hp]
-    _ = g.common := rfl
 
-theorem commonCorrected_eq_of_localized (f g : PeriodizedWaveBounds.CopyData D K)
-    (hb : f.background = g.background) (he : ∀ k, f.localized k = g.localized k)
-    (s : StripData D) (d : GraphDirections D) :
-    f.commonCorrected s d = g.commonCorrected s d := by
-  unfold PeriodizedWaveBounds.CopyData.commonCorrected
-  rw [common_eq_of_localized f g hb he]
 
 end Copies
 
@@ -301,41 +227,8 @@ noncomputable def dynamicCopyData (request : ℕ → Cylinder → Vec2) (j : Fin
       (layout sys hh label hl gap).nativeGaussian reference k (V.map n x).1.2.2
   source := fun _ _ => 0
 
-theorem dynamic_localized_eq (request : ℕ → Cylinder → Vec2) (j : Fin 2) (k : Frequency) :
-    (dynamicCopyData sys hh label hl gap B V request j).localized k =
-      (ActualPeriodizedSignedRealization.copyData B (layout sys hh label hl gap) V request j).localized k := by
-  have hm : ActualPeriodizedSignedRealization.copyMask B (layout sys hh label hl gap) V k =
-      fun n x => ActualPeriodizedSignedRealization.sharedMask B V n x *
-        nativeMask sys label ((geometry sys label gap).coordinates k (V.map n x).1.2.2) := rfl
-  change ((dynamicCoefficients sys hh label hl gap B V request j k).withCutoff _) =
-    ((ActualPeriodizedSignedRealization.nativeCoefficients B (layout sys hh label hl gap) V request j k).withCutoff _)
-  unfold dynamicCoefficients ActualPeriodizedSignedRealization.nativeCoefficients
-  rw [hm]
-  unfold ActualPeriodizedSignedRealization.coefficientsWith
-  rw [coefficients_repartition]
-  congr 1
-  funext n x
-  change PartitionedCovariance.cutoff sys.radius
-      ((geometry sys label gap).coordinates k (V.map n x).1.2.2).1 *
-    GaussianTailFlat.profile (((geometry sys label gap).coordinates k (V.map n x).1.2.2).2 /
-      ChartScales.slotLength sys.radius h label.1) =
-    GaussianTailFlat.profile (((geometry sys label gap).coordinates k (V.map n x).1.2.2).2 /
-      ChartScales.slotLength sys.radius h label.1) *
-      (PartitionedCovariance.cutoff sys.radius
-        ((geometry sys label gap).coordinates k (V.map n x).1.2.2).1 *
-        PrimaryCopyBounds.outerCutoff (((geometry sys label gap).coordinates k (V.map n x).1.2.2).2 /
-          ChartScales.slotLength sys.radius h label.1))
-  rw [mul_left_comm, PrimaryCopyBounds.profile_mul_outerCutoff]
 
 
-theorem dynamic_commonCorrected_eq (request : ℕ → Cylinder → Vec2) (j : Fin 2) :
-    (dynamicCopyData sys hh label hl gap B V request j).commonCorrected V.strip V.directions =
-      (ActualPeriodizedSignedRealization.views B (layout sys hh label hl gap) V).exactCoefficients request j := by
-  rw [commonCorrected_eq_of_localized
-    (dynamicCopyData sys hh label hl gap B V request j)
-    (ActualPeriodizedSignedRealization.copyData B (layout sys hh label hl gap) V request j) rfl
-    (dynamic_localized_eq sys hh label hl gap B V request j),
-    ActualPeriodizedSignedRealization.commonCorrected_eq]
 
 end ActualCopies
 
@@ -1087,85 +980,7 @@ theorem pressure_periodized_physical (L : NativeLabel f.active) {a b delta : ℝ
   rfl
 
 
-/-- The original physical potential is the pulled-back native coefficient
-mode, with the potential scale derived by the actual curl construction. -/
-theorem referencePotential_eq_mode (L : NativeLabel f.active)
-    (hPhi : ContDiffOn ℝ ∞ ((f.primary L).base.phase L.val.1) (f.primary L).strip.domain)
-    (z : SpaceTime) (hr : 0 < z.2 0)
-    (hz : (PhysicalResidualBridge.commonGraph (ChartScales.Q L.val.1) h
-      (ChartScales.nativeIndex h L.val.1)).map z ∈ (f.primary L).strip.domain) :
-    (ActualPeriodizedSignedRealization.views (f.primary L) (layout sys hh L.val L.property 0)
-      (f.view L)).referencePotential (f.state L).referenceRequest (f.column L) z =
-      (ChartScales.Q L.val.1 ^ (-h) : ℝ) • HarmonicCalculus.vectorMode
-        ((f.primary L).base.frequency L.val.1) ((f.primary L).base.phase L.val.1)
-        (referencePotentialCoefficient sys hh f L)
-        ((PhysicalResidualBridge.commonGraph (ChartScales.Q L.val.1) h
-          (ChartScales.nativeIndex h L.val.1)).map z) := by
-  let V := ActualPeriodizedSignedRealization.views (f.primary L)
-    (layout sys hh L.val L.property 0) (f.view L)
-  have hK : (f.primary L).base.frequency L.val.1 ≠ 0 := by
-    rw [G.frequency L]
-    exact PartitionedCovariance.actual_carrier_ne_zero _ _
-  have hx : z ∈ (PhysicalResidualBridge.commonGraph (f.view L).referenceScale
-      (f.view L).exponent (f.view L).referenceCover).source (f.primary L).strip.domain := by
-    simp only [G.scale L, G.exponent L, G.cover L]
-    exact And.intro hr hz
-  have he := PhysicalCurlCovariance.referencePotential_eq_on (f.view L).referenceScale_pos
-    (f.view L).exponent (f.view L).referenceCover (f.primary L).strip.isOpen_domain
-    hK hK hPhi
-    ((ActualPeriodizedSignedRealization.periodizedPrimary (f.primary L)
-      (layout sys hh L.val L.property 0)).raw (f.state L).referenceRequest (f.column L) L.val.1)
-    V.physicalPhase (V.physicalRaw (f.state L).referenceRequest (f.column L))
-    (fun _ _ => rfl) (fun _ _ => rfl) hx
-  simp only [G.scale L, G.exponent L, G.cover L] at he
-  change V.referencePotential (f.state L).referenceRequest (f.column L) z = _ at he
-  simp only [CurlClassBounds.vectorPotential, CurlClassBounds.coefficient,
-    ← (G.chart L).normal] at he ⊢
-  exact he
 
-/-- Equality with the same signed Cartesian potential. Every native copy,
-cutoff and the potential's actual derivative normalization is retained. -/
-theorem potential_periodized_physical (L : NativeLabel f.active) (i : Fin 3)
-    (hPhi : ContDiffOn ℝ ∞ ((f.primary L).base.phase L.val.1) (f.primary L).strip.domain)
-    {a b delta : ℝ} (ha : 0 < a) (hdelta : 0 < delta) (j : PolarCharts.Index) (z : SpaceTime)
-    (hz : z ∈ PhysicalCurlCovariance.validCylindrical delta j)
-    (hsource : (PhysicalResidualBridge.commonGraph (ChartScales.Q L.val.1) h
-      (ChartScales.nativeIndex h L.val.1)).map z ∈ (f.primary L).strip.domain)
-    (hw : PhysicalGraphBounds.scaledRadial L.val.1 (z.1, CylindricalResidual.chart z.2) ∈
-      PhysicalGraphBounds.annulus a b)
-    (hj : PhysicalGraphBounds.scaledRadial L.val.1 (z.1, CylindricalResidual.chart z.2) ∈
-      PolarCharts.chartDomain a j) :
-    ((potentialFamily sys hh f i).periodized a h sys.radius (positiveIndex L)
-      (z.1, CylindricalResidual.chart z.2)).re =
-      ActualPeriodizedSignedRealization.physicalPotential (f.primary L)
-        (layout sys hh L.val L.property 0) (f.view L) (f.state L) (f.column L) delta
-        (z.1, CylindricalResidual.chart z.2) i := by
-  let V := ActualPeriodizedSignedRealization.views (f.primary L)
-    (layout sys hh L.val L.property 0) (f.view L)
-  have hK : (f.primary L).base.frequency L.val.1 ≠ 0 := by
-    rw [G.frequency L]
-    exact PartitionedCovariance.actual_carrier_ne_zero _ _
-  have hmap := cylinderAt_physical_forward h L.val.1 ha j z hz.1 hz.2.1 hj
-  have hc : PhysicalGraphBounds.liftXY
-      (PhysicalGraphBounds.physicalLift h L.val.1 (z.1, CylindricalResidual.chart z.2)) ∈
-      PolarCharts.chartDomain a j := by simpa only [PhysicalGraphBounds.liftXY_physicalLift] using hj
-  have hangle : (PolarCharts.chart a j (PhysicalGraphBounds.liftXY
-      (PhysicalGraphBounds.physicalLift h L.val.1 (z.1, CylindricalResidual.chart z.2)))).2 = z.2 1 :=
-    congrArg Prod.snd hmap
-  rw [potential_periodized_of_chart sys hh f G L i ha _ hw j hj,
-    ← rotateCoefficient_vectorMode]
-  have he := rotateCoefficient_chart_re ha j hc
-    ((ChartScales.Q L.val.1 ^ (-h) : ℝ) • HarmonicCalculus.vectorMode
-      ((f.primary L).base.frequency L.val.1) ((f.primary L).base.phase L.val.1)
-      (referencePotentialCoefficient sys hh f L)
-      (cylinderAt a j (PhysicalGraphBounds.physicalLift h L.val.1 (z.1, CylindricalResidual.chart z.2)))) i
-  rw [rotateCoefficient_real_smul, Pi.smul_apply] at he
-  rw [he, hangle, hmap, ← referencePotential_eq_mode sys hh f G L hPhi z hz.1 hsource]
-  have hf := (PhysicalCurlCovariance.globalCartesianPotential_forward_germ hdelta j
-    (V.referencePotential (f.state L).referenceRequest (f.column L))
-    (V.referencePotential_periodic (ActualPeriodizedSignedRealization.periodizedAngular
-      (f.primary L) (layout sys hh L.val L.property 0) (G.angular L)) hK (f.column L)) hz).eq_of_nhds
-  exact (congrArg (fun v : Space => v i) hf).symm
 
 end PhysicalFamilies
 
@@ -2013,49 +1828,8 @@ variable (G : ReferenceGeometry sys f) (L : NativeLabel f.active)
 
 include G ha hd
 
-include hPhi in
-theorem labelPotential_eq_reference {x : SpaceTime}
-    (hx : x ∈ referencePatch (h := h) f L a b delta j) :
-    labelPotential sys hh f L a x =
-      ActualPeriodizedSignedRealization.physicalPotential (f.primary L)
-        (layout sys hh L.val L.property 0) (f.view L) (f.state L) (f.column L) delta x := by
-  let z := PhysicalCurlCovariance.polarCoordinates delta j x
-  have hz : z ∈ PhysicalCurlCovariance.validCylindrical delta j := polarCoordinates_valid hd j hx.1
-  have he : (z.1, CylindricalResidual.chart z.2) = x := polarCoordinates_backward hd j hx.1
-  ext i
-  simp only [labelPotential, PhysicalCurlCovariance.realVector_apply]
-  have hb' : PhysicalGraphBounds.scaledRadial L.val.1 (z.1, CylindricalResidual.chart z.2) ∈
-      PhysicalGraphBounds.annulus a b := by simpa only [he] using hx.2.1
-  have hj' : PhysicalGraphBounds.scaledRadial L.val.1 (z.1, CylindricalResidual.chart z.2) ∈
-      PolarCharts.chartDomain a j := by simpa only [he] using hx.2.2.1
-  have H := potential_periodized_physical sys hh f G L i hPhi ha hd j z hz hx.2.2.2 hb' hj'
-  simp only [he] at H
-  exact H
 
-theorem labelPressure_eq_reference {x : SpaceTime}
-    (hx : x ∈ referencePatch (h := h) f L a b delta j) :
-    labelPressure sys hh f L a x =
-      ActualPeriodizedSignedRealization.physicalPressure (f.primary L)
-        (layout sys hh L.val L.property 0) (f.view L) (f.state L) (f.column L) delta x := by
-  let z := PhysicalCurlCovariance.polarCoordinates delta j x
-  have hz : z ∈ PhysicalCurlCovariance.validCylindrical delta j := polarCoordinates_valid hd j hx.1
-  have he : (z.1, CylindricalResidual.chart z.2) = x := polarCoordinates_backward hd j hx.1
-  have hb' : PhysicalGraphBounds.scaledRadial L.val.1 (z.1, CylindricalResidual.chart z.2) ∈
-      PhysicalGraphBounds.annulus a b := by simpa only [he] using hx.2.1
-  have hj' : PhysicalGraphBounds.scaledRadial L.val.1 (z.1, CylindricalResidual.chart z.2) ∈
-      PolarCharts.chartDomain a j := by simpa only [he] using hx.2.2.1
-  have H := pressure_periodized_physical sys hh f G L ha hd j z hz hb' hj'
-  simp only [he] at H
-  exact H
 
-include hPhi in
-theorem labelPotential_germ {x : SpaceTime}
-    (hx : x ∈ interior (referencePatch (h := h) f L a b delta j)) :
-    labelPotential sys hh f L a =ᶠ[𝓝 x]
-      ActualPeriodizedSignedRealization.physicalPotential (f.primary L)
-        (layout sys hh L.val L.property 0) (f.view L) (f.state L) (f.column L) delta :=
-  eventually_of_mem (isOpen_interior.mem_nhds hx) (fun _ hy =>
-    labelPotential_eq_reference sys hh f G L hPhi ha hd j (interior_subset hy))
 
 
 

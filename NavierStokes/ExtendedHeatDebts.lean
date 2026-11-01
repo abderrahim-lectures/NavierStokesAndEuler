@@ -361,12 +361,6 @@ theorem weightedJet_integrable (square : Bool) (n : ℕ) (ν : ℝ) :
   chain_integrable (weightedJet_measurable hh hK hW square)
     (weightedJet_dominated hh hK hB hweight hpq square) n ν
 
-theorem weightedDebtJet_hasDerivAt (square : Bool) (n : ℕ) (ν : ℝ) :
-    HasDerivAt (weightedDebtJet W square h K q n)
-      (weightedDebtJet W square h K q (n + 1) ν) ν :=
-  integral_chain_hasDerivAt (weightedJet_derivative hh square)
-    (weightedJet_measurable hh hK hW square)
-    (weightedJet_dominated hh hK hB hweight hpq square) n ν
 
 theorem weightedDebtJet_eq_iteratedDeriv (square : Bool) (n : ℕ) (ν : ℝ) :
     iteratedDeriv n (weightedDebtJet W square h K q 0) ν =
@@ -396,13 +390,6 @@ theorem nuConstant_nonneg (d : TailData) {L : ℝ} (hL : 0 ≤ L) (square : Bool
   exact div_nonneg (mul_nonneg (tailSize_nonneg d square)
     (editBound_nonneg square d.h hL n)) (by linarith)
 
-theorem nuDebtJet_hasDerivAt (d : TailData) {K : ℝ} (hK : 1 ≤ K) (square : Bool)
-    {q : ℝ} (hq : tailDecay d square + q < 0) (n : ℕ) (ν : ℝ) :
-    HasDerivAt (nuDebtJet d K square q n) (nuDebtJet d K square q (n + 1) ν) ν :=
-  weightedDebtJet_hasDerivAt d.h_pos hK
-    (tailWeight_continuousOn d (lt_of_lt_of_le zero_lt_one hK) square)
-    (tailSize_nonneg d square) (tailWeight_bound d (lt_of_lt_of_le zero_lt_one hK) square)
-    hq square n ν
 
 theorem nuDebt_contDiff (d : TailData) {K : ℝ} (hK : 1 ≤ K) (square : Bool)
     {q : ℝ} (hq : tailDecay d square + q < 0) : ContDiff ℝ ∞ (nuDebtJet d K square q 0) :=
@@ -519,67 +506,11 @@ theorem physicalAngular_eq_original (d : TailData) {K η : ℝ} (hK : 0 < K)
 
 /-! ## Exact radius rescaling and joint smoothness -/
 
-theorem correction_scale (h ν : ℝ) {K : ℝ} (hK : K ≠ 0) (X : ℝ) :
-    correction h K ν (K * X) = correction h 1 (ν / K) X := by
-  unfold correction switch HeatProfileExtension.scaledProfile
-  simp only [mul_div_cancel_left₀ X hK, div_one]
-  congr 2
-  simp only [div_eq_mul_inv, mul_inv_rev]
-  ring_nf
 
-theorem tailWeight_scale (d : TailData) {K : ℝ} (hK : K ≠ 0) (square : Bool) (X : ℝ) :
-    tailWeight d K square (K * X) = tailWeight d 1 square X := by
-  cases square <;> simp only [tailWeight, Bool.false_eq_true, ite_false, ite_true,
-    powerTail, mul_div_cancel_left₀ X hK, div_one]
 
-theorem editJet_scale_zero (h ν : ℝ) {K : ℝ} (hK : K ≠ 0) (square : Bool) (X : ℝ) :
-    editJet square h K 0 ν (K * X) = editJet square h 1 0 (ν / K) X := by
-  cases square
-  · exact correction_scale h ν hK X
-  · simp only [editJet, ite_true, squareCorrectionJet_zero, multiplier, correction_scale h ν hK X]
 
-theorem weightedJet_scale_zero (d : TailData) {K : ℝ} (hK : 0 < K)
-    (square : Bool) (q ν : ℝ) {X : ℝ} (hX : 0 ≤ X) :
-    weightedJet (tailWeight d K square) square d.h K q 0 ν (K * X) =
-      K ^ q * weightedJet (tailWeight d 1 square) square d.h 1 q 0 (ν / K) X := by
-  unfold weightedJet
-  rw [Real.mul_rpow hK.le hX, tailWeight_scale d hK.ne', editJet_scale_zero d.h ν hK.ne']
-  ring
 
-/-- A genuine change of variables in the improper integral gives all radius
-dependence through an explicit power and the rescaled diffusion. -/
-theorem nuDebt_scale (d : TailData) {K : ℝ} (hK : 0 < K)
-    (square : Bool) (q ν : ℝ) :
-    nuDebtJet d K square q 0 ν = K ^ (q + 1) * nuDebtJet d 1 square q 0 (ν / K) := by
-  let g : ℝ → ℝ := weightedJet (tailWeight d K square) square d.h K q 0 ν
-  have hcv := integral_comp_mul_left_Ioi g 1 hK
-  simp only [mul_one, smul_eq_mul] at hcv
-  have hcv' : nuDebtJet d K square q 0 ν = K * ∫ X in Ioi 1, g (K * X) := by
-    rw [hcv, ← mul_assoc, mul_inv_cancel₀ hK.ne', one_mul]
-    rfl
-  rw [hcv']
-  have heq : (∫ X in Ioi (1 : ℝ), g (K * X)) =
-      K ^ q * nuDebtJet d 1 square q 0 (ν / K) := by
-    unfold nuDebtJet weightedDebtJet
-    rw [← integral_const_mul]
-    apply setIntegral_congr_fun measurableSet_Ioi
-    intro X hX
-    exact weightedJet_scale_zero d hK square q ν (zero_le_one.trans hX.le)
-  rw [heq, Real.rpow_add_one hK.ne']
-  ring
 
-theorem nuDebt_joint_contDiffOn (d : TailData) (square : Bool) {q : ℝ}
-    (hq : tailDecay d square + q < 0) :
-    ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => nuDebtJet d p.1 square q 0 p.2)
-      (Ioi 0 ×ˢ (univ : Set ℝ)) := by
-  have hp : ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => p.1 ^ (q + 1))
-      (Ioi 0 ×ˢ (univ : Set ℝ)) :=
-    contDiffOn_fst.rpow_const_of_ne (fun p hp => (show 0 < p.1 from hp.1).ne')
-  have hr : ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => p.2 / p.1)
-      (Ioi 0 ×ˢ (univ : Set ℝ)) :=
-    contDiffOn_snd.div contDiffOn_fst (fun p hp => (show 0 < p.1 from hp.1).ne')
-  have hout := hp.mul ((nuDebt_contDiff d (K := 1) le_rfl square hq).comp_contDiffOn hr)
-  exact hout.congr (fun p hp => nuDebt_scale d hp.1 square q p.2)
 
 noncomputable def etaDebt (d : TailData) (K : ℝ) (square : Bool) (q η : ℝ) : ℝ :=
   nuDebtJet d K square q 0 (diffusion η)
@@ -589,31 +520,9 @@ theorem etaDebt_contDiff (d : TailData) {K : ℝ} (hK : 1 ≤ K) (square : Bool)
   (nuDebt_contDiff d hK square hq).comp diffusion_contDiff
 
 
-theorem etaDebt_joint_contDiffOn (d : TailData) (square : Bool) {q : ℝ}
-    (hq : tailDecay d square + q < 0) :
-    ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => etaDebt d p.1 square q p.2)
-      (Ioi 0 ×ˢ (univ : Set ℝ)) := by
-  exact (nuDebt_joint_contDiffOn d square hq).comp
-    (contDiffOn_fst.prodMk (diffusion_contDiff.comp_contDiffOn contDiffOn_snd))
-    (fun p hp => ⟨hp.1, mem_univ _⟩)
 
-theorem physicalPressure_joint_contDiffOn (d : TailData) :
-    ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => physicalPressure d p.1 p.2)
-      (Ioi 0 ×ˢ (univ : Set ℝ)) :=
-  (etaDebt_joint_contDiffOn d true (ParametricHeatTail.pressure_decay d)).congr
-    (fun p hp => physicalPressure_eq d hp.1 p.2)
 
-theorem physicalEnergy_joint_contDiffOn (d : TailData) :
-    ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => physicalEnergy d p.1 p.2)
-      (Ioi 0 ×ˢ (univ : Set ℝ)) :=
-  (etaDebt_joint_contDiffOn d true (ParametricHeatTail.energy_decay d)).congr
-    (fun p hp => physicalEnergy_eq d hp.1 p.2)
 
-theorem physicalAngular_joint_contDiffOn (d : TailData) :
-    ContDiffOn ℝ ∞ (fun p : ℝ × ℝ => physicalAngular d p.1 p.2)
-      (Ioi 0 ×ˢ (univ : Set ℝ)) :=
-  (contDiffOn_const.mul (etaDebt_joint_contDiffOn d false (ParametricHeatTail.angular_decay d))).congr
-    (fun p hp => physicalAngular_eq d hp.1 p.2)
 
 /-! ## Uniform estimates on a fixed enlarged physical band -/
 
@@ -992,17 +901,6 @@ theorem etaIntegrandJet_dominated (d : TailData) {K : ℝ} (hK : 1 ≤ K)
   · intro i hi _
     exact diffusion_iterated_bound hL.le hη i hi
 
-theorem etaIntegrandJet_derivative (d : TailData) (K : ℝ) (square : Bool) (q : ℝ) :
-    ∀ᵐ X ∂volume.restrict (Ioi K), ∀ n η,
-      HasDerivAt (fun θ => etaIntegrandJet d K square q n θ X)
-        (etaIntegrandJet d K square q (n + 1) η X) η := by
-  apply Eventually.of_forall
-  intro X n η
-  have hc := (weightedJet_zero_contDiff d.h_pos (tailWeight d K square) K q X square).comp
-    diffusion_contDiff
-  have hd := hc.differentiable_iteratedDeriv n
-    (ENat.natCast_lt_of_coe_top_le_withTop le_rfl n) η
-  simpa only [etaIntegrandJet, iteratedDeriv_succ, Function.comp_def] using hd.hasDerivAt
 
 theorem etaIntegrandJet_integrable (d : TailData) {K : ℝ} (hK : 1 ≤ K)
     (square : Bool) {q : ℝ} (hq : tailDecay d square + q < 0) (n : ℕ) (η : ℝ) :
@@ -1010,15 +908,6 @@ theorem etaIntegrandJet_integrable (d : TailData) {K : ℝ} (hK : 1 ≤ K)
   chain_integrable (etaIntegrandJet_measurable d hK square q)
     (etaIntegrandJet_dominated d hK square hq) n η
 
-/-- Every genuine eta derivative of the improper debt is the integral of
-the same genuine derivative of its integrand. -/
-theorem etaDebt_derivative_integral (d : TailData) {K : ℝ} (hK : 1 ≤ K)
-    (square : Bool) {q : ℝ} (hq : tailDecay d square + q < 0) (n : ℕ) (η : ℝ) :
-    iteratedDeriv n (etaDebt d K square q) η =
-      ∫ X in Ioi K, etaIntegrandJet d K square q n η X :=
-  iteratedDeriv_integral_chain (etaIntegrandJet_derivative d K square q)
-    (etaIntegrandJet_measurable d hK square q)
-    (etaIntegrandJet_dominated d hK square hq) n η
 
 theorem pressure_integrand_eq (d : TailData) {K X : ℝ} (hK : 0 < K) (hX : K < X) (η : ℝ) :
     squareChange (outgoingProfile d K η) d.h (diffusion η) K X / X =

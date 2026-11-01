@@ -35,33 +35,9 @@ def reynolds (velocity length : ℝ) : ℝ := velocity * length
 
 
 
-theorem sqrt_viscosity {Q : ℝ} (hQ : 0 < Q) (h : ℝ) :
-    Real.sqrt (Q ^ h) = Q ^ (h / 2) := by
-  rw [Real.sqrt_eq_rpow, ← Real.rpow_mul hQ.le]
-  congr 1
-  ring
 
-/-- The physical amplitude prefactor of the primary wave. -/
-theorem wave_amplitude_power {Q : ℝ} (hQ : 0 < Q) (h : ℝ) :
-    coreVelocity Q h * Real.sqrt (Q ^ h) = Q ^ (-1 / 2 - h / 2) := by
-  rw [sqrt_viscosity hQ]
-  unfold coreVelocity
-  rw [← Real.rpow_add hQ]
-  congr 1
-  ring
 
-/-- The continuum wavelength scale, before rounding the frequency. -/
-theorem wave_length_power {Q : ℝ} (hQ : 0 < Q) (h : ℝ) :
-    radialLength Q * Real.sqrt (Q ^ h) = Q ^ (1 / 2 + h / 2) := by
-  rw [sqrt_viscosity hQ]
-  unfold radialLength
-  rw [← Real.rpow_add hQ]
 
-theorem wave_power_cancellation {Q : ℝ} (hQ : 0 < Q) (h : ℝ) :
-    Q ^ (-1 / 2 - h / 2) * Q ^ (1 / 2 + h / 2) = 1 := by
-  rw [← Real.rpow_add hQ]
-  have he : (-1 / 2 - h / 2) + (1 / 2 + h / 2) = (0 : ℝ) := by ring
-  rw [he, Real.rpow_zero]
 
 /-- The integer carrier frequency is the natural ceiling of `ε ^ (-1/2)`. -/
 def carrierFrequency (ε : ℝ) : ℕ := ⌈ε ^ (-(1 / 2 : ℝ))⌉₊
@@ -145,27 +121,6 @@ def waveLength (Q h : ℝ) : ℝ :=
 def waveVelocity (Q h envelope : ℝ) : ℝ :=
   coreVelocity Q h * Real.sqrt (Q ^ h) * envelope
 
-/-- Exact cancellation leaves the envelope and a bounded rounding factor. -/
-theorem wave_reynolds_exact {Q : ℝ} (hQ : 0 < Q) (h envelope : ℝ) :
-    reynolds (waveVelocity Q h envelope) (waveLength Q h) =
-      envelope / ((carrierFrequency (Q ^ h) : ℝ) * Real.sqrt (Q ^ h)) := by
-  have hp : 0 < Q ^ h := Real.rpow_pos_of_pos hQ h
-  have hk := carrier_frequency_pos hp
-  have hs : 0 < Real.sqrt (Q ^ h) := Real.sqrt_pos.mpr hp
-  have hc : (coreVelocity Q h * Real.sqrt (Q ^ h)) *
-      (radialLength Q * Real.sqrt (Q ^ h)) = 1 := by
-    rw [wave_amplitude_power hQ h, wave_length_power hQ h,
-      wave_power_cancellation hQ h]
-  apply (eq_div_iff (mul_ne_zero hk.ne' hs.ne')).mpr
-  unfold reynolds waveVelocity waveLength
-  calc
-    (coreVelocity Q h * Real.sqrt (Q ^ h) * envelope *
-        (radialLength Q / (carrierFrequency (Q ^ h) : ℝ))) *
-        ((carrierFrequency (Q ^ h) : ℝ) * Real.sqrt (Q ^ h)) =
-        envelope * ((coreVelocity Q h * Real.sqrt (Q ^ h)) *
-          (radialLength Q * Real.sqrt (Q ^ h))) := by
-      field_simp
-    _ = envelope := by rw [hc, mul_one]
 
 
 

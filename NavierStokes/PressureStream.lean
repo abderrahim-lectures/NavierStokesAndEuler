@@ -45,8 +45,6 @@ theorem rho_integrable (a b : ℝ) (hab : a < b) : Integrable (rho a b hab) :=
 theorem rho_integral (a b : ℝ) (hab : a < b) : (∫ r, rho a b hab r) = 1 :=
   (meanBump a b hab).integral_normed
 
-theorem rho_nonneg (a b : ℝ) (hab : a < b) (r : ℝ) : 0 ≤ rho a b hab r :=
-  (meanBump a b hab).nonneg_normed r
 
 theorem rho_support (a b : ℝ) (hab : a < b) : support (rho a b hab) ⊆ Icc a b := by
   intro r hr
@@ -583,15 +581,6 @@ theorem torusAverage_physicalAlias {d a b M : ℝ}
     ← pressureMass_eq_interval hf hs p.2]
   rfl
 
-theorem pressureAlias_mean_zero {d a b M : ℝ}
-    (ha : 0 < a) (hab : a < b) (hd : 0 < d) (v : Plane)
-    {f : Lift S → ℝ} (hf : ContDiff ℝ ∞ f) (hs : RadialAlias.RadiallySupported a b f)
-    (hp : TorusPeriodicLift f) (p : ℝ × S) :
-    torusAverage (pressureAlias d a b M hab v f) p = 0 := by
-  unfold pressureAlias
-  rw [torusAverage_physicalAlias ha hab hd v (pressureSource_contDiff hab hf hs)
-    (pressureSource_supported hab hs) (pressureSource_periodic hab hp),
-    pressureSource_mass_zero hab hf hs, mul_zero]
 
 /-- Taking the torus mean of the physical compact primitive gives the
 ordinary radial compact primitive, with its exact mean-mass term. -/

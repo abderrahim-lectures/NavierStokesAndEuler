@@ -1078,53 +1078,6 @@ theorem preparedPrefactor_jets (r0 : ℝ) (vr vt : TorusInverse.Plane) (N : ℕ)
     (PolynomialJets.const_fixed (D := PrimaryGeometryAssembly.domain W₀ N)
       (PartitionedCovariance.nativePrefactor vr vt r0 * (2 * r0)))
 
-/-- The determinant, entry and inverse-weight constants are produced by
-the actual same-profile construction before the label and copy chart are
-chosen.  The target is the literal leading stress of that same profile. -/
-theorem exists_prepared_primary_jets
-    (hcone : LeadingStressWeights.FullTrueCone v₀) (upper : ℝ) (B : ℕ)
-    (r0 : ℝ) (hr0 : 0 < r0)
-    (hbox : 2 * NominalConeAssembly.activeRight W₀ ≤ FinalSlowBase.boxRadius W₀ upper)
-    (N0 : ℕ) (vr vt : TorusInverse.Plane) (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) :
-    ∃ a : PrimaryGeometryAssembly.Prepared H₀ v₀ upper B r0 N0,
-      ∀ (V : JetDomain (PrimaryGeometryAssembly.Index W₀ a.N) D)
-        (χ : PrimaryGeometryAssembly.Index W₀ a.N → D → PhaseCalculus.Slow × ℝ)
-        (mask : PrimaryGeometryAssembly.Index W₀ a.N → D → ℝ),
-      (∀ L, (PrimaryGeometryAssembly.domain W₀ a.N).scale L = V.scale L) →
-      PolynomialJets V.toDomain χ →
-      (∀ L x, x ∈ V.carrier L →
-        χ L x ∈ (PrimaryGeometryAssembly.domain W₀ a.N).carrier L ×ˢ Ioo (0 : ℝ) 1) →
-      (∀ L x, x ∈ V.carrier L → (χ L x).1 ∈
-        PositiveRepresentatives.positivePart (PrimaryGeometryAssembly.referenceSet W₀)) →
-      (∀ k, NativeJets V (fun L x => PrimaryTargetBounds.movingWeight W₀ (χ L x).1)
-        (fun L x => PrimaryTargetBounds.actualTarget v₀ (χ L x).1 k)) →
-      PolynomialJets V.toDomain mask →
-      (∀ L x, x ∈ V.carrier L → 0 < PrimaryTargetBounds.movingWeight W₀ (χ L x).1) →
-      ∀ j : Fin 2,
-      NativeJets V
-        (fun L x => Real.sqrt (ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L)) *
-          (Real.sqrt (PrimaryTargetBounds.movingWeight W₀ (χ L x).1) *
-            pulseEnvelope (PrimaryGeometryAssembly.construction H₀ v₀ a hr0) χ j L x))
-        (primaryVelocity (PrimaryGeometryAssembly.construction H₀ v₀ a hr0)
-          (preparedPrefactor r0 vr vt) χ
-          (fun L => ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L))
-          (fun L x k => PrimaryTargetBounds.actualTarget v₀ (χ L x).1 k) mask j) := by
-  obtain ⟨a, dg, eb, il, hdg, heb, hil, hz⟩ := PrimaryTargetBounds.exists_constructed_bounds
-    H₀ v₀ hcone upper B r0 hr0 hbox N0 vr vt hdet
-  refine ⟨a, ?_⟩
-  intro V χ mask hscale hχ hmap hpositive hT hm hw j
-  apply primaryVelocity_jets (PrimaryGeometryAssembly.construction H₀ v₀ a hr0)
-    (preparedPrefactor r0 vr vt) χ
-    (fun L => ChartScales.epsilon F₀.data.h (BaseChartJets.cellBand L))
-    (fun L x k => PrimaryTargetBounds.actualTarget v₀ (χ L x).1 k) mask
-    (fun L x => PrimaryTargetBounds.movingWeight W₀ (χ L x).1)
-    hscale hχ hmap (fun j => preparedPrefactor_jets r0 vr vt a.N j)
-    hT hm hw hdg heb hil _ j
-  intro L x hx
-  have h := hz L (χ L x).1 (hpositive L x hx) (hmap L x hx).1
-  have hsc : V.scale L = ChartScales.S (BaseChartJets.cellBand L) := (hscale L).symm
-  simp only [hsc, pulseMatrix] at h ⊢
-  exact h
 
 
 end Prepared

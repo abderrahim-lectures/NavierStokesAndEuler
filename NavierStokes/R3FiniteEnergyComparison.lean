@@ -33,42 +33,5 @@ theorem GlobalSolutionRn.uniformFiniteEnergy {f v : VelocityField} {q : Pressure
     have hm := le_max_right 0 (E / 2)
     linarith
 
-/-- A compact candidate with unbounded speed excludes every global smooth
-solution having the comparator's finite-energy bound. -/
-theorem compact_candidate_excludes_global_solution
-    {u v f : VelocityField} {p q : PressureField}
-    (h : R3CompactCandidate.Properties u p f) (hv : GlobalSolutionRn f v q) : False := by
-  apply h.not_global_agreement hv.velocity_smooth
-  obtain ⟨K, hK, hs⟩ := h.velocity_support
-  intro t ht x
-  by_cases ht0 : t = 0
-  · subst t
-    rw [h.zero_initial_velocity, hv.initial_velocity]
-  have hpos : 0 < t := lt_of_le_of_ne ht.1 (Ne.symm ht0)
-  have hpre : NavierStokesR3.Comparison.slab 0 t ⊆ preSingularDomain := by
-    intro z hz
-    exact ⟨⟨hz.1.1, hz.1.2.trans_lt ht.2⟩, hz.2⟩
-  have hfuture : NavierStokesR3.Comparison.slab 0 t ⊆ futureDomain := by
-    intro z hz
-    exact ⟨hz.1.1, hz.2⟩
-  have hsupport : ∀ r ∈ Icc (0 : ℝ) t, tsupport (fun y => u (r, y)) ⊆ K := by
-    intro r hr
-    apply closure_minimal _ hK.isClosed
-    intro y hy
-    by_contra hyK
-    exact hy (hs r ⟨hr.1, hr.2.trans_lt ht.2⟩ y hyK)
-  have heq := NavierStokesR3.WholeSpaceUniqueness.classical_uniqueness_on_Icc hpos
-    (h.velocity_smooth.mono hpre) (hv.velocity_smooth.mono hfuture)
-    (h.pressure_smooth.mono hpre) (hv.pressure_smooth.mono hfuture)
-    hK hsupport (hv.uniformFiniteEnergy t)
-    (fun r hr => h.divergence_free r ⟨hr.1.le, hr.2.trans ht.2⟩)
-    (fun r hr => hv.divergence_free r hr.1.le)
-    (fun r hr y => by
-      simpa only [NavierStokesR3.ProblemStatement.navierStokesResidual,
-        navierStokesResidual, one_smul] using
-        (h.navier_stokes r ⟨hr.1, hr.2.trans ht.2⟩ y).trans
-          (hv.navier_stokes r hr.1 y).symm)
-    (fun y => (h.zero_initial_velocity y).trans (hv.initial_velocity y).symm)
-  exact heq t ⟨ht.1, le_rfl⟩ x
 
 end NavierStokes.ComparatorBridge

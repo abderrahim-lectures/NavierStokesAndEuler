@@ -66,23 +66,6 @@ theorem common_potential_smooth (n : ℕ) :
     ContDiffOn ℝ ∞ (a.common.curlPotential s d n) Ω :=
   LocalizedCurlRealization.RawData.common_potential_smooth h.raw h.cells h.cutoff_support h.cover n
 
-theorem glue_smooth {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (F : ℕ → D → E) (f : ℕ → I → D → E)
-    (hg : ∀ n i x, x ∈ h.cells.carrier n i → F n =ᶠ[𝓝 x] f n i)
-    (hz : ∀ n x, (∀ i, x ∉ h.cells.carrier n i) → F n =ᶠ[𝓝 x] fun _ => 0)
-    (hs : ∀ n i, ContDiffOn ℝ ∞ (f n i) (Ω ∩ h.patch n i))
-    (hflat : ∀ n i x, ((a.localized i).amplitude n =ᶠ[𝓝 x] fun _ => 0) →
-      f n i =ᶠ[𝓝 x] fun _ => 0) (n : ℕ) : ContDiffOn ℝ ∞ (F n) Ω := by
-  intro x hx
-  apply ContDiffAt.contDiffWithinAt
-  classical
-  by_cases hi : ∃ i, x ∈ h.cells.carrier n i
-  · obtain ⟨i, hi⟩ := hi
-    rcases h.cover n i x hx hi with hC | h0
-    · exact ((hs n i).contDiffAt ((h.raw.geometry n i).isOpen.mem_nhds ⟨hx, hC⟩)).congr_of_eventuallyEq
-        (hg n i x hi)
-    · exact contDiffAt_const.congr_of_eventuallyEq ((hg n i x hi).trans (hflat n i x h0))
-  · exact contDiffAt_const.congr_of_eventuallyEq (hz n x (not_exists.mp hi))
 
 
 theorem native_normal_smooth (n : ℕ) (i : I) :

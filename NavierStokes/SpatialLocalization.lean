@@ -90,8 +90,6 @@ theorem spatialCutoff_support_subset : Function.support spatialCutoff ⊆ suppor
 theorem spatialCutoff_tsupport_subset : tsupport spatialCutoff ⊆ supportCylinder :=
   closure_minimal spatialCutoff_support_subset isClosed_supportCylinder
 
-theorem spatialCutoff_hasCompactSupport : HasCompactSupport spatialCutoff :=
-  isCompact_supportCylinder.of_isClosed_subset (isClosed_tsupport _) spatialCutoff_tsupport_subset
 
 theorem supportCylinder_coordinate_bound {x : Space} (hx : x ∈ supportCylinder)
     (i : Fin 3) : |x i| ≤ 1 / 4 := by
@@ -267,26 +265,14 @@ theorem periodicVelocity_eventuallyEq (A : VelocityField) {z : SpaceTime}
     (hz : z.2 ∈ plateau) : periodicVelocity A =ᶠ[𝓝 z] SpatialCurl.spatialCurl A :=
   SolenoidalDiagonal.spatialCurl_eventuallyEq (periodicPotential_eventuallyEq A hz)
 
-theorem periodicPressure_eventuallyEq (p : PressureField) {z : SpaceTime}
-    (hz : z.2 ∈ plateau) : periodicPressure p =ᶠ[𝓝 z] p :=
-  (PeriodicLocalization.periodize_eventuallyEq (cutPressure_supported p)
-    (plateau_subset_innerCube hz)).trans (cutPressure_eventuallyEq p hz)
 
 theorem periodicVelocity_eq (A : VelocityField) {z : SpaceTime} (hz : z.2 ∈ plateau) :
     periodicVelocity A z = SpatialCurl.spatialCurl A z :=
   (periodicVelocity_eventuallyEq A hz).self_of_nhds
 
-theorem periodicPressure_eq (p : PressureField) {z : SpaceTime} (hz : z.2 ∈ plateau) :
-    periodicPressure p z = p z := (periodicPressure_eventuallyEq p hz).self_of_nhds
 
 
 
-theorem periodic_residual_eventuallyEq (A : VelocityField) (p : PressureField)
-    {z : SpaceTime} (hz : z.2 ∈ plateau) :
-    (fun w => navierStokesResidual (periodicVelocity A) (periodicPressure p) w.1 w.2)
-      =ᶠ[𝓝 z] (fun w => navierStokesResidual (SpatialCurl.spatialCurl A) p w.1 w.2) :=
-  ResidualRegularity.residual_eventuallyEq (periodicVelocity_eventuallyEq A hz)
-    (periodicPressure_eventuallyEq p hz)
 
 
 
@@ -310,57 +296,18 @@ noncomputable def localizedPotential (A : VelocityField) : VelocityField :=
 
 
 
-theorem localizedVelocity_smooth {A : VelocityField}
-    (hA : ContDiffOn ℝ ∞ A preSingularDomain) :
-    ContDiffOn ℝ ∞ (localizedVelocity A) preSingularDomain :=
-  TimeLocalization.activatedVelocity_smooth _ (periodicVelocity_smoothOn hA)
-
-theorem localizedPressure_smooth {p : PressureField}
-    (hp : ContDiffOn ℝ ∞ p preSingularDomain) :
-    ContDiffOn ℝ ∞ (localizedPressure p) preSingularDomain :=
-  TimeLocalization.activatedPressure_smooth _ (periodicPressure_smoothOn hp)
-
-theorem localizedVelocity_smooth_before {A : VelocityField}
-    (hA : ContDiffOn ℝ ∞ A (Iio (1 : ℝ) ×ˢ (univ : Set Space))) :
-    ContDiffOn ℝ ∞ (localizedVelocity A) preSingularDomain :=
-  localizedVelocity_smooth (hA.mono (fun _ hz => ⟨hz.1.2, hz.2⟩))
-
-theorem localizedPressure_smooth_before {p : PressureField}
-    (hp : ContDiffOn ℝ ∞ p (Iio (1 : ℝ) ×ˢ (univ : Set Space))) :
-    ContDiffOn ℝ ∞ (localizedPressure p) preSingularDomain :=
-  localizedPressure_smooth (hp.mono (fun _ hz => ⟨hz.1.2, hz.2⟩))
-
-theorem localizedVelocity_periodic (A : VelocityField) (times : Set ℝ) :
-    UnitSpatialPeriodsOn times (localizedVelocity A) :=
-  TimeLocalization.activatedVelocity_periodic _ times (periodicVelocity_periodic A times)
-
-theorem localizedPressure_periodic (p : PressureField) (times : Set ℝ) :
-    UnitSpatialPeriodsOn times (localizedPressure p) :=
-  TimeLocalization.activatedPressure_periodic _ times (periodicPressure_periodic p times)
-
-theorem localizedVelocity_zero_initial (A : VelocityField) (x : Space) :
-    localizedVelocity A (0, x) = 0 := TimeLocalization.activatedVelocity_zero_initial _ x
 
 
 
 
-theorem localizedVelocity_divergence_free {A : VelocityField}
-    (hA : ContDiffOn ℝ ∞ A preSingularDomain) :
-    ∀ t ∈ Ico (0 : ℝ) 1, ∀ x : Space, spatialDivergence (localizedVelocity A) t x = 0 :=
-  TimeLocalization.activatedVelocity_divergence_free _ (periodicVelocity_smoothOn hA)
-    (fun _ ht x => periodicVelocity_divergence_free hA ht x)
 
-theorem localizedVelocity_eventuallyEq (A : VelocityField) {z : SpaceTime}
-    (ht : 3 / 4 < z.1) (hz : z.2 ∈ plateau) :
-    localizedVelocity A =ᶠ[𝓝 z] SpatialCurl.spatialCurl A :=
-  (TimeLocalization.activatedVelocity_eventuallyEq_late _ ht z.2).trans
-    (periodicVelocity_eventuallyEq A hz)
 
-theorem localizedPressure_eventuallyEq (p : PressureField) {z : SpaceTime}
-    (ht : 3 / 4 < z.1) (hz : z.2 ∈ plateau) :
-    localizedPressure p =ᶠ[𝓝 z] p :=
-  (TimeLocalization.activatedPressure_eventuallyEq_late _ ht z.2).trans
-    (periodicPressure_eventuallyEq p hz)
+
+
+
+
+
+
 
 theorem localizedVelocity_eq (A : VelocityField) {z : SpaceTime}
     (ht : 3 / 4 ≤ z.1) (hz : z.2 ∈ plateau) :
@@ -368,23 +315,8 @@ theorem localizedVelocity_eq (A : VelocityField) {z : SpaceTime}
   rw [localizedVelocity, TimeLocalization.activatedVelocity_eq_late _ ht,
     periodicVelocity_eq A hz]
 
-theorem localizedPressure_eq (p : PressureField) {z : SpaceTime}
-    (ht : 3 / 4 ≤ z.1) (hz : z.2 ∈ plateau) : localizedPressure p z = p z := by
-  rw [localizedPressure, TimeLocalization.activatedPressure_eq_late _ ht,
-    periodicPressure_eq p hz]
 
-theorem localized_residual_eventuallyEq (A : VelocityField) (p : PressureField)
-    {z : SpaceTime} (ht : 3 / 4 < z.1) (hz : z.2 ∈ plateau) :
-    (fun w => navierStokesResidual (localizedVelocity A) (localizedPressure p) w.1 w.2)
-      =ᶠ[𝓝 z] (fun w => navierStokesResidual (SpatialCurl.spatialCurl A) p w.1 w.2) :=
-  ResidualRegularity.residual_eventuallyEq (localizedVelocity_eventuallyEq A ht hz)
-    (localizedPressure_eventuallyEq p ht hz)
 
-theorem localized_residual_eq (A : VelocityField) (p : PressureField)
-    {z : SpaceTime} (ht : 3 / 4 < z.1) (hz : z.2 ∈ plateau) :
-    navierStokesResidual (localizedVelocity A) (localizedPressure p) z.1 z.2 =
-      navierStokesResidual (SpatialCurl.spatialCurl A) p z.1 z.2 :=
-  (localized_residual_eventuallyEq A p ht hz).self_of_nhds
 
 
 

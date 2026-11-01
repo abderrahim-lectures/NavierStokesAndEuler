@@ -57,16 +57,6 @@ theorem rawVelocity_eq_base {B Nr : ℕ} {A D : ℕ → VelocityField}
   exact TailGaugePotential.finalPotential_sameCurl ActualPrimary.certificate
     ActualPrimary.modulation ActualPrimary.upper B ht
 
-theorem localized_eq_raw {A D : VelocityField} {t : ℝ} (ht : 3 / 4 ≤ t)
-    {x : Space} (hx : x ∈ SpatialLocalization.plateau) :
-    R3CompactCandidate.velocity A D (t, x) = MixedPeriodicAssembly.velocity A D (t, x) := by
-  rw [R3CompactCandidate.velocity, TimeLocalization.activatedVelocity_eq_late _ ht]
-  have hA := SolenoidalDiagonal.spatialCurl_eq_of_eventuallyEq
-    (SpatialLocalization.cutPotential_eventuallyEq A (z := (t, x)) hx)
-  have hD := (SpatialLocalization.cutPotential_eventuallyEq D (z := (t, x)) hx).self_of_nhds
-  change SpatialCurl.spatialCurl (SpatialLocalization.cutPotential A) (t, x) +
-    SpatialLocalization.cutPotential D (t, x) = SpatialCurl.spatialCurl A (t, x) + D (t, x)
-  rw [hA, hD]
 
 def innerRadius : ℝ := NominalConeAssembly.activeLeft ActualPrimary.nominal / 2
 
@@ -146,24 +136,6 @@ def selectedDirect (a : ℕ → ℕ) : VelocityField :=
 def selectedVelocity (a : ℕ → ℕ) : VelocityField :=
   R3CompactCandidate.velocity (selectedPotential a) (selectedDirect a)
 
-theorem selectedVelocity_eq_base_on_ray {a : ℕ → ℕ}
-    (ha : Tendsto (fun j => (a j : ℝ)) atTop atTop) :
-    ∃ δ : ℝ, 0 < δ ∧ δ ≤ 1 ∧ ∀ τ : ℝ, 0 < τ → τ < δ →
-      selectedVelocity a (1 - τ, BaseAngularGrowth.ray innerRadius τ) =
-        FinalSlowBase.velocity ActualPrimary.certificate ActualPrimary.modulation
-          ActualPrimary.upper ActualCandidateConstruction.selectedBudget
-          (1 - τ, BaseAngularGrowth.ray innerRadius τ) := by
-  obtain ⟨δ, hδ, hδ1, hconditions⟩ := exists_ray_interval (fun j => (a j : ℝ))
-    (ActualCandidateConstruction.residualBand ActualCandidateConstruction.selectedBudget
-      ActualCandidateConstruction.selectedThreshold)
-  refine ⟨δ, hδ, hδ1, ?_⟩
-  intro τ hτ hτδ
-  obtain ⟨hw, hsmall, ht, hx⟩ := hconditions τ hτ hτδ
-  rw [selectedVelocity, localized_eq_raw ht hx]
-  exact rawVelocity_eq_base
-    (ActualCandidateAssembly.exteriorStages ActualCandidateConstruction.selectedBudget
-      ActualCandidateConstruction.selectedThreshold ActualCandidateConstruction.selectedThreshold_geometry)
-    ha hw hsmall
 
 theorem innerRadius_le_boxRadius : innerRadius ≤
     FinalSlowBase.boxRadius ActualPrimary.nominal ActualPrimary.upper := by
@@ -214,18 +186,6 @@ theorem selectedRawVelocity_angularGrowth {a : ℕ → ℕ}
   rw [heq]
   exact hb τ hτ (hτδ.le.trans hδ1)
 
-theorem selectedVelocity_angularGrowth {a : ℕ → ℕ}
-    (ha : Tendsto (fun j => (a j : ℝ)) atTop atTop) : AngularGrowth (selectedVelocity a) := by
-  obtain ⟨δ, hδ, hδ1, heq⟩ := selectedVelocity_eq_base_on_ray ha
-  obtain ⟨C, hC, hb⟩ := BaseAngularGrowth.normalized_velocity_ray_bound
-    ActualPrimary.certificate ActualPrimary.modulation ActualPrimary.upper
-    ActualCandidateConstruction.selectedBudget innerRadius_pos innerRadius_le_boxRadius
-  refine ⟨BaseAngularGrowth.leadingAmplitude ActualPrimary.modulation innerRadius, C, δ,
-    BaseAngularGrowth.leadingAmplitude_pos ActualPrimary.modulation innerRadius_pos,
-    hC, hδ, hδ1, ?_⟩
-  intro τ hτ hτδ
-  rw [heq τ hτ hτδ]
-  exact hb τ hτ (hτδ.le.trans hδ1)
 
 theorem selected_exponent_small : 0 < ActualPrimary.h ∧ ActualPrimary.h < 1 / 100 := by
   refine ⟨ActualPrimary.outgoing.data.h_pos, ?_⟩

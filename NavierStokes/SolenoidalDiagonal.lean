@@ -137,45 +137,8 @@ theorem iteratedFDeriv_eventuallyEq {f g : E → V} {x : E}
   simpa only [nhdsWithin_univ, iteratedFDerivWithin_univ] using
     h'.iteratedFDerivWithin (𝕜 := ℝ) k
 
-theorem potentialSum_allJets_eventuallyEq_partial {a : ℕ → ℝ}
-    (ha : Tendsto a atTop atTop) {q : E → ℝ} {A : ℕ → E → V} {x : E}
-    (hq : ContinuousAt q x) (hqx : 0 < q x) :
-    ∃ N : ℕ, ∀ k : ℕ,
-      iteratedFDeriv ℝ k (potentialSum a q A) =ᶠ[𝓝 x]
-        iteratedFDeriv ℝ k (partialPotential a q A N) := by
-  obtain ⟨N, hN⟩ := potentialSum_eventuallyEq_partial ha hq hqx A
-  exact ⟨N, fun k => iteratedFDeriv_eventuallyEq hN k⟩
 
-theorem iteratedFDeriv_partialPotential {a : ℕ → ℝ} {q : E → ℝ}
-    {A : ℕ → E → V} {x : E} (hq : ContDiffAt ℝ ∞ q x)
-    (hA : ∀ j, ContDiffAt ℝ ∞ (A j) x) (N k : ℕ) :
-    iteratedFDeriv ℝ k (partialPotential a q A N) x =
-      ∑ j ∈ Finset.range N, iteratedFDeriv ℝ k (cutStage a q A j) x := by
-  have hstage : ∀ j ∈ Finset.range N,
-      ContDiffWithinAt ℝ k (cutStage a q A j) univ x := by
-    intro j _
-    exact ((cutStage_contDiffAt hq hA j).of_le
-      (by exact_mod_cast (le_top : (k : ℕ∞) ≤ ⊤))).contDiffWithinAt
-  unfold partialPotential
-  simpa only [iteratedFDerivWithin_univ] using
-    iteratedFDerivWithin_fun_sum_apply uniqueDiffOn_univ (mem_univ x) hstage
 
-/-- Every derivative is locally the finite sum of the corresponding stage
-derivatives. The prefix length is independent of the derivative order. -/
-theorem potentialSum_allJets_eventuallyEq_sum {a : ℕ → ℝ}
-    (ha : Tendsto a atTop atTop) {q : E → ℝ} {A : ℕ → E → V}
-    {U : Set E} (hU : IsOpen U) (hqpos : ∀ x ∈ U, 0 < q x)
-    (hq : ContDiffOn ℝ ∞ q U) (hA : ∀ j, ContDiffOn ℝ ∞ (A j) U)
-    {x : E} (hx : x ∈ U) :
-    ∃ N : ℕ, ∀ k : ℕ, ∀ᶠ y in 𝓝 x,
-      iteratedFDeriv ℝ k (potentialSum a q A) y =
-        ∑ j ∈ Finset.range N, iteratedFDeriv ℝ k (cutStage a q A j) y := by
-  obtain ⟨N, hN⟩ := potentialSum_allJets_eventuallyEq_partial (A := A) ha
-    (hq.contDiffAt (hU.mem_nhds hx)).continuousAt (hqpos x hx)
-  refine ⟨N, fun k => ?_⟩
-  filter_upwards [hN k, hU.mem_nhds hx] with y hy hyU
-  exact hy.trans (iteratedFDeriv_partialPotential (hq.contDiffAt (hU.mem_nhds hyU))
-    (fun j => (hA j).contDiffAt (hU.mem_nhds hyU)) N k)
 
 end Smooth
 
@@ -252,20 +215,6 @@ theorem spatialCurl_partialPotential {a : ℕ → ℝ} {q : SpaceTime → ℝ}
   simpa only [partialPotential, SpatialCurl.spatialCurl, SpatialCurl.curl, map_sum] using
     congrArg SpatialCurl.curlLinear (fderiv_fun_sum hstage)
 
-/-- The curl of the summed potential is locally the finite sum of the curls
-of the cut potentials. Thus it also realizes the manuscript's stage sum. -/
-theorem velocitySum_eventuallyEq_sum {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
-    {q : SpaceTime → ℝ} {A : ℕ → VelocityField} {U : Set SpaceTime}
-    (hU : IsOpen U) (hqpos : ∀ z ∈ U, 0 < q z) (hq : ContDiffOn ℝ ∞ q U)
-    (hA : ∀ j, ContDiffOn ℝ ∞ (A j) U) {z : SpaceTime} (hz : z ∈ U) :
-    ∃ N : ℕ, velocitySum a q A =ᶠ[𝓝 z]
-      (fun w => ∑ j ∈ Finset.range N, SpatialCurl.spatialCurl (cutStage a q A j) w) := by
-  obtain ⟨N, hN⟩ := potentialSum_eventuallyEq_partial ha
-    (hq.contDiffAt (hU.mem_nhds hz)).continuousAt (hqpos z hz) A
-  refine ⟨N, ?_⟩
-  filter_upwards [spatialCurl_eventuallyEq hN, hU.mem_nhds hz] with w hw hwU
-  exact hw.trans (spatialCurl_partialPotential (hq.contDiffAt (hU.mem_nhds hwU))
-    (fun j => (hA j).contDiffAt (hU.mem_nhds hwU)) N)
 
 
 /-- Integer schedules from `DiagonalScale` supply the required real divergence

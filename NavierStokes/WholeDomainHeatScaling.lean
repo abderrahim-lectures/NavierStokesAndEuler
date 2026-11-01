@@ -11,11 +11,6 @@ namespace NavierStokes.WholeDomainHeatBounds
 
 open ProblemStatement PhysicalWaveSum
 
-theorem rescale_angularVector (a : ℝ) (ha : 0 < a) (z : ℝ) (w : SpaceTime) :
-    BaseResidual.angularVector (rescale a ha z w) =
-      (Real.sqrt a)⁻¹ • BaseResidual.angularVector w := by
-  ext i
-  fin_cases i <;> simp [BaseResidual.angularVector, rescale_space, coordinateVector]
 
 theorem rescale_heat_ratio (a : ℝ) (ha : 0 < a) (z : ℝ) {w : SpaceTime}
     (hs : 0 < AxisymmetricFields.radialEnergy w.2) :
@@ -25,35 +20,7 @@ theorem rescale_heat_ratio (a : ℝ) (ha : 0 < a) (z : ℝ) {w : SpaceTime}
   field_simp
   ring
 
-theorem heatCoefficient_rescale (C h a : ℝ) (ha : 0 < a) (z : ℝ) {w : SpaceTime}
-    (hs : 0 < AxisymmetricFields.radialEnergy w.2) :
-    a ^ RadialHeatProfile.spatialExponent (1+h) *
-      BaseExterior.heatCoefficient C h (AxisymmetricFields.profilePoint
-        (rescale a ha z w).1 (rescale a ha z w).2) * (Real.sqrt a)⁻¹ =
-      BaseExterior.heatCoefficient C h (AxisymmetricFields.profilePoint w.1 w.2) := by
-  rw [BaseExterior.heatCoefficient_eq, BaseExterior.heatCoefficient_eq]
-  simp only [TerminalStress.physicalHeat, RadialHeatProfile.spatialProfile,
-    AxisymmetricFields.profilePoint]
-  rw [rescale_radialEnergy, rescale_time]
-  have hr : 2*(1-(1-(1-w.1)/a)) / (AxisymmetricFields.radialEnergy w.2/a) =
-      2*(1-w.1) / AxisymmetricFields.radialEnergy w.2 := by field_simp; ring
-  rw [hr, Real.div_rpow hs.le ha.le]
-  rw [show 2*(AxisymmetricFields.radialEnergy w.2/a) =
-      (2*AxisymmetricFields.radialEnergy w.2)/a by ring,
-    Real.sqrt_div (by positivity : 0 ≤ 2*AxisymmetricFields.radialEnergy w.2)]
-  have hp : a ^ RadialHeatProfile.spatialExponent (1+h) ≠ 0 :=
-    (Real.rpow_pos_of_pos ha _).ne'
-  have hroot : Real.sqrt a ≠ 0 := (Real.sqrt_pos.mpr ha).ne'
-  field_simp
 
-theorem heatVelocity_rescale (C h a : ℝ) (ha : 0 < a) (z : ℝ) {w : SpaceTime}
-    (hs : 0 < AxisymmetricFields.radialEnergy w.2) :
-    BaseExterior.heatVelocity C h w =
-      a ^ RadialHeatProfile.spatialExponent (1+h) •
-        BaseExterior.heatVelocity C h (rescale a ha z w) := by
-  rw [BaseExterior.heatVelocity_eq_angularVector,
-    BaseExterior.heatVelocity_eq_angularVector, rescale_angularVector,
-    smul_smul, smul_smul, heatCoefficient_rescale C h a ha z hs]
 
 theorem heatPressure_rescale (C h a : ℝ) (ha : 0 < a) (z : ℝ) {w : SpaceTime}
     (hs : 0 < AxisymmetricFields.radialEnergy w.2) :

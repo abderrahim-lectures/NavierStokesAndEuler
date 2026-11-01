@@ -529,15 +529,7 @@ theorem exists_positive_reference_charts {h a b : ℝ} (hh : 0 < h) (hh1 : h < 1
 
 /-! ## Compact bounds use the genuine extension, with physical jet equality -/
 
-theorem stableQ_eventuallyEq_chartQ {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {p : Slow} (hp : 0 < p.2.2) : stableQ h =ᶠ[𝓝 p] SimilarityHomogeneity.chartQ h := by
-  filter_upwards [positiveTime_open.mem_nhds hp] with q hq
-  exact stableQ_eq_chartQ hh hh1 hq
 
-theorem stableInner_eventuallyEq_chartInner {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {p : Slow} (hp : 0 < p.2.2) : stableInner h =ᶠ[𝓝 p] SimilarityHomogeneity.chartInner h := by
-  filter_upwards [positiveTime_open.mem_nhds hp] with q hq
-  exact stableInner_eq_chartInner hh hh1 hq
 
 theorem iteratedFDeriv_eq_of_eventuallyEq {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {f g : Slow → E} {p : Slow} (he : f =ᶠ[𝓝 p] g) (n : ℕ) :
@@ -571,12 +563,6 @@ theorem stablePullback_smoothAt {h : ℝ} (hh : 0 ≤ h) (hh1 : h ≤ 1 / 2)
   ((stableQ_smoothAt hh hh1 hp).rpow_const_of_ne (stableQ_spec hp).1.ne').mul
     (hf.comp p (stableInner_smoothAt hh hh1 hp))
 
-theorem stablePullback_eventuallyEq {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (exponent : ℝ) (f : (ℝ × ℝ) → ℝ) {p : Slow} (hp : 0 < p.2.2) :
-    stablePullback h exponent f =ᶠ[𝓝 p] physicalPullback h exponent f := by
-  filter_upwards [stableQ_eventuallyEq_chartQ hh hh1 hp,
-    stableInner_eventuallyEq_chartInner hh hh1 hp] with q hq hi
-  exact congrArg₂ (fun r x => r ^ exponent * f x) hq hi
 
 
 /-! ## Compact reference data are transferred only at positive time -/

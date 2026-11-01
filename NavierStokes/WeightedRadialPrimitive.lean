@@ -292,87 +292,10 @@ theorem right_primitive_uniform
   simpa only [intervalIntegral.integral_comp_sub_left, sub_sub_cancel, sub_zero,
     weight_reflect] using h
 
-/-- Uniform total and partial mass bounds on the finite shell. Endpoint values
-of the source are immaterial to this Lebesgue-integral statement. -/
-theorem interval_primitive_uniform
-    {cL cR L : ℝ} (hcL : 0 < cL) (hcR : 0 < cR) (hL : 0 < L) (m : ℕ) :
-    ∃ D : ℝ, 0 ≤ D ∧ ∀ (f : ℝ → V) (A : ℝ), 0 ≤ A →
-      (∀ s ∈ Ioo (0 : ℝ) L, ‖f s‖ ≤ A * weight cL cR L m s) →
-      ∀ a b : ℝ, 0 ≤ a → a ≤ b → b ≤ L →
-        ‖intervalIntegral f a b volume‖ ≤ D * A := by
-  obtain ⟨D, hD, hb⟩ := weight_uniform_bound hcL hcR L m
-  refine ⟨D * L, mul_nonneg hD hL.le, ?_⟩
-  intro f A hA hf a b ha hab hbL
-  have hbound : ∀ s ∈ Ioo a b, ‖f s‖ ≤ A * D := by
-    intro s hs
-    have hsi : s ∈ Ioo 0 L := ⟨lt_of_le_of_lt ha hs.1, lt_of_lt_of_le hs.2 hbL⟩
-    exact (hf s hsi).trans (mul_le_mul_of_nonneg_left (hb s hsi) hA)
-  rw [intervalIntegral.integral_of_le hab, integral_Ioc_eq_integral_Ioo]
-  have hi := norm_setIntegral_le_of_norm_le_const
-    (by simp only [Real.volume_Ioo, ENNReal.ofReal_lt_top] : volume (Ioo a b) < ⊤) hbound
-  rw [Real.volume_real_Ioo_of_le hab] at hi
-  calc
-    _ ≤ (A * D) * (b - a) := hi
-    _ ≤ (A * D) * L := mul_le_mul_of_nonneg_left (by linarith) (mul_nonneg hA hD)
-    _ = (D * L) * A := by ring
 
 def compactPrimitive (χ : ℝ → ℝ) (f : ℝ → V) (L x : ℝ) : V :=
   intervalIntegral f 0 x volume - χ x • intervalIntegral f 0 L volume
 
-/-- The actual compactified primitive preserves the same two-edge weighted
-envelope. The cutoff is only required to have two plateaus and remain bounded;
-no monotonicity of the weight or inverse estimate is assumed. -/
-theorem compact_primitive_uniform
-    {cL cR L ρ : ℝ} (hcL : 0 < cL) (hcR : 0 < cR) (hL : 0 < L)
-    (hρ : 0 < ρ) (hρL : ρ ≤ L / 2) (m : ℕ) (χ : ℝ → ℝ)
-    (hχ : ∀ x, |χ x| ≤ 1)
-    (hleft : ∀ x, x ≤ ρ → χ x = 0)
-    (hright : ∀ x, L - ρ ≤ x → χ x = 1) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (f : ℝ → V), Continuous f → ∀ A : ℝ, 0 ≤ A →
-      (∀ s ∈ Ioo (0 : ℝ) L, ‖f s‖ ≤ A * weight cL cR L m s) →
-      ∀ x ∈ Ioo (0 : ℝ) L,
-        ‖compactPrimitive χ f L x‖ ≤ K * A * weight cL cR L m x := by
-  obtain ⟨KL, hKL, hbL⟩ := left_primitive_uniform (V := V) hcL hcR hL m
-  obtain ⟨KR, hKR, hbR⟩ := right_primitive_uniform (V := V) hcL hcR hL m
-  obtain ⟨D, hD, hbD⟩ := interval_primitive_uniform (V := V) hcL hcR hL m
-  obtain ⟨d, hd, hbd⟩ := middle_weight_lower_bound (L := L) hcL hcR hρ
-  let KM : ℝ := 2 * D / d
-  have hKM : 0 ≤ KM := div_nonneg (by positivity) hd.le
-  let K : ℝ := KL + KR + KM
-  have hKKL : KL ≤ K := by dsimp [K]; linarith
-  have hKKR : KR ≤ K := by dsimp [K]; linarith
-  have hKKM : KM ≤ K := by dsimp [K]; linarith
-  refine ⟨K, le_trans hKL hKKL, ?_⟩
-  intro f hfc A hA hf x hx
-  have hw := (weight_pos cL cR m hx).le
-  by_cases hl : x ≤ ρ
-  · simp only [compactPrimitive, hleft x hl, zero_smul, sub_zero]
-    exact (hbL f A hA hf x hx.1 (hl.trans hρL)).trans
-      (mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_right hKKL hA) hw)
-  · by_cases hr : L - ρ ≤ x
-    · have heq : compactPrimitive χ f L x = -intervalIntegral f x L volume := by
-        simp only [compactPrimitive, hright x hr, one_smul]
-        rw [intervalIntegral.integral_interval_sub_left (hfc.intervalIntegrable 0 x)
-          (hfc.intervalIntegrable 0 L), intervalIntegral.integral_symm]
-      rw [heq, norm_neg]
-      exact (hbR f A hA hf x (by linarith) hx.2).trans
-        (mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_right hKKR hA) hw)
-    · have hxd : d ≤ weight cL cR L m x := hbd m x ⟨le_of_not_ge hl, le_of_not_ge hr⟩
-      have hp := hbD f A hA hf 0 x le_rfl hx.1.le hx.2.le
-      have ht := hbD f A hA hf 0 L le_rfl hL.le le_rfl
-      have hn : ‖compactPrimitive χ f L x‖ ≤ 2 * D * A := by
-        calc
-          _ ≤ ‖intervalIntegral f 0 x volume‖ + ‖χ x • intervalIntegral f 0 L volume‖ := norm_sub_le _ _
-          _ ≤ D * A + 1 * (D * A) := by
-            rw [norm_smul, Real.norm_eq_abs]
-            exact add_le_add hp (mul_le_mul (hχ x) ht (norm_nonneg _) zero_le_one)
-          _ = 2 * D * A := by ring
-      have hm : 2 * D * A ≤ KM * A * weight cL cR L m x := by
-        calc
-          _ = KM * A * d := by dsimp [KM]; field_simp
-          _ ≤ KM * A * weight cL cR L m x := mul_le_mul_of_nonneg_left hxd (mul_nonneg hKM hA)
-      exact (hn.trans hm).trans
-        (mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_right hKKM hA) hw)
 
 end Integrals
 
@@ -391,13 +314,6 @@ theorem logPosition_mem {a b X : ℝ} (ha : 0 < a) (hX : X ∈ Ioo a b) :
   exact ⟨Real.log_pos ((one_lt_div ha).mpr hX.1),
     Real.log_lt_log (div_pos (lt_trans ha hX.1) ha) (div_lt_div_of_pos_right hX.2 ha)⟩
 
-theorem log_remaining {a b X : ℝ} (ha : 0 < a) (hX : X ∈ Ioo a b) :
-    logLength a b - logPosition a X = Real.log (b / X) := by
-  have hx := lt_trans ha hX.1
-  have hb := lt_trans hx hX.2
-  simp only [logLength, logPosition, Real.log_div hb.ne' ha.ne', Real.log_div hx.ne' ha.ne',
-    Real.log_div hb.ne' hx.ne']
-  ring
 
 
 def expCoordinate (a s : ℝ) : ℝ := a * Real.exp s
@@ -522,33 +438,6 @@ theorem log_interval_primitive_uniform
 def logCompactPrimitive (χ : ℝ → ℝ) (f : ℝ → V) (a b X : ℝ) : V :=
   intervalIntegral f a X volume - χ (logPosition a X) • intervalIntegral f a b volume
 
-/-- The compactified primitive preserves the explicit logarithmic two-edge
-weight uniformly on the whole positive annulus. -/
-theorem log_compact_primitive_uniform
-    {a b cL cR ρ : ℝ} (ha : 0 < a) (hab : a < b) (hcL : 0 < cL) (hcR : 0 < cR)
-    (hρ : 0 < ρ) (hρL : ρ ≤ logLength a b / 2) (m : ℕ) (χ : ℝ → ℝ)
-    (hχ : ∀ x, |χ x| ≤ 1)
-    (hleft : ∀ x, x ≤ ρ → χ x = 0)
-    (hright : ∀ x, logLength a b - ρ ≤ x → χ x = 1) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (f : ℝ → V), Continuous f → ∀ A : ℝ, 0 ≤ A →
-      (∀ X ∈ Ioo a b, ‖f X‖ ≤ A * logWeight cL cR a b m X) →
-      ∀ X ∈ Ioo a b,
-        ‖logCompactPrimitive χ f a b X‖ ≤ K * A * logWeight cL cR a b m X := by
-  obtain ⟨K, hK, hbound⟩ := compact_primitive_uniform (V := V) hcL hcR (logLength_pos ha hab)
-    hρ hρL m χ hχ hleft hright
-  refine ⟨K * b, mul_nonneg hK (lt_trans ha hab).le, ?_⟩
-  intro f hfc A hA hf X hX
-  have hgp : Continuous (expPullback a f) :=
-    (continuous_const.mul Real.continuous_exp).smul
-      (hfc.comp (continuous_const.mul Real.continuous_exp))
-  have h := hbound (expPullback a f) hgp (b * A) (mul_nonneg (lt_trans ha hab).le hA)
-    (expPullback_bound ha hab m f hA hf) (logPosition a X) (logPosition_mem ha hX)
-  have htop : expCoordinate a (logLength a b) = b := expCoordinate_logPosition ha (lt_trans ha hab)
-  unfold compactPrimitive at h
-  rw [expPullback_integral a f hfc, expPullback_integral a f hfc,
-    expCoordinate_logPosition ha (lt_trans ha hX.1), htop] at h
-  simpa only [logCompactPrimitive, logWeight, expCoordinate, Real.exp_zero, mul_one,
-    mul_assoc] using h
 
 end LogIntegrals
 
@@ -593,25 +482,6 @@ theorem exists_log_plateau_width
       _ ≤ expCoordinate a s :=
         mul_le_mul_of_nonneg_left (Real.exp_le_exp.mpr (by linarith)) ha.le
 
-/-- The cutoff can be specified directly in the physical radial coordinate.
-No logarithmic cutoff regularity or assumed inverse bound is required. -/
-theorem radial_compact_primitive_uniform
-    {a b c d cL cR : ℝ} (ha : 0 < a) (hac : a < c) (hcd : c < d) (hdb : d < b)
-    (hcL : 0 < cL) (hcR : 0 < cR) (m : ℕ) (χ : ℝ → ℝ)
-    (hχ : ∀ X, |χ X| ≤ 1)
-    (hleft : ∀ X, X ≤ c → χ X = 0) (hright : ∀ X, d ≤ X → χ X = 1) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (f : ℝ → V), Continuous f → ∀ A : ℝ, 0 ≤ A →
-      (∀ X ∈ Ioo a b, ‖f X‖ ≤ A * logWeight cL cR a b m X) →
-      ∀ X ∈ Ioo a b,
-        ‖radialCompactPrimitive χ f a b X‖ ≤ K * A * logWeight cL cR a b m X := by
-  obtain ⟨ρ, hρ, hρL, hl, hr⟩ := exists_log_plateau_width ha hac hcd hdb χ hleft hright
-  obtain ⟨K, hK, hbound⟩ := log_compact_primitive_uniform (V := V) ha (hac.trans (hcd.trans hdb))
-    hcL hcR hρ hρL m (fun s => χ (expCoordinate a s)) (fun s => hχ _) hl hr
-  refine ⟨K, hK, ?_⟩
-  intro f hfc A hA hf X hX
-  have h := hbound f hfc A hA hf X hX
-  simpa only [logCompactPrimitive, radialCompactPrimitive,
-    expCoordinate_logPosition ha (ha.trans hX.1)] using h
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -625,25 +495,6 @@ theorem radialSlice_continuous {f : ℝ × E → V} (hf : Continuous f)
   exact hf.comp (continuous_id.prodMk
     (continuous_const.add ((continuous_const.mul (continuous_id.sub continuous_const)).smul continuous_const)))
 
-/-- Auxiliary translation does not change a radial bound that is uniform in
-the auxiliary variable. Constants are independent of M, v, and the base point. -/
-theorem shifted_radial_compact_primitive_uniform
-    {a b c d cL cR : ℝ} (ha : 0 < a) (hac : a < c) (hcd : c < d) (hdb : d < b)
-    (hcL : 0 < cL) (hcR : 0 < cR) (m : ℕ) (χ : ℝ → ℝ)
-    (hχ : ∀ X, |χ X| ≤ 1)
-    (hleft : ∀ X, X ≤ c → χ X = 0) (hright : ∀ X, d ≤ X → χ X = 1) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (M : ℝ) (v : E) (f : ℝ × E → V), Continuous f →
-      ∀ A : ℝ, 0 ≤ A →
-      (∀ X ∈ Ioo a b, ∀ Y : E, ‖f (X, Y)‖ ≤ A * logWeight cL cR a b m X) →
-      ∀ z : ℝ × E, z.1 ∈ Ioo a b →
-        ‖radialCompactPrimitive χ (radialSlice M v f z) a b z.1‖ ≤
-          K * A * logWeight cL cR a b m z.1 := by
-  obtain ⟨K, hK, hbound⟩ := radial_compact_primitive_uniform (V := V)
-    ha hac hcd hdb hcL hcR m χ hχ hleft hright
-  refine ⟨K, hK, ?_⟩
-  intro M v f hfc A hA hf z hz
-  exact hbound (radialSlice M v f z) (radialSlice_continuous hfc M v z) A hA
-    (fun X hX => hf X hX _) z.1 hz
 
 end PhysicalIntegrals
 
@@ -654,35 +505,7 @@ section Transport
 variable {E V : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup V] [NormedSpace ℝ V]
 
-theorem compactIntegral_eq_radialCompactPrimitive
-    {a b M : ℝ} {v : E} {f : ℝ × E → V} (χ : ℝ → ℝ)
-    (hf : Continuous f) (hs : RadialAlias.RadiallySupported a b f) (z : ℝ × E) :
-    TransportPrimitive.compactIntegral χ M v f z =
-      radialCompactPrimitive χ (radialSlice M v f z) a b z.1 := by
-  rw [TransportPrimitive.compactIntegral,
-    TransportPrimitive.pastIntegral_eq_radialInterval hf hs,
-    TransportPrimitive.totalIntegral_eq_radialInterval hf hs]
-  rfl
 
-/-- A uniform weighted inverse bound for the manuscript's actual shifted,
-compactified transport primitive. All shifts are quantified after the constant. -/
-theorem transport_compact_primitive_uniform
-    {a b c d cL cR : ℝ} (ha : 0 < a) (hac : a < c) (hcd : c < d) (hdb : d < b)
-    (hcL : 0 < cL) (hcR : 0 < cR) (m : ℕ) (χ : ℝ → ℝ)
-    (hχ : ∀ X, |χ X| ≤ 1)
-    (hleft : ∀ X, X ≤ c → χ X = 0) (hright : ∀ X, d ≤ X → χ X = 1) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ (M : ℝ) (v : E) (f : ℝ × E → V), Continuous f →
-      RadialAlias.RadiallySupported a b f → ∀ A : ℝ, 0 ≤ A →
-      (∀ X ∈ Ioo a b, ∀ Y : E, ‖f (X, Y)‖ ≤ A * logWeight cL cR a b m X) →
-      ∀ z : ℝ × E, z.1 ∈ Ioo a b →
-        ‖TransportPrimitive.compactIntegral χ M v f z‖ ≤
-          K * A * logWeight cL cR a b m z.1 := by
-  obtain ⟨K, hK, hbound⟩ := shifted_radial_compact_primitive_uniform (E := E) (V := V)
-    ha hac hcd hdb hcL hcR m χ hχ hleft hright
-  refine ⟨K, hK, ?_⟩
-  intro M v f hf hs A hA hb z hz
-  rw [compactIntegral_eq_radialCompactPrimitive χ hf hs]
-  exact hbound M v f hf A hA hb z hz
 
 
 /-- The uncorrected past primitive obeys the left weighted estimate uniformly
@@ -1011,45 +834,6 @@ theorem logStrip_majorant_eq
 
 variable {V : Type} [NormedAddCommGroup V] [NormedSpace ℝ V] [CompleteSpace V]
 
-/-- The concrete compactified shifted inverse preserves the all-jet mean
-class `M_α` on the explicit logarithmic annulus. Both radial support and global
-smoothness of the input are named hypotheses; neither the inverse estimate nor
-smoothness of the output is assumed. The bandwise shifts may be arbitrary. -/
-theorem meanClass_canonical_transport
-    {a b cL cR : ℝ} (ha : 0 < a) (hab : a < b) (hcL : 0 < cL) (hcR : 0 < cR)
-    (ε S : ℕ → ℝ) (hε : ∀ n, 0 < ε n) (hεone : ∀ n, ε n ≤ 1) (hS : ∀ n, 1 ≤ S n)
-    (α : ℝ) (M : ℕ → ℝ) (v : ℕ → E) (f : ℕ → ℝ × E → V)
-    (hf : ∀ n, ContDiff ℝ ∞ (f n)) (hs : ∀ n, RadialAlias.RadiallySupported a b (f n))
-    (hclass : WeightedClasses.MeanClass
-      (logStripData a b cL cR ha hcL hcR ε S hε hεone hS) α f) :
-    WeightedClasses.MeanClass (logStripData a b cL cR ha hcL hcR ε S hε hεone hS) α
-      (fun n => TransportPrimitive.compactIntegral (TransportPrimitive.interiorCutoff a b)
-        (M n) (v n) (f n)) := by
-  refine ⟨hclass.weight_nonneg, ?_, ?_⟩
-  · intro n
-    exact (TransportPrimitive.compactIntegral_contDiff
-      (TransportPrimitive.interiorCutoff_contDiff a b) (hf n) (hs n)).contDiffOn
-  · intro m
-    obtain ⟨C, hC, p, hsource⟩ := hclass.bounds m
-    obtain ⟨K, hK, hbound⟩ := canonical_transport_finiteJets_uniform (E := E) (V := V)
-      ha hab hcL hcR p m
-    refine ⟨K * C, mul_nonneg hK hC, p, ?_⟩
-    intro n z hz j hj
-    change z.1 ∈ Ioo a b at hz
-    have hA : 0 ≤ C * (ε n) ^ α * (S n) ^ p :=
-      mul_nonneg (mul_nonneg hC (Real.rpow_pos_of_pos (hε n) α).le)
-        (pow_nonneg (zero_le_one.trans (hS n)) p)
-    have hinput : ∀ i : ℕ, i ≤ m → ∀ X ∈ Ioo a b, ∀ Y : E,
-        ‖iteratedFDeriv ℝ i (f n) (X, Y)‖ ≤
-          (C * (ε n) ^ α * (S n) ^ p) * logWeight cL cR a b p X := by
-      intro i hi X hX Y
-      have hpnt := hsource n (X, Y) hX i hi
-      rw [logStrip_majorant_eq ha hcL hcR ε S hε hεone hS α C p n (X, Y) hX] at hpnt
-      exact hpnt
-    have hout := hbound (M n) (v n) (f n) (hf n) (hs n)
-      (C * (ε n) ^ α * (S n) ^ p) hA hinput z hz j hj
-    rw [logStrip_majorant_eq ha hcL hcR ε S hε hεone hS α (K * C) p n z hz]
-    simpa only [mul_assoc] using hout
 
 
 end LogStrip

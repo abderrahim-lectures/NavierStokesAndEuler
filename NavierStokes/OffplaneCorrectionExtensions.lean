@@ -70,35 +70,7 @@ structure Window (coord a b : ℝ) where
   left : ∀ s ∈ carrier, lower ≤ stableLength coord s * a
   right : ∀ s ∈ carrier, stableLength coord s * b ≤ upper
 
-theorem exists_window_at {coord a b : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (ha : 0 < a) (hab : a < b) {s₀ : Slow}
-    (hs : s₀ ∈ PositiveRepresentatives.stableTarget coord) :
-    ∃ W : Window coord a b, s₀ ∈ W.carrier := by
-  let L := stableLength coord s₀
-  have hL : 0 < L := stableLength_pos hs
-  have hl := (stableLength_contDiffAt hc hc1 hs).continuousAt
-  have hnear : ∀ᶠ s in 𝓝 s₀,
-      s ∈ PositiveRepresentatives.stableTarget coord ∧
-      L / 2 < stableLength coord s ∧ stableLength coord s < 2 * L := by
-    filter_upwards [(PositiveRepresentatives.stableTarget_open coord).mem_nhds hs,
-      hl (lt_mem_nhds (half_lt_self hL)), hl (gt_mem_nhds (show L < 2 * L by linarith))]
-      with s hst hlo hhi
-    exact ⟨hst, hlo, hhi⟩
-  obtain ⟨U, hUsub, hU, hzU⟩ := mem_nhds_iff.mp hnear
-  refine ⟨⟨U, hU, fun s hs => (hUsub hs).1, L / 2 * a, 2 * L * b,
-    mul_pos (half_pos hL) ha, ?_, ?_, ?_⟩, hzU⟩
-  · have hprod := mul_lt_mul_of_pos_left hab hL
-    have hprodpos := mul_pos hL ha
-    nlinarith
-  · intro s hsU
-    exact mul_le_mul_of_nonneg_right (hUsub hsU).2.1.le ha.le
-  · intro s hsU
-    exact mul_le_mul_of_nonneg_right (hUsub hsU).2.2.le (ha.trans hab).le
 
-theorem exists_endpoint_window {coord a b Z : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (ha : 0 < a) (hab : a < b) (hZ : Z ≠ 0) :
-    ∃ W : Window coord a b, (0, Z) ∈ W.carrier :=
-  exists_window_at hc hc1 ha hab (EndpointCoordinates.zeroTime_mem_stableTarget hc hc1 hZ)
 
 namespace Window
 
@@ -192,11 +164,6 @@ def ModelPeriodic (F : Model → ℝ) : Prop :=
   ∀ y : MeanRankUpdate.ModelPoint, 0 < y.1 →
     FourierAlias.TorusPeriodic (fun Y => F (y, Y))
 
-theorem continuedSource_periodic {coord : ℝ} {F : Model → ℝ} (hF : ModelPeriodic F)
-    {U : Set Slow} (hU : U ⊆ PositiveRepresentatives.stableTarget coord) :
-    PhysicalMeanDomain.PeriodicOn U (continuedSource coord F) := by
-  intro r s hs
-  exact hF (stableQ coord s, (r, s.2)) (stableQ_pos (hU hs))
 
 theorem continuedSource_supported {coord a b : ℝ} {F : Model → ℝ}
     (hF : ModelSupported a b F) {U : Set Slow}
@@ -437,14 +404,6 @@ noncomputable def finiteSum {ι : Type*} (s : Finset ι) (f : ι → Lift → �
 
 
 
-theorem support_on_past {f : Lift → ℝ} (e : SupportedContinuation W f)
-    (hc : 0 < coord) (hc1 : coord < 1) {p : Lift}
-    (hp : p.2.1 ∈ W.carrier) (ht : 0 < p.2.1.1) (hn : f p ≠ 0) :
-    p.1 ∈ Icc (VariableGaugeMean.qLength coord p.2.1 * a)
-      (VariableGaugeMean.qLength coord p.2.1 * b) := by
-  have he := e.agrees ⟨hp, ht⟩
-  have hs := e.supported p hp (fun hzero => hn (he.symm.trans hzero))
-  simpa only [stableLength_eq_qLength hc hc1 ht] using hs
 
 end SupportedContinuation
 
@@ -486,15 +445,7 @@ noncomputable def physicalReferenceSolve (coord : ℝ)
     (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) : Lift → E :=
   fun p => (pullLinearData (physicalParameter coord) d).commonSolve g hab κ ((p.1, p.2.1), p.2.2)
 
-theorem continuedReferenceSolve_eq (coord : ℝ)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) :
-    continuedReferenceSolve coord d g hab κ = d.commonSolve g hab κ ∘ stableModel coord := rfl
 
-theorem physicalReferenceSolve_eq (coord : ℝ)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) :
-    physicalReferenceSolve coord d g hab κ = d.commonSolve g hab κ ∘ physicalModel coord := rfl
 
 
 
@@ -780,69 +731,10 @@ noncomputable def angularExtension (e : SupportedContinuation W f) (h : ℝ) (n 
 
 end SupportedContinuation
 
-/-- The scalar pressure and the actual azimuthal mean potential (and hence
-its Cartesian curl) have ambient endpoint extensions from primitive model
-smoothness and support.  No extension of a solved field is an input. -/
-theorem mean_model_extensions {h a b d : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (ha : 0 < a) (hab : a < b) (hd : 0 < d) (M : ℝ) (v : Slow) (n : ℕ)
-    (F : Model → ℝ) (hF : ContDiffOn ℝ ∞ F modelDomain) (hs : ModelSupported a b F)
-    {x : Space} (hx : x 2 ≠ 0) :
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (physicalScalar h n (VariableGaugeMean.meanPressure d a b M hab
-        (VariableGaugeMean.qLength (2 * h)) v (physicalSource (2 * h) F))) x) ∧
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (azimuthalPotential h n (VariableGaugeMean.streamPotential d a b M
-        (VariableGaugeMean.qLength (2 * h)) v (physicalSource (2 * h) F))) x) ∧
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (SpatialCurl.spatialCurl (azimuthalPotential h n (VariableGaugeMean.streamPotential d a b M
-        (VariableGaugeMean.qLength (2 * h)) v (physicalSource (2 * h) F)))) x) := by
-  have hc : 0 < 2 * h := by linarith
-  have hc1 : 2 * h < 1 := by linarith
-  obtain ⟨W, hw⟩ := exists_endpoint_window hc hc1 ha hab hx
-  let e : SupportedContinuation W (physicalSource (2 * h) F) :=
-    SupportedContinuation.ofModel hc hc1 F hF hs
-  let ep := (e.pressure hc hc1 ha hab hd M v).physicalExtension h n hw
-  let eA := (e.stream hc hc1 ha hab hd M v).azimuthalExtension h n hw
-  exact ⟨⟨ep⟩, ⟨eA⟩, ⟨AnnularEndpoint.curlExtension eA⟩⟩
 
 
-theorem mean_models_supported {coord a b d : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (ha : 0 < a) (hab : a < b) (hd : 0 < d) (M : ℝ) (v : Slow)
-    (F : Model → ℝ) (hF : ContDiffOn ℝ ∞ F modelDomain) (hs : ModelSupported a b F) :
-    VariableGaugeMean.SupportedGauge a b (VariableGaugeMean.qLength coord) positiveSlow
-      (VariableGaugeMean.meanPressure d a b M hab (VariableGaugeMean.qLength coord) v (physicalSource coord F)) ∧
-    VariableGaugeMean.SupportedGauge a b (VariableGaugeMean.qLength coord) positiveSlow
-      (VariableGaugeMean.streamPotential d a b M (VariableGaugeMean.qLength coord) v (physicalSource coord F)) := by
-  constructor
-  · intro p hp hn
-    obtain ⟨W, hw⟩ := exists_window_at hc hc1 ha hab
-      (PositiveRepresentatives.positiveTime_mem_stableTarget hc hc1 hp)
-    let e : SupportedContinuation W (physicalSource coord F) := SupportedContinuation.ofModel hc hc1 F hF hs
-    exact (e.pressure hc hc1 ha hab hd M v).support_on_past hc hc1 hw hp hn
-  · intro p hp hn
-    obtain ⟨W, hw⟩ := exists_window_at hc hc1 ha hab
-      (PositiveRepresentatives.positiveTime_mem_stableTarget hc hc1 hp)
-    let e : SupportedContinuation W (physicalSource coord F) := SupportedContinuation.ofModel hc hc1 F hF hs
-    exact (e.stream hc hc1 ha hab hd M v).support_on_past hc hc1 hw hp hn
 
-theorem physicalScalar_shrinkingSupport (h : ℝ) (n : ℕ) {a b : ℝ} {f : Lift → ℝ}
-    (hf : VariableGaugeMean.SupportedGauge a b (VariableGaugeMean.qLength (2 * h)) positiveSlow f) :
-    AnnularEndpoint.ShrinkingSupport h b (physicalScalar h n f) := by
-  intro w ht hn
-  have hs := (hf (physicalLift h n w) (show 0 < 1 - w.1 from sub_pos.mpr ht) hn).2
-  change AnnularEndpoint.radius w ≤
-    Real.sqrt (SimilarityCoordinates.coordinateQ (2 * h) (1 - w.1, w.2 2)) * b at hs
-  change AnnularEndpoint.radius w ≤
-    b * Real.sqrt (SimilarityCoordinates.coordinateQ (2 * h) (1 - w.1, w.2 2))
-  simpa only [mul_comm] using hs
 
-theorem azimuthalPotential_shrinkingSupport (h : ℝ) (n : ℕ) {a b : ℝ} {f : Lift → ℝ}
-    (hf : VariableGaugeMean.SupportedGauge a b (VariableGaugeMean.qLength (2 * h)) positiveSlow f) :
-    AnnularEndpoint.ShrinkingSupport h b (azimuthalPotential h n f) := by
-  intro w ht hn
-  apply physicalScalar_shrinkingSupport h n hf w ht
-  intro hz
-  exact hn (by simp only [azimuthalPotential, hz, mul_zero, zero_smul, add_zero])
 
 end PhysicalFields
 
@@ -910,29 +802,6 @@ theorem diagonal_extension {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
 
 end DiagonalCutoffs
 
-/-- All stages of actual moving mean reconstruction can be summed with the
-chosen cutoff schedule at a nonzero-axial endpoint.  The model assumptions
-are on the primitive source of each stage. -/
-theorem mean_diagonal_extensions {h a b d : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (ha : 0 < a) (hab : a < b) (hd : 0 < d)
-    (M : ℕ → ℝ) (v : ℕ → Slow) (n : ℕ → ℕ)
-    (F : ℕ → Model → ℝ) (hF : ∀ j, ContDiffOn ℝ ∞ (F j) modelDomain)
-    (hs : ∀ j, ModelSupported a b (F j)) {scale : ℕ → ℝ} (hscale : Tendsto scale atTop atTop)
-    {x : Space} (hx : x 2 ≠ 0) :
-    let p := fun j => physicalScalar h (n j) (VariableGaugeMean.meanPressure d a b (M j) hab
-      (VariableGaugeMean.qLength (2 * h)) (v j) (physicalSource (2 * h) (F j)))
-    let A := fun j => azimuthalPotential h (n j) (VariableGaugeMean.streamPotential d a b (M j)
-      (VariableGaugeMean.qLength (2 * h)) (v j) (physicalSource (2 * h) (F j)))
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (SolenoidalDiagonal.potentialSum scale (PhysicalWaveSum.physicalQ h) p) x) ∧
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (SolenoidalDiagonal.potentialSum scale (PhysicalWaveSum.physicalQ h) A) x) ∧
-    Nonempty (JointResidualLimits.OneSidedExtension
-      (SolenoidalDiagonal.velocitySum scale (PhysicalWaveSum.physicalQ h) A) x) := by
-  have he := fun j => mean_model_extensions hh hh1 ha hab hd (M j) (v j) (n j) (F j) (hF j) (hs j) hx
-  obtain ⟨eA⟩ := diagonal_extension hh hh1 hscale hx (fun j => (he j).2.1)
-  exact ⟨diagonal_extension hh hh1 hscale hx (fun j => (he j).1), ⟨eA⟩,
-    ⟨AnnularEndpoint.curlExtension eA⟩⟩
 
 
 end NavierStokes.OffplaneCorrectionExtensions

@@ -179,16 +179,6 @@ theorem phase_periodic (K : ℝ) (x : Cylinder) (k : TorusInverse.Frequency) :
     (PeriodicPhaseAssembly.profileRate (C.angularMode / K) C.axialFrequency C.F C.G)
     (C.angularMode / K) (x.1.1, (x.1.2.1.2, x.1.2.1.1)) x.2 x.1.2.2 k
 
-theorem phase_native_germ (K : ℝ)
-    (hinj : InjOn TorusAverages.quotientPoint
-      ((fun z => C.geometry.center + C.geometry.basis z) '' C.window.outer))
-    (copy : TorusInverse.Frequency) {x : Cylinder}
-    (hx : C.geometry.coordinates copy x.1.2.2 ∈ C.window.core) :
-    C.phase K =ᶠ[𝓝 x] C.nativePhase K copy := by
-  have he := PeriodicPhaseAssembly.profilePhase_germ C.geometry C.window hinj C.epsilon
-    (C.angularMode / K) C.axialFrequency C.radialFrequency C.F C.G copy
-    (x := PhysicalParticularWave.waveEquiv x) hx
-  exact he.comp_tendsto PhysicalParticularWave.waveEquiv.continuous.continuousAt
 
 
 theorem phase_smooth (K : ℝ) (hF : ContDiff ℝ ∞ C.F) (hG : ContDiff ℝ ∞ C.G) :
@@ -630,14 +620,6 @@ noncomputable def viewPrimaryVector (s : StripData Cylinder) (velocity : ℕ →
     (B.matrix reference (view n x)) (B.viewTarget s velocity view reference n x) j •
       B.fundamental j reference (view n x)
 
-theorem view_primaryVector (s : StripData Cylinder) (velocity : ℕ → ℝ)
-    (view : ℕ → Cylinder → Cylinder) (reference : ℕ) (j : Fin 2) (n : ℕ) (x : Cylinder)
-    (hc : 0 < velocity n) :
-    B.viewPrimaryVector s velocity view reference j n x =
-      velocity n • B.primaryVector j reference (view n x) := by
-  unfold viewPrimaryVector viewTarget primaryVector
-  rw [primary_scalar_scale _ _ _ (s.epsilon_pos n) (B.strip.epsilon_pos reference) hc j,
-    smul_smul]
 
 noncomputable def viewPrimaryCoefficients (s : StripData Cylinder)
     (d : LinearWaveBounds.GraphDirections Cylinder)
@@ -1353,11 +1335,6 @@ theorem primaryCoefficients_eq_signed (j : Fin 2) :
     SignedWaveUpdate.coefficients
   rw [he]
 
-theorem primaryRequest_transport (n : ℕ) (x : Cylinder) :
-    V.primaryRequest n x = coefficientScale (V.strip.epsilon n) (B.strip.epsilon reference)
-      (V.velocity n) ^ 2 • B.primaryRequest reference (V.map n x) := by
-  simp only [primaryRequest, PrimaryData.primaryRequest, viewTarget]
-  exact smul_comm _ _ _
 
 noncomputable def primaryPhysicalPotential (delta : ℝ) (j : Fin 2) : VelocityField :=
   V.physicalPotential B.primaryRequest j delta

@@ -1326,32 +1326,7 @@ theorem transportTailField_eq (N : ℕ) (h e α : ℝ) (v u f : ℕ → Inner �
   funext z
   exact transportTail_eq_finite_monomials N (cartesianChart h z).1 h e α v u f (cartesianChart h z).2
 
-theorem transportTailField_smooth {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {O : Set Inner} (hO : IsOpen O) (N : ℕ) (e α : ℝ) (v u f : ℕ → Inner → ℝ)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (v j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (u j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0) :
-    ContDiffOn ℝ ∞ (transportTailField N h e α v u f) (chartedDomain h O) := by
-  rw [transportTailField_eq]
-  exact ContDiffOn.sum (fun i hi => monomial_smoothOn hh hh1 hO
-    (transportTerm_smoothOn hO N h e α v u f hv hu hf hX hL hi))
 
-theorem transportTailField_rate {l : Filter SpaceTime} {h lo hi : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) (A : PhysicalApproach l h lo hi)
-    {O : Set Inner} (hO : IsOpen O) (hKO : innerBox lo hi ⊆ O)
-    (N : ℕ) (e α : ℝ) (v u f : ℕ → Inner → ℝ)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (v j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (u j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0) (M : ℕ) :
-    FiniteJetRate l (fun z => (cartesianChart h z).1) (transportTailField N h e α v u f)
-      M (e - 1 + slowOrder h (N + 1) - M) := by
-  rw [transportTailField_eq]
-  exact finset_monomial_rate hh hh1 A hO hKO (transportIndices N)
-    (transportTerm N h e α v u f) (transportPower N h e) (e - 1 + slowOrder h (N + 1))
-    (fun _ hi => transportTerm_smoothOn hO N h e α v u f hv hu hf hX hL hi)
-    (fun _ hi => transportPower_lower hh.le N e hi) M
 
 end FiniteTailRates
 
@@ -1368,82 +1343,8 @@ theorem radialTailExpression_eq {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     radialTailExpression N h C f z = radialTailField N h C f z :=
   (radialTail_eq_finite_monomials hh hh1 N C f hz.1 hz.2).symm
 
-theorem radialTailExpression_smooth {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {O : Set Inner} (hO : IsOpen O) (N : ℕ) (C : ℝ) (f : SlowProfiles)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.flux j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.axial j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.phi j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0) :
-    ContDiffOn ℝ ∞ (radialTailExpression N h C f) (chartedDomain h O) := by
-  apply ContDiffOn.sum
-  intro i hi
-  apply monomial_smoothOn hh hh1 hO
-  exact (pressureTerm_smoothOn hO N h C f hv hu hf hX hL hi).div
-    (contDiffOn_const.mul contDiffOn_fst) (fun w hw => mul_ne_zero (by norm_num) (hX w hw))
 
-theorem radialTailExpression_rate {l : Filter SpaceTime} {h lo hi : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) (A : PhysicalApproach l h lo hi)
-    {O : Set Inner} (hO : IsOpen O) (hKO : innerBox lo hi ⊆ O)
-    (N : ℕ) (C : ℝ) (f : SlowProfiles)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.flux j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.axial j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.phi j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0) (M : ℕ) :
-    FiniteJetRate l (fun z => (cartesianChart h z).1) (radialTailExpression N h C f)
-      M (pressureExponent h - 1 + slowOrder h (N + 1) - M) := by
-  apply finset_monomial_rate hh hh1 A hO hKO (pressureIndices N)
-    (fun i w => pressureTerm N h C f i w / (2 * w.1)) (fun i => pressurePower N h i - 1)
-    (pressureExponent h - 1 + slowOrder h (N + 1))
-  · intro i hi
-    exact (pressureTerm_smoothOn hO N h C f hv hu hf hX hL hi).div
-      (contDiffOn_const.mul contDiffOn_fst) (fun w hw => mul_ne_zero (by norm_num) (hX w hw))
-  · intro i hi
-    have hp := pressurePower_lower hh.le N hi
-    linarith
 
-/-- The actual finite residual left by the recurrence has arbitrary
-increasing order as the truncation index increases. Its rate is derived
-from the explicit omitted monomials, not supplied as a hypothesis. -/
-theorem truncationResidual_rate {l : Filter SpaceTime} {h lo hi : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) (A : PhysicalApproach l h lo hi) (hlo : 0 < lo)
-    {O : Set Inner} (hO : IsOpen O) (hKO : innerBox lo hi ⊆ O)
-    (N : ℕ) (C : ℝ) (f : SlowProfiles)
-    (hv : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.flux j) O)
-    (hu : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.axial j) O)
-    (hf : ∀ j ≤ N, ContDiffOn ℝ ∞ (f.phi j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0) (M : ℕ) :
-    FiniteJetRate l (fun z => (cartesianChart h z).1)
-      (fun z => truncationResidual N h C f z.1 z.2) M (2 * (N : ℝ) * h - 2 - M) := by
-  let R := radialTailExpression N h C f
-  let F := transportTailField N h (angularExponent h) 1 f.flux f.axial f.phi
-  let Z := transportTailField N h (axialExponent h) 0 f.flux f.axial f.axial
-  have hW := chartedDomain_isOpen hh hh1 hO
-  have hlW := A.in_chartedDomain hh hh1 hKO
-  have hq := A.positive_small hh hh1
-  have hRs : ContDiffOn ℝ ∞ R (chartedDomain h O) :=
-    radialTailExpression_smooth hh hh1 hO N C f hv hu hf hX hL
-  have hFs : ContDiffOn ℝ ∞ F (chartedDomain h O) :=
-    transportTailField_smooth hh hh1 hO N _ _ _ _ _ hv hu hf hX hL
-  have hZs : ContDiffOn ℝ ∞ Z (chartedDomain h O) :=
-    transportTailField_smooth hh hh1 hO N _ _ _ _ _ hv hu hu hX hL
-  have hR := radialTailExpression_rate hh hh1 A hO hKO N C f hv hu hf hX hL M
-  have hF := transportTailField_rate hh hh1 A hO hKO N (angularExponent h) 1
-    f.flux f.axial f.phi hv hu hf hX hL M
-  have hZ := transportTailField_rate hh hh1 A hO hKO N (axialExponent h) 0
-    f.flux f.axial f.axial hv hu hu hX hL M
-  obtain ⟨he, heF, heZ⟩ := common_tail_power_lower hh.le N
-  have hF' := finiteRate_weaken hF hq (sub_le_sub_right heF (M : ℝ))
-  have hZ' := finiteRate_weaken hZ hq (sub_le_sub_right heZ (M : ℝ))
-  have hFC := scalarConst_rate hF' hW hlW hFs C⁻¹
-  have hr := assembleComponents_rate hW hlW A.compact A.in_carrier
-    (hq.mono (fun _ hz => hz.1)) hRs (contDiffOn_const.mul hFs) hZs hR hFC hZ'
-  rw [he] at hr
-  apply finiteRate_congr_on hr annularPast_isOpen (A.in_annularPast hh hh1 hlo)
-  intro z hz
-  rw [assembleComponents_eq_pack]
-  dsimp only [R]
-  rw [radialTailExpression_eq hh hh1 N C f hz]
-  rfl
 
 end TruncationRate
 
@@ -1483,99 +1384,6 @@ def FiniteIdentities (h C : ℝ) (d : Coefficients) (f : SlowProfiles) : Prop :=
     navierStokesResidual (prefixVelocity J h C d) (prefixPressure J h C d) z.1 z.2 =
       prefixStressForce J h C d z + truncationResidual J h C f z.1 z.2
 
-/-- The nonlinear residual estimate for the concrete asymptotic sum. Every
-rate used in its proof is derived above from smooth coefficients, the chosen
-scales, and the explicit finite identities. -/
-theorem baseResidual_jetRate {l : Filter SpaceTime} {a : ℕ → ℕ} {h C lo hi : ℝ}
-    (hh : 0 < h) (hh1 : h < 1 / 2) (A : PhysicalApproach l h lo hi) (hlo : 0 < lo)
-    {d : Coefficients} (hd : SmoothCoefficients d)
-    (ha : AdmissibleScales h (coefficientBundle C d) (innerBox lo hi) a)
-    (f : SlowProfiles) {O : Set Inner} (hO : IsOpen O) (hKO : innerBox lo hi ⊆ O)
-    (hv : ∀ j, ContDiffOn ℝ ∞ (f.flux j) O)
-    (hu : ∀ j, ContDiffOn ℝ ∞ (f.axial j) O)
-    (hf : ∀ j, ContDiffOn ℝ ∞ (f.phi j) O)
-    (hX : ∀ w ∈ O, w.1 ≠ 0) (hL : ∀ w ∈ O, CoordinateAlgebra.L h w.2 ≠ 0)
-    (hfinite : FiniteIdentities h C d f) (m : ℕ) (n : ℝ) (hn : 0 ≤ n) :
-    JetRate l (fun z => (cartesianChart h z).1) (baseResidual a h C d) m n := by
-  let b : ℝ := CoordinateAlgebra.A h + m + 2
-  have hA : 0 < CoordinateAlgebra.A h := by unfold CoordinateAlgebra.A; linarith
-  have hm : (0 : ℝ) ≤ m := Nat.cast_nonneg m
-  have hb : 0 ≤ b := by dsimp [b]; positivity
-  obtain ⟨N, hN⟩ := exists_nat_ge ((n + b + 2 * CoordinateAlgebra.A h + 6 * m + 12) / h)
-  let J := max (m + 2) N
-  have hJ : m + 2 ≤ J := le_max_left _ _
-  have hJN : (N : ℝ) ≤ J := by exact_mod_cast le_max_right (m + 2) N
-  have hgain : n + b + 2 * CoordinateAlgebra.A h + 6 * m + 12 ≤ h * ((J : ℝ) + 1) := by
-    have hn' := (div_le_iff₀ hh).mp hN
-    nlinarith
-  have hq := A.positive_small hh hh1
-  have hU := annularPast_isOpen
-  have hlU := A.in_annularPast hh hh1 hlo
-  have hus := (baseVelocity_smooth ha.strictMono hh hh1 hd C).mono annularPast_subset
-  have hps := (basePressure_smooth ha.strictMono hh hh1 hd C).mono annularPast_subset
-  have huJs := (prefixVelocity_smooth hh hh1 hd J C).mono annularPast_subset
-  have hpJs := (prefixPressure_smooth hh hh1 hd J C).mono annularPast_subset
-  have htS := baseStressForce_smooth ha.strictMono hh hh1 hd C
-  have htJ := prefixStressForce_smooth hh hh1 hd J C
-  have hbg : FiniteJetRate l (fun z => (cartesianChart h z).1) (prefixVelocity J h C d)
-      (m + 1) (-b) := by
-    convert! prefixVelocity_growth (C := C) hh hh1 A hd J (m + 1) using 1
-    dsimp [b]
-    push_cast
-    ring
-  have hvel : FiniteJetRate l (fun z => (cartesianChart h z).1)
-      (fun z => baseVelocity a h C d z - prefixVelocity J h C d z) (m + 2) (n + b) := by
-    apply finiteRate_weaken (velocity_prefix_rate hh hh1 A hd ha J (m + 2) (by omega)) hq
-    push_cast
-    nlinarith
-  have hpres : FiniteJetRate l (fun z => (cartesianChart h z).1)
-      (fun z => basePressure a h C d z - prefixPressure J h C d z) (m + 1) (n + b) := by
-    apply finiteRate_weaken (pressure_prefix_rate hh hh1 A hd ha J (m + 1) (by omega)) hq
-    push_cast
-    nlinarith
-  have hstress : JetRate l (fun z => (cartesianChart h z).1)
-      (fun z => baseStressForce a h C d z - prefixStressForce J h C d z) m n := by
-    apply (finiteRate_at (stress_prefix_rate hh hh1 A hlo hd ha J m (by omega)) le_rfl).weaken hq
-    dsimp [b] at hgain
-    nlinarith
-  have htail : JetRate l (fun z => (cartesianChart h z).1)
-      (fun z => truncationResidual J h C f z.1 z.2) m n := by
-    apply (finiteRate_at (truncationResidual_rate hh hh1 A hlo hO hKO J C f
-      (fun j _ => hv j) (fun j _ => hu j) (fun j _ => hf j) hX hL m) le_rfl).weaken hq
-    dsimp [b] at hgain
-    nlinarith
-  let EJ : SpaceTime → Space := fun z =>
-    navierStokesResidual (prefixVelocity J h C d) (prefixPressure J h C d) z.1 z.2 -
-      prefixStressForce J h C d z
-  have hEJ : JetRate l (fun z => (cartesianChart h z).1) EJ m n :=
-    htail.congr_on hU hlU (fun z hz => by dsimp [EJ]; rw [hfinite J z hz]; abel)
-  have hEJs : ContDiffOn ℝ ∞ EJ annularPast :=
-    (ResidualRegularity.contDiffOn_residual hU huJs hpJs).sub htJ
-  let Df := residualDifference (prefixVelocity J h C d)
-    (fun z => baseVelocity a h C d z - prefixVelocity J h C d z)
-    (prefixPressure J h C d) (fun z => basePressure a h C d z - prefixPressure J h C d z)
-  have hDf : JetRate l (fun z => (cartesianChart h z).1) Df m n :=
-    residualDifference_jetRate hU hlU hq huJs (hus.sub huJs) hpJs (hps.sub hpJs)
-      m hb hn hbg hvel hpres
-  have hDfs : ContDiffOn ℝ ∞ Df annularPast :=
-    (ResidualRegularity.contDiffOn_residual hU (huJs.add (hus.sub huJs))
-      (hpJs.add (hps.sub hpJs))).sub (ResidualRegularity.contDiffOn_residual hU huJs hpJs)
-  have hsum := (hEJ.add hDf hU hlU hEJs hDfs).add (jetRate_neg hstress) hU hlU
-    (hEJs.add hDfs) (htS.sub htJ).neg
-  have hvelsum : (fun z => prefixVelocity J h C d z +
-      (baseVelocity a h C d z - prefixVelocity J h C d z)) = baseVelocity a h C d := by
-    funext z
-    abel
-  have hpressum : (fun z => prefixPressure J h C d z +
-      (basePressure a h C d z - prefixPressure J h C d z)) = basePressure a h C d := by
-    funext z
-    abel
-  have heq : (fun z => EJ z + Df z + -(baseStressForce a h C d z - prefixStressForce J h C d z)) =
-      baseResidual a h C d := by
-    funext z
-    simp only [EJ, Df, residualDifference, hvelsum, hpressum, baseResidual]
-    abel
-  rwa [heq] at hsum
 
 
 end NonlinearAssembly
@@ -1920,23 +1728,6 @@ theorem normalizedTensor_weighted_bound {a : ℕ → ℕ} {h C : ℝ} (hh : 0 < 
     (fun _j hj w hw => higherStressQuotient_factor d zeta hj (hz w hw).ne')
     (weightedBundle_quotient_scales hd hq ha) m
 
-/-- The common schedule is constructed from coefficient smoothness. The
-weighted estimate is an output, not part of the admissibility assumptions. -/
-theorem exists_weighted_base_scales {h : ℝ} (hh : 0 < h) (C : ℝ)
-    {d : Coefficients} (hd : SmoothCoefficients d) {K W O : Set Inner}
-    (hK : IsCompact K) (hWK : W ⊆ K) (hO : IsOpen O) (hWO : W ⊆ O)
-    {zeta delta : Inner → ℝ} (hzs : ContDiff ℝ ∞ zeta)
-    (hz : ∀ w ∈ O, 0 < zeta w) (hdelta : ∀ w ∈ W, 0 < delta w ∧ delta w ≤ 1)
-    (hfirst : PolynomialEdgeJets W zeta delta (stressPair d 1))
-    (hweight : PolynomialEdgeJets W zeta delta zeta)
-    (hq : ∀ j, ContDiff ℝ ∞ (higherStressQuotient d zeta j)) (B : ℕ) :
-    ∃ a : ℕ → ℕ, B ≤ a 0 ∧ AdmissibleScales h (coefficientBundle C d) K a ∧
-      ∀ m : ℕ, ∃ D : ℝ, 0 < D ∧ ∃ N : ℕ, ∀ q : ℝ, 0 < q → q ≤ 1 → ∀ w ∈ W,
-        ‖blownJet m (fun y => normalizedTensor a h d y - stressPair d 0 y.2) (q, w)‖ ≤
-          D * q ^ h * zeta w * (delta w)⁻¹ ^ N := by
-  obtain ⟨a, hB, ha⟩ := exists_admissibleScales (weightedBundle_smooth hd hq C) hh hK B
-  exact ⟨a, hB, weightedBundle_base_scales hd hq ha,
-    normalizedTensor_weighted_bound hh hd hK hWK hO hWO hzs hz hdelta hfirst hweight hq ha⟩
 
 end WeightedTensor
 

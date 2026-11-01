@@ -184,99 +184,11 @@ def constant (k : ℕ) (a : E) : CK (E := E) k :=
 
 @[simp] theorem constant_value (k : ℕ) (a : E) (x : I) : value k (constant k a) x = a := rfl
 
-theorem norm_constant_zero (a : E) : ‖constant 0 a‖ = ‖a‖ := by
-  apply le_antisymm
-  · apply (norm_ofContDiffOn_le_iff _ _ (norm_nonneg a)).mpr
-    intro n hn x
-    have hn0 : n = 0 := Nat.eq_zero_of_le_zero hn
-    subst n
-    exact le_rfl
-  · have he := ((value 0 (constant 0 a)).norm_coe_le_norm leftEndpoint).trans
-      (norm_value_le (constant 0 a))
-    exact he
 
-theorem norm_coefficient_le (B : ℝ → E →L[ℝ] F) (hB : ContDiffOn ℝ 0 B I) (x : I) :
-    ‖B x‖ ≤ ‖coefficientOperator (E := E) (F := F) 0 B hB‖ := by
-  apply ContinuousLinearMap.opNorm_le_bound _ (norm_nonneg _)
-  intro a
-  have he := ((value 0 (coefficientOperator 0 B hB (constant 0 a))).norm_coe_le_norm x).trans
-    (norm_value_le _)
-  rw [coefficientOperator_value 0 B hB (constant 0 a) x, constant_value] at he
-  exact he.trans (by simpa only [norm_constant_zero] using
-    (coefficientOperator 0 B hB).le_opNorm (constant 0 a))
 
-theorem norm_quadratic_coefficient_le (A : ℝ → E →L[ℝ] F →L[ℝ] G)
-    (hA : ContDiffOn ℝ 0 A I) (x : I) :
-    ‖A x‖ ≤ ‖quadraticOperator (E := E) (F := F) (G := G) 0 A hA‖ := by
-  apply ContinuousLinearMap.opNorm_le_bound (A x) (norm_nonneg (quadraticOperator 0 A hA))
-  intro a
-  apply ContinuousLinearMap.opNorm_le_bound (A x a) (by positivity)
-  intro b
-  have he := ((value 0 (quadraticOperator 0 A hA (constant 0 a) (constant 0 b))).norm_coe_le_norm x).trans
-    (norm_value_le _)
-  rw [quadraticOperator_value 0 A hA (constant 0 a) (constant 0 b) x,
-    constant_value, constant_value] at he
-  exact he.trans (by simpa only [norm_constant_zero] using
-    (quadraticOperator 0 A hA).le_opNorm₂ (constant 0 a) (constant 0 b))
 
-theorem norm_coefficientOperator_zero_le (B : ℝ → E →L[ℝ] F)
-    (hB : ContDiffOn ℝ 0 B I) {M : ℝ} (hM : 0 ≤ M) (hbound : ∀ x ∈ I, ‖B x‖ ≤ M) :
-    ‖coefficientOperator 0 B hB‖ ≤ M := by
-  apply ContinuousLinearMap.opNorm_le_bound (coefficientOperator 0 B hB) hM
-  intro f
-  rw [norm_zero_eq_value]
-  apply (ContinuousMap.norm_le _ (mul_nonneg hM (norm_nonneg _))).mpr
-  intro x
-  rw [coefficientOperator_value 0 B hB f x]
-  exact ((B x).le_opNorm (value 0 f x)).trans
-    (mul_le_mul (hbound x x.property)
-      (((value 0 f).norm_coe_le_norm x).trans (norm_value_le f)) (norm_nonneg _) hM)
 
-theorem norm_quadraticOperator_zero_le (A : ℝ → E →L[ℝ] F →L[ℝ] G)
-    (hA : ContDiffOn ℝ 0 A I) {M : ℝ} (hM : 0 ≤ M) (hbound : ∀ x ∈ I, ‖A x‖ ≤ M) :
-    ‖quadraticOperator 0 A hA‖ ≤ M := by
-  apply ContinuousLinearMap.opNorm_le_bound (quadraticOperator 0 A hA) hM
-  intro f
-  apply ContinuousLinearMap.opNorm_le_bound (quadraticOperator 0 A hA f)
-    (mul_nonneg hM (norm_nonneg _))
-  intro g
-  rw [norm_zero_eq_value]
-  apply (ContinuousMap.norm_le _ (by positivity)).mpr
-  intro x
-  rw [quadraticOperator_value 0 A hA f g x]
-  exact ((A x).le_opNorm₂ (value 0 f x) (value 0 g x)).trans
-    (mul_le_mul (mul_le_mul (hbound x x.property)
-      (((value 0 f).norm_coe_le_norm x).trans (norm_value_le f)) (norm_nonneg _) hM)
-      (((value 0 g).norm_coe_le_norm x).trans (norm_value_le g)) (norm_nonneg _)
-      (mul_nonneg hM (norm_nonneg _)))
 
-/-- The order-zero multiplication norm is exactly the supremum of the
-pointwise matrix norms, as in `outgoing:steering`. -/
-theorem norm_coefficientOperator_zero (B : ℝ → E →L[ℝ] F) (hB : ContDiffOn ℝ 0 B I) :
-    ‖coefficientOperator 0 B hB‖ = ⨆ x : I, ‖B x‖ := by
-  let b : Path (E →L[ℝ] F) := value 0 (ofContDiffOn B hB)
-  have he : ‖b‖ = ⨆ x : I, ‖B x‖ := b.norm_eq_iSup_norm
-  rw [← he]
-  apply le_antisymm
-  · apply norm_coefficientOperator_zero_le B hB (norm_nonneg b)
-    intro x hx
-    exact b.norm_coe_le_norm ⟨x,hx⟩
-  · apply (ContinuousMap.norm_le b (norm_nonneg _)).mpr
-    intro x
-    exact norm_coefficient_le B hB x
 
-/-- The order-zero bilinear norm is exactly its pointwise supremum. -/
-theorem norm_quadraticOperator_zero (A : ℝ → E →L[ℝ] F →L[ℝ] G) (hA : ContDiffOn ℝ 0 A I) :
-    ‖quadraticOperator 0 A hA‖ = ⨆ x : I, ‖A x‖ := by
-  let a : Path (E →L[ℝ] F →L[ℝ] G) := value 0 (ofContDiffOn A hA)
-  have he : ‖a‖ = ⨆ x : I, ‖A x‖ := a.norm_eq_iSup_norm
-  rw [← he]
-  apply le_antisymm
-  · apply norm_quadraticOperator_zero_le A hA (norm_nonneg a)
-    intro x hx
-    exact a.norm_coe_le_norm ⟨x,hx⟩
-  · apply (ContinuousMap.norm_le a (norm_nonneg (quadraticOperator 0 A hA))).mpr
-    intro x
-    exact norm_quadratic_coefficient_le A hA x
 
 end NavierStokes.ClosedIntervalCk

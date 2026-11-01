@@ -194,13 +194,6 @@ theorem candidate_is_maximal {u : VelocityField} {p : PressureField}
   rintro ⟨T, v, q, hT, hv, _⟩
   exact candidate_no_solution_after_one h hT hv
 
-/-- Any shorter classical solution extends by the actual candidate field. -/
-theorem candidate_extends_shorter_solution {u v : VelocityField} {p q : PressureField}
-    {f : VelocityField} {T : ℝ} (h : CandidateProperties u p f)
-    (hv : ClassicalSolution f (fun _ => 0) T v q) (hT : T < 1) :
-    HasClassicalExtension f (fun _ => 0) T v := by
-  refine ⟨1, u, p, hT, candidate_is_classical_solution h, ?_⟩
-  simpa only [min_eq_left hT.le] using candidate_agree_on_overlap h hv
 
 
 
@@ -215,31 +208,6 @@ theorem candidate_admissible_lifespans {u : VelocityField} {p : PressureField}
   · intro ht
     exact ⟨u, p, (candidate_is_classical_solution h).restrict ht.1 ht.2⟩
 
-/-- A global classical solution would restrict to a forbidden lifespan
-greater than one. This makes the exclusion of infinite-time continuation
-explicit without assuming any existence theorem. -/
-theorem candidate_excludes_global_solution {u v : VelocityField} {p q : PressureField}
-    {f : VelocityField} (h : CandidateProperties u p f)
-    (hv : ContDiffOn ℝ ∞ v futureDomain) (hq : ContDiffOn ℝ ∞ q futureDomain)
-    (hpv : UnitSpatialPeriodsOn (Ici (0 : ℝ)) v)
-    (hpq : UnitSpatialPeriodsOn (Ici (0 : ℝ)) q)
-    (hvzero : ∀ x : Space, v (0, x) = 0)
-    (hdv : ∀ t : ℝ, 0 ≤ t → ∀ x : Space, spatialDivergence v t x = 0)
-    (hNSv : ∀ t : ℝ, 0 < t → ∀ x : Space, navierStokesResidual v q t x = f (t, x)) :
-    False := by
-  have hsub : lifespanDomain 2 ⊆ futureDomain := by
-    intro z hz
-    exact ⟨hz.1.1, hz.2⟩
-  apply candidate_no_solution_after_one h (T := 2) (by norm_num)
-  refine ⟨by norm_num, hv.mono hsub, hq.mono hsub, ?_, ?_, hvzero, ?_, ?_⟩
-  · intro t ht x i
-    exact hpv t ht.1 x i
-  · intro t ht x i
-    exact hpq t ht.1 x i
-  · intro t ht x
-    exact hdv t ht.1 x
-  · intro t ht x
-    exact hNSv t ht.1 x
 
 theorem zero_classical_solution_of_zero_force {f : VelocityField} {T : ℝ}
     (hT : 0 < T) (hf : ∀ t ∈ Ioo (0 : ℝ) T, ∀ x : Space, f (t, x) = 0) :

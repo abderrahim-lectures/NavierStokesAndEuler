@@ -132,14 +132,6 @@ theorem copySum_memClass {s : StripData D} {w : ℕ → D → ℝ} {α : ℝ}
   memClass_of_local_germs hw hj (fun n x _ => copySum_germ_cover K n (f n) (hs n) x)
 
 
-omit [NormedSpace ℝ D] [NormedSpace ℝ E] in
-theorem copySum_support (K : Cells D I) (n : ℕ) (f : I → D → E)
-    (hs : ∀ i, support (f i) ⊆ K.carrier n i) :
-    support (copySum f) ⊆ ⋃ i, K.carrier n i := by
-  intro x hx
-  by_contra hn
-  have hz := copySum_zero_germ K n f hs (by simpa using hn)
-  exact hx hz.self_of_nhds
 
 omit [NormedSpace ℝ D] [NormedSpace ℝ E] in
 theorem copySum_eventually_finite (K : Cells D I) (n : ℕ) (f : I → D → E)
@@ -486,108 +478,7 @@ open GaussianTailFlat
 variable {D E : Type*} [NormedAddCommGroup D] [NormedSpace ℝ D]
   [NormedAddCommGroup E] [NormedSpace ℝ E] {I : Type*}
 
-/-- The Gaussian absorption argument is uniform in the native copy.  Its
-only local field estimate is the weighted jet bound before absorption. -/
-theorem local_gaussian_tail_bound {s : StripData D} {K : ℕ → I → Set D}
-    {W : ℕ → D → ℝ} {α c : ℝ} {f : ℕ → I → D → E}
-    (hf : LocalJets s (fun n x => Real.sqrt (s.zeta x) * W n x) α K f)
-    (edges : FlatEdges s) (scales : BandScaleControl s)
-    (θ : ℕ → I → D → ℝ) (L : ℕ → ℝ) (hL : ∀ n, 0 < L n)
-    (ell : ℝ) (hell : 0 < ell) (hLell : ∀ n, ell * ChartScales.S n ≤ L n) (hc : 0 < c)
-    (hW : ∀ n i x, x ∈ s.domain → x ∈ K n i →
-      W n x ≤ Real.exp (-c * (θ n i x - 1 / 2) ^ 2 * L n))
-    (hzero : ∀ n i x, x ∈ s.domain → x ∈ K n i →
-      |θ n i x - 1 / 2| < 1 / 5 → f n i =ᶠ[𝓝 x] fun _ => 0)
-    (m : ℕ) : ∃ C : ℝ, 0 ≤ C ∧ ∃ p : ℕ, ∀ n i x, x ∈ s.domain → x ∈ K n i →
-      ∀ j ≤ m, ‖iteratedFDeriv ℝ j (f n i) x‖ ≤
-        C * (1 + ChartScales.S n) ^ p * Real.exp (-(c * ell / 50) * ChartScales.S n) := by
-  obtain ⟨A, hA, p, hb⟩ := hf.bounds m
-  obtain ⟨B, hB, hweight⟩ := edges.uniform_weight p
-  have hconstant := scales.constant_one_le
-  have hdec : 0 < c * ell / 25 := by positivity
-  obtain ⟨C, hC, hgauss⟩ := fixed_power_gaussian_bound hdec (scales.power * α)
-  refine ⟨A * B * scales.constant ^ p * C, by positivity, scales.degree * p, ?_⟩
-  intro n i x hx hi j hj
-  have hQ := ChartScales.Q_pos n
-  by_cases hmid : |θ n i x - 1 / 2| < 1 / 5
-  · rw [jets_eq_of_germ (hzero n i x hx hi hmid) j]
-    simp only [iteratedFDeriv_fun_zero, Pi.zero_apply, norm_zero]
-    have hS : 0 ≤ ChartScales.S n := sq_nonneg _
-    positivity
-  have htail : 1 / 5 ≤ |θ n i x - 1 / 2| := le_of_not_gt hmid
-  have hsq : (1 / 25 : ℝ) ≤ (θ n i x - 1 / 2) ^ 2 := by
-    have hh := pow_le_pow_left₀ (by norm_num : (0 : ℝ) ≤ 1 / 5) htail 2
-    norm_num [sq_abs] at hh ⊢
-    exact hh
-  have hPg : W n x ≤ Real.exp (-(c * ell / 25) * ChartScales.S n) := by
-    apply (hW n i x hx hi).trans
-    apply (Real.exp_le_exp.2 ?_).trans (gaussian_length_comparison hc.le (hLell n))
-    nlinarith [mul_le_mul_of_nonneg_left hsq (mul_nonneg hc.le (hL n).le)]
-  have hslow0 : 0 ≤ s.slow n := zero_le_one.trans (s.one_le_slow n)
-  have hK0 : 0 ≤ scales.constant := zero_le_one.trans scales.constant_one_le
-  have hslowp : s.slow n ^ p ≤
-      scales.constant ^ p * (1 + ChartScales.S n) ^ (scales.degree * p) := by
-    simpa only [mul_pow, ← pow_mul] using pow_le_pow_left₀ hslow0 (scales.slow_le n) p
-  have hmajor : majorant s (fun n x => Real.sqrt (s.zeta x) * W n x) α A p n x ≤
-      (A * B * scales.constant ^ p) * ChartScales.Q n ^ (scales.power * α) *
-        ((1 + ChartScales.S n) ^ (scales.degree * p) *
-          Real.exp (-(c * ell / 25) * ChartScales.S n)) := by
-    rw [majorant, StripData.growth, mul_pow, scales.epsilon_eq, ← Real.rpow_mul hQ.le]
-    calc
-      _ = (A * ChartScales.Q n ^ (scales.power * α) * s.slow n ^ p) *
-          (Real.sqrt (s.zeta x) * max 1 (s.delta x)⁻¹ ^ p) * W n x := by ring
-      _ ≤ (A * ChartScales.Q n ^ (scales.power * α) * s.slow n ^ p) *
-          (Real.sqrt (s.zeta x) * max 1 (s.delta x)⁻¹ ^ p) *
-            Real.exp (-(c * ell / 25) * ChartScales.S n) :=
-        mul_le_mul_of_nonneg_left hPg (by positivity)
-      _ ≤ (A * ChartScales.Q n ^ (scales.power * α) * s.slow n ^ p) * B *
-            Real.exp (-(c * ell / 25) * ChartScales.S n) := by
-        gcongr
-        exact hweight x hx
-      _ ≤ (A * ChartScales.Q n ^ (scales.power * α) *
-          (scales.constant ^ p * (1 + ChartScales.S n) ^ (scales.degree * p))) * B *
-            Real.exp (-(c * ell / 25) * ChartScales.S n) := by gcongr
-      _ = _ := by ring
-  calc
-    _ ≤ majorant s (fun n x => Real.sqrt (s.zeta x) * W n x) α A p n x := hb n i x hx hi j hj
-    _ ≤ _ := hmajor
-    _ = (A * B * scales.constant ^ p) * (1 + ChartScales.S n) ^ (scales.degree * p) *
-        (ChartScales.Q n ^ (scales.power * α) *
-          Real.exp (-(c * ell / 25) * ChartScales.S n)) := by ring
-    _ ≤ (A * B * scales.constant ^ p) * (1 + ChartScales.S n) ^ (scales.degree * p) *
-        (C * Real.exp (-((c * ell / 25) / 2) * ChartScales.S n)) := by
-      have hS : 0 ≤ ChartScales.S n := sq_nonneg _
-      exact mul_le_mul_of_nonneg_left (hgauss n) (by positivity)
-    _ = _ := by
-      rw [show c * ell / 25 / 2 = c * ell / 50 by ring]
-      ring
 
-theorem local_gaussian_all_gains {s : StripData D} {K : ℕ → I → Set D}
-    {W : ℕ → D → ℝ} {α c : ℝ} {f : ℕ → I → D → E}
-    (hf : LocalJets s (fun n x => Real.sqrt (s.zeta x) * W n x) α K f)
-    (edges : FlatEdges s) (scales : BandScaleControl s)
-    (θ : ℕ → I → D → ℝ) (L : ℕ → ℝ) (hL : ∀ n, 0 < L n)
-    (ell : ℝ) (hell : 0 < ell) (hLell : ∀ n, ell * ChartScales.S n ≤ L n) (hc : 0 < c)
-    (hW : ∀ n i x, x ∈ s.domain → x ∈ K n i →
-      W n x ≤ Real.exp (-c * (θ n i x - 1 / 2) ^ 2 * L n))
-    (hzero : ∀ n i x, x ∈ s.domain → x ∈ K n i →
-      |θ n i x - 1 / 2| < 1 / 5 → f n i =ᶠ[𝓝 x] fun _ => 0)
-    (β : ℝ) : LocalJets s (fun _ _ => 1) β K f := by
-  refine ⟨hf.smooth, ?_⟩
-  intro m
-  obtain ⟨A, hA, p, hb⟩ := local_gaussian_tail_bound hf edges scales θ L hL ell hell hLell hc hW hzero m
-  obtain ⟨B, hB, hflat⟩ := gaussian_beats_Q_power (by positivity : 0 < c * ell / 50) p (scales.power * β)
-  refine ⟨A * B, mul_nonneg hA hB.le, 0, ?_⟩
-  intro n i x hx hi j hj
-  have ht := (hb n i x hx hi j hj).trans
-    (show A * (1 + ChartScales.S n) ^ p * Real.exp (-(c * ell / 50) * ChartScales.S n) ≤
-      (A * B) * ChartScales.Q n ^ (scales.power * β) by
-        calc
-          _ = A * ((1 + ChartScales.S n) ^ p * Real.exp (-(c * ell / 50) * ChartScales.S n)) := by ring
-          _ ≤ A * (B * ChartScales.Q n ^ (scales.power * β)) := mul_le_mul_of_nonneg_left (hflat n) hA
-          _ = _ := by ring)
-  simpa only [majorant, pow_zero, mul_one, scales.epsilon_eq,
-    ← Real.rpow_mul (ChartScales.Q_pos n).le] using ht
 
 end NativeGaussianEstimates
 
@@ -1062,43 +953,8 @@ theorem globalGood_class_of_native (K : Cells D I)
     MemClass s w α (a.globalGood s d) :=
   copySum_memClass K hw (a.localGood_support K hs s d) hg
 
-/-- If the literal incoming source is supported in the union of native
-cores, the global Gaussian error is flat whenever the native error jets
-are uniformly flat.  No global error class is assumed. -/
-theorem globalGaussian_class_of_covered_source (K : Cells D I)
-    (hs : ∀ n i, support (a.cutoff n i) ⊆ K.carrier n i)
-    (hsource : ∀ n, support (a.source n) ⊆ ⋃ i, K.carrier n i)
-    {s : StripData D} (d : GraphDirections D) {w : ℕ → D → ℝ} {α : ℝ}
-    (hw : ∀ n x, x ∈ s.domain → 0 ≤ w n x)
-    (hg : LocalJets s w α K.carrier (a.localGaussian d)) :
-    MemClass s w α (a.globalGaussian d) := by
-  apply memClass_of_local_germs hw hg
-  intro n x _
-  classical
-  by_cases h : ∃ i, x ∈ K.carrier n i
-  · obtain ⟨i, hi⟩ := h
-    exact Or.inl ⟨i, hi, a.globalGaussian_germ K hs d n hi⟩
-  · have hn := not_exists.mp h
-    exact Or.inr ((a.globalGaussian_uncovered_germ K hs d hn).trans (source_zero_germ K hsource hn))
 
-/-- A nonzero uncovered source is retained and estimated from its own
-primitive jets on that complement. -/
-theorem globalGaussian_class_with_complement (K : Cells D I)
-    (hs : ∀ n i, support (a.cutoff n i) ⊆ K.carrier n i)
-    {s : StripData D} (d : GraphDirections D) {w : ℕ → D → ℝ} {α : ℝ}
-    (hw : ∀ n x, x ∈ s.domain → 0 ≤ w n x)
-    (hg : LocalJets s w α K.carrier (a.localGaussian d))
-    (hf : ComplementJets s w α K.carrier a.source) :
-    MemClass s w α (a.globalGaussian d) :=
-  memClass_of_local_and_complement_germs hw hg hf
-    (fun n _ _ _ hx => a.globalGaussian_germ K hs d n hx)
-    (fun _ _ _ hx => a.globalGaussian_uncovered_germ K hs d hx)
 
-/-- The homogeneous construction has only the periodized derivative tail. -/
-theorem globalGaussian_of_source_zero (d : GraphDirections D)
-    (hf : a.source = fun _ _ => 0) : a.globalGaussian d = a.globalTail d := by
-  funext n x
-  simp [globalGaussian, hf]
 
 
 
@@ -1253,32 +1109,6 @@ theorem localGaussian_zero_of_fields (d : GraphDirections D)
   filter_upwards [hu, hf] with y huy hfy
   simp only [localGaussian, excludedSlotError, huy, hfy, smul_zero, add_zero]
 
-/-- Primitive native amplitude/source/cutoff jets and a Gaussian envelope
-prove flatness of the actual two cutoff products, uniformly over every copy.
-The central alternative allows transverse regions where both fields vanish. -/
-theorem localGaussian_all_gains_from_native {s : StripData D} (d : GraphDirections D)
-    {K : ℕ → I → Set D} {W : ℕ → D → ℝ} {α c : ℝ}
-    (hWnonneg : ∀ n x, x ∈ s.domain → 0 ≤ W n x)
-    (hψ : LocalJets s (fun _ _ => 1) 0 K a.cutoff)
-    (hfast : BandBound s 0 d.fastScale)
-    (hu : LocalJets s (fun n x => Real.sqrt (s.zeta x) * W n x) α K a.amplitude)
-    (hf : LocalJets s (fun n x => Real.sqrt (s.zeta x) * W n x) α K (fun n _ => a.source n))
-    (edges : GaussianTailFlat.FlatEdges s) (scales : GaussianTailFlat.BandScaleControl s)
-    (θ : ℕ → I → D → ℝ) (L : ℕ → ℝ) (hL : ∀ n, 0 < L n)
-    (ell : ℝ) (hell : 0 < ell) (hLell : ∀ n, ell * ChartScales.S n ≤ L n) (hc : 0 < c)
-    (hW : ∀ n i x, x ∈ s.domain → x ∈ K n i →
-      W n x ≤ Real.exp (-c * (θ n i x - 1 / 2) ^ 2 * L n))
-    (hcentral : ∀ n i x, x ∈ s.domain → x ∈ K n i → |θ n i x - 1 / 2| < 1 / 5 →
-      (a.cutoff n i =ᶠ[𝓝 x] fun _ => 1) ∨
-        ((a.amplitude n i =ᶠ[𝓝 x] fun _ => 0) ∧ (a.source n =ᶠ[𝓝 x] fun _ => 0)))
-    (β : ℝ) : LocalJets s (fun _ _ => 1) β K (a.localGaussian d) := by
-  have hj := a.localGaussian_wave_jets d
-    (fun n x hx => mul_nonneg (Real.sqrt_nonneg _) (hWnonneg n x hx)) hψ hfast hu hf
-  apply local_gaussian_all_gains hj edges scales θ L hL ell hell hLell hc hW _ β
-  intro n i x hx hi hmid
-  rcases hcentral n i x hx hi hmid with hone | ⟨hu0, hf0⟩
-  · exact a.localGaussian_zero_of_cutoff_one d hone
-  · exact a.localGaussian_zero_of_fields d hu0 hf0
 
 
 theorem common_potential_germ (K : Cells D I)
@@ -1466,30 +1296,6 @@ noncomputable def particularData (r : Reference P) (charts : BandCharts P)
 
 
 
-/-- This is the same actual periodization as `ParticularWaveAssembly`,
-with its single physical reference and original source. -/
-theorem particularData_common (r : Reference P) (charts : BandCharts P)
-    (c : Context (P × Plane)) (u : State (P × Plane)) (b : HarmonicBlock (P × Plane))
-    (G A : HarmonicResidual.BlockCoefficients (P × Plane)) {j : ℤ} (hj : j ≠ 0)
-    (hfrequency : ∀ n, b.frequency n ≠ 0)
-    (base : WaveCoefficients ((P × ℝ) × Plane)) :
-    (particularData r charts c u b G A j base).common =
-      actualCommonCoefficients r charts c u b G A j base := by
-  let a := particularData r charts c u b G A j base
-  have ha : a.common.amplitude = (actualCommonCoefficients r charts c u b G A j base).amplitude := by
-    funext n
-    rw [actualCommon_amplitude_periodization]
-    rfl
-  have hp : a.common.pressure = (actualCommonCoefficients r charts c u b G A j base).pressure := by
-    funext n
-    rw [actualCommon_pressure_periodization r charts c u b G A hj hfrequency]
-    rfl
-  calc
-    a.common = { actualCarrier base b j with amplitude := a.common.amplitude, pressure := a.common.pressure } := rfl
-    _ = { actualCarrier base b j with
-      amplitude := (actualCommonCoefficients r charts c u b G A j base).amplitude,
-      pressure := (actualCommonCoefficients r charts c u b G A j base).pressure } := by rw [ha, hp]
-    _ = _ := rfl
 
 
 end ActualParticularData

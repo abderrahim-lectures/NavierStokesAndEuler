@@ -14,72 +14,10 @@ variable {E₀ Eₖ : Type*}
   [NormedAddCommGroup E₀] [NormedSpace ℝ E₀]
   [NormedAddCommGroup Eₖ] [NormedSpace ℝ Eₖ]
 
-theorem inverse_compatible (i : Eₖ →L[ℝ] E₀) (B₀ : E₀ ≃L[ℝ] E₀) (Bₖ : Eₖ ≃L[ℝ] Eₖ)
-    (hB : ∀ x, i (Bₖ x) = B₀ (i x)) (y : Eₖ) :
-    i (Bₖ.symm y) = B₀.symm (i y) := by
-  apply B₀.injective
-  rw [← hB, Bₖ.apply_symm_apply, B₀.apply_symm_apply]
-
-theorem iteration_compatible (i : Eₖ →L[ℝ] E₀)
-    (B₀ : E₀ ≃L[ℝ] E₀) (Bₖ : Eₖ ≃L[ℝ] Eₖ)
-    (A₀ : E₀ →L[ℝ] E₀ →L[ℝ] E₀) (Aₖ : Eₖ →L[ℝ] Eₖ →L[ℝ] Eₖ)
-    (d₀ : E₀) (dₖ : Eₖ)
-    (hB : ∀ x, i (Bₖ x) = B₀ (i x))
-    (hA : ∀ x y, i (Aₖ x y) = A₀ (i x) (i y)) (hd : i dₖ = d₀) (x : Eₖ) :
-    i (MomentRepair.correctionIteration Bₖ (fun y => Aₖ y y) dₖ x) =
-      MomentRepair.correctionIteration B₀ (fun y => A₀ y y) d₀ (i x) := by
-  unfold MomentRepair.correctionIteration
-  rw [inverse_compatible i B₀ Bₖ hB, map_sub, hd, hA]
-
-/-- The actual Picard iterates agree before taking either norm limit. -/
-theorem iterates_compatible (i : Eₖ →L[ℝ] E₀)
-    (B₀ : E₀ ≃L[ℝ] E₀) (Bₖ : Eₖ ≃L[ℝ] Eₖ)
-    (A₀ : E₀ →L[ℝ] E₀ →L[ℝ] E₀) (Aₖ : Eₖ →L[ℝ] Eₖ →L[ℝ] Eₖ)
-    (d₀ : E₀) (dₖ : Eₖ)
-    (hB : ∀ x, i (Bₖ x) = B₀ (i x))
-    (hA : ∀ x y, i (Aₖ x y) = A₀ (i x) (i y)) (hd : i dₖ = d₀) (n : ℕ) :
-    i ((MomentRepair.correctionIteration Bₖ (fun y => Aₖ y y) dₖ)^[n] 0) =
-      (MomentRepair.correctionIteration B₀ (fun y => A₀ y y) d₀)^[n] 0 := by
-  induction n with
-  | zero => simp
-  | succ n ih =>
-      rw [Function.iterate_succ_apply', Function.iterate_succ_apply',
-        iteration_compatible i B₀ Bₖ A₀ Aₖ d₀ dₖ hB hA hd, ih]
-
-/-- Uniqueness of the common limit identifies the branches without any
-assumption that the stronger-norm solution lies in the weaker correction ball. -/
-theorem limits_compatible (i : Eₖ →L[ℝ] E₀)
-    (B₀ : E₀ ≃L[ℝ] E₀) (Bₖ : Eₖ ≃L[ℝ] Eₖ)
-    (A₀ : E₀ →L[ℝ] E₀ →L[ℝ] E₀) (Aₖ : Eₖ →L[ℝ] Eₖ →L[ℝ] Eₖ)
-    (d₀ : E₀) (dₖ : Eₖ)
-    (hB : ∀ x, i (Bₖ x) = B₀ (i x))
-    (hA : ∀ x y, i (Aₖ x y) = A₀ (i x) (i y)) (hd : i dₖ = d₀)
-    {c₀ : E₀} {cₖ : Eₖ}
-    (h₀ : Tendsto (fun n : ℕ => (MomentRepair.correctionIteration B₀ (fun y => A₀ y y) d₀)^[n] 0)
-      atTop (𝓝 c₀))
-    (hₖ : Tendsto (fun n : ℕ => (MomentRepair.correctionIteration Bₖ (fun y => Aₖ y y) dₖ)^[n] 0)
-      atTop (𝓝 cₖ)) : i cₖ = c₀ := by
-  apply tendsto_nhds_unique _ h₀
-  exact ((i.continuous.tendsto cₖ).comp hₖ).congr
-    (iterates_compatible i B₀ Bₖ A₀ Aₖ d₀ dₖ hB hA hd)
 
 
-/-- A previously selected zero-started C⁰ branch satisfies the stronger
-norm estimate whenever the corresponding stronger smallness test holds. -/
-theorem existing_branch_has_stronger_lift [CompleteSpace Eₖ]
-    (i : Eₖ →L[ℝ] E₀) (B₀ : E₀ ≃L[ℝ] E₀) (Bₖ : Eₖ ≃L[ℝ] Eₖ)
-    (A₀ : E₀ →L[ℝ] E₀ →L[ℝ] E₀) (Aₖ : Eₖ →L[ℝ] Eₖ →L[ℝ] Eₖ)
-    (d₀ : E₀) (dₖ : Eₖ)
-    (hB : ∀ x, i (Bₖ x) = B₀ (i x))
-    (hA : ∀ x y, i (Aₖ x y) = A₀ (i x) (i y)) (hd : i dₖ = d₀)
-    {c₀ : E₀}
-    (h₀ : Tendsto (fun n : ℕ => (MomentRepair.correctionIteration B₀ (fun y => A₀ y y) d₀)^[n] 0)
-      atTop (𝓝 c₀))
-    (hsmallₖ : 8 * ‖Bₖ.symm.toContinuousLinearMap‖ ^ 2 * ‖Aₖ‖ * ‖dₖ‖ ≤ 1) :
-    ∃ cₖ : Eₖ, i cₖ = c₀ ∧ ‖cₖ‖ ≤ 2 * ‖Bₖ.symm.toContinuousLinearMap‖ * ‖dₖ‖ ∧
-      Bₖ cₖ + Aₖ cₖ cₖ = dₖ := by
-  obtain ⟨cₖ, hcₖ, heₖ, htₖ⟩ :=
-    MomentRepairPicardConvergence.exists_small_solution_with_iterates Bₖ Aₖ dₖ hsmallₖ
-  exact ⟨cₖ, limits_compatible i B₀ Bₖ A₀ Aₖ d₀ dₖ hB hA hd h₀ htₖ, hcₖ, heₖ⟩
+
+
+
 
 end NavierStokes.MomentRepairPicard

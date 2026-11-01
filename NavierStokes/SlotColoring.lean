@@ -46,47 +46,7 @@ theorem spacing_pos (a : ℝ) {n : ℕ} (hn : 1 ≤ n) : 0 < spacing a n := by
   have hn' : (0 : ℝ) < n := by exact_mod_cast (by omega : 0 < n)
   exact div_pos (Real.rpow_pos_of_pos (by norm_num) _) (pow_pos hn' _)
 
-theorem spacing_ratio (a : ℝ) {n m : ℕ} (hn : 1 ≤ n) (hm : 1 ≤ m) :
-    spacing a n / spacing a m =
-      ((m : ℝ) / (n : ℝ)) ^ 6 * (2 : ℝ) ^ (((m : ℝ) - (n : ℝ)) * a) := by
-  have hn' : (n : ℝ) ≠ 0 := by exact_mod_cast (by omega : n ≠ 0)
-  have hm' : (m : ℝ) ≠ 0 := by exact_mod_cast (by omega : m ≠ 0)
-  have he : (2 : ℝ) ^ (-(m : ℝ) * a) ≠ 0 := ne_of_gt (Real.rpow_pos_of_pos (by norm_num) _)
-  have hp : (2 : ℝ) ^ (((m : ℝ) - (n : ℝ)) * a) =
-      (2 : ℝ) ^ (-(n : ℝ) * a) / (2 : ℝ) ^ (-(m : ℝ) * a) := by
-    rw [← Real.rpow_sub (by norm_num : (0 : ℝ) < 2)]
-    congr 1
-    ring
-  rw [hp]
-  unfold spacing
-  rw [div_pow]
-  field_simp
 
-/-- The mesh ratio is uniform across levels at distance at most four. -/
-theorem spacing_ratio_le (a A : ℝ) {n m : ℕ}
-    (hn : 1 ≤ n) (hm : 1 ≤ m) (hnm : n ≤ m + 4) (hmn : m ≤ n + 4)
-    (ha : |a| ≤ A) :
-    spacing a n / spacing a m ≤ (5 : ℝ) ^ 6 * (2 : ℝ) ^ (4 * A) := by
-  rw [spacing_ratio a hn hm]
-  have hn' : (0 : ℝ) < n := by exact_mod_cast (by omega : 0 < n)
-  have hm0 : (0 : ℝ) ≤ m := by positivity
-  have hm5 : (m : ℝ) ≤ 5 * (n : ℝ) := by exact_mod_cast (by omega : m ≤ 5 * n)
-  have hquot : (m : ℝ) / (n : ℝ) ≤ 5 := (div_le_iff₀ hn').mpr hm5
-  have hpow : ((m : ℝ) / (n : ℝ)) ^ 6 ≤ (5 : ℝ) ^ 6 :=
-    pow_le_pow_left₀ (div_nonneg hm0 hn'.le) hquot 6
-  have hdiff : |(m : ℝ) - (n : ℝ)| ≤ 4 := by
-    have h1 : (n : ℝ) ≤ (m : ℝ) + 4 := by exact_mod_cast hnm
-    have h2 : (m : ℝ) ≤ (n : ℝ) + 4 := by exact_mod_cast hmn
-    rw [abs_le]
-    constructor <;> linarith
-  have hexp : ((m : ℝ) - (n : ℝ)) * a ≤ 4 * A := by
-    calc
-      ((m : ℝ) - (n : ℝ)) * a ≤ |((m : ℝ) - (n : ℝ)) * a| := le_abs_self _
-      _ = |(m : ℝ) - (n : ℝ)| * |a| := abs_mul _ _
-      _ ≤ 4 * |a| := mul_le_mul_of_nonneg_right hdiff (abs_nonneg a)
-      _ ≤ 4 * A := mul_le_mul_of_nonneg_left ha (by norm_num)
-  exact mul_le_mul hpow (Real.rpow_le_rpow_of_exponent_le (by norm_num) hexp)
-    (Real.rpow_nonneg (by norm_num) _) (by positivity)
 
 def axisExponent (D : ℝ) : Fin 3 → ℝ := ![1 / 2, D, 1]
 def width (D : ℝ) (j : Fin 3) (n : ℕ) : ℝ := spacing (axisExponent D j) n
@@ -95,19 +55,6 @@ def ratioBound (D : ℝ) : ℝ := (5 : ℝ) ^ 6 * (2 : ℝ) ^ (4 * (1 + |D|))
 theorem width_pos (D : ℝ) (j : Fin 3) {n : ℕ} (hn : 1 ≤ n) : 0 < width D j n :=
   spacing_pos _ hn
 
-theorem width_ratio_le (D : ℝ) (j : Fin 3) {n m : ℕ}
-    (hn : 1 ≤ n) (hm : 1 ≤ m) (hnm : n ≤ m + 4) (hmn : m ≤ n + 4) :
-    width D j n / width D j m ≤ ratioBound D := by
-  apply spacing_ratio_le _ _ hn hm hnm hmn
-  fin_cases j
-  · change |(1 / 2 : ℝ)| ≤ 1 + |D|
-    rw [abs_of_nonneg (by norm_num : (0 : ℝ) ≤ 1 / 2)]
-    linarith [abs_nonneg D]
-  · change |D| ≤ 1 + |D|
-    linarith
-  · change |(1 : ℝ)| ≤ 1 + |D|
-    rw [abs_one]
-    linarith [abs_nonneg D]
 
 def physicalBox (D : ℝ) (L : Label) : Set Position :=
   {x | ∀ j, |x j - width D j L.1 * (L.2.1 j : ℝ)| ≤ 2 * width D j L.1}
@@ -186,31 +133,7 @@ theorem color_proper (D : ℝ) {L M : Label} (h : Adj D L M) : color L ≠ color
   intro hc
   exact colorData_proper D h ((Fintype.equivFin Palette).injective hc)
 
-/-- A reusable one-dimensional bound: overlapping intervals force the finer
-grid index to lie within a fixed distance of the rescaled reference index. -/
-theorem normalized_index_gap (h h' B : ℝ) (i j : ℤ) (hh' : 0 < h')
-    (hratio : h / h' ≤ B)
-    (hgap : |h * (i : ℝ) - h' * (j : ℝ)| ≤ 2 * (h + h')) :
-    |h / h' * (i : ℝ) - (j : ℝ)| ≤ 2 * (B + 1) := by
-  calc
-    |h / h' * (i : ℝ) - (j : ℝ)| = |(h * (i : ℝ) - h' * (j : ℝ)) / h'| := by
-      congr 1
-      field_simp
-    _ = |h * (i : ℝ) - h' * (j : ℝ)| / h' := by rw [abs_div, abs_of_pos hh']
-    _ ≤ (2 * (h + h')) / h' := div_le_div_of_nonneg_right hgap hh'.le
-    _ = 2 * (h / h' + 1) := by field_simp
-    _ ≤ 2 * (B + 1) := by linarith
 
-theorem index_near_floor (c A : ℝ) (j : ℤ) (K : ℕ)
-    (hgap : |c - (j : ℝ)| ≤ A) (hK : A + 1 ≤ (K : ℝ)) :
-    |j - ⌊c⌋| ≤ (K : ℤ) := by
-  have hfloor : |c - (⌊c⌋ : ℝ)| ≤ 1 := by
-    rw [abs_of_nonneg (sub_nonneg.mpr (Int.floor_le c))]
-    linarith [Int.lt_floor_add_one c]
-  have ht := abs_sub_le (j : ℝ) c (⌊c⌋ : ℝ)
-  rw [abs_sub_comm (j : ℝ) c] at ht
-  have hreal : |(j : ℝ) - (⌊c⌋ : ℝ)| ≤ (K : ℝ) := by linarith
-  exact_mod_cast hreal
 
 def indexRadius (D : ℝ) : ℕ := ⌈2 * (ratioBound D + 1) + 1⌉₊
 
@@ -227,68 +150,13 @@ def candidatesAtLevel (D : ℝ) (L : Label) (m : ℕ) : Finset Label :=
 def candidates (D : ℝ) (L : Label) : Finset Label :=
   (Finset.Icc (L.1 - 4) (L.1 + 4)).biUnion (candidatesAtLevel D L)
 
-theorem adj_index_bound (D : ℝ) {L M : Label} (h : Adj D L M) (j : Fin 3) :
-    |M.2.1 j - indexCenter D L M.1 j| ≤ (indexRadius D : ℤ) := by
-  apply index_near_floor
-  · exact normalized_index_gap _ _ _ _ _ (width_pos D j h.right_positive)
-      (width_ratio_le D j h.left_positive h.right_positive h.left_level_le h.right_level_le)
-      (overlapping_centers D L M h.overlap j)
-  · exact Nat.le_ceil _
 
-theorem adj_mem_candidates (D : ℝ) {L M : Label} (h : Adj D L M) : M ∈ candidates D L := by
-  apply Finset.mem_biUnion.mpr
-  refine ⟨M.1, ?_, ?_⟩
-  · simp only [Finset.mem_Icc]
-    have h1 := h.left_level_le
-    have h2 := h.right_level_le
-    omega
-  · apply Finset.mem_image.mpr
-    refine ⟨M.2, ?_, rfl⟩
-    apply Finset.mem_product.mpr
-    refine ⟨?_, Finset.mem_univ _⟩
-    apply Fintype.mem_piFinset.mpr
-    intro j
-    have hj := abs_le.mp (adj_index_bound D h j)
-    simp only [Finset.mem_Icc]
-    omega
 
-theorem integer_interval_card (c : ℤ) (K : ℕ) :
-    (Finset.Icc (c - (K : ℤ)) (c + (K : ℤ))).card = 2 * K + 1 := by
-  rw [Int.card_Icc]
-  omega
 
-theorem candidateGrids_card (D : ℝ) (L : Label) (m : ℕ) :
-    (candidateGrids D L m).card = (2 * indexRadius D + 1) ^ 3 := by
-  unfold candidateGrids
-  rw [Fintype.card_piFinset]
-  simp only [integer_interval_card, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
 
-theorem candidatesAtLevel_card_le (D : ℝ) (L : Label) (m : ℕ) :
-    (candidatesAtLevel D L m).card ≤ (2 * indexRadius D + 1) ^ 3 * 2 := by
-  calc
-    (candidatesAtLevel D L m).card ≤
-        ((candidateGrids D L m).product (Finset.univ : Finset Bool)).card := Finset.card_image_le
-    _ = (2 * indexRadius D + 1) ^ 3 * 2 := by
-      change ((candidateGrids D L m) ×ˢ (Finset.univ : Finset Bool)).card = _
-      simpa only [candidateGrids_card, Finset.card_univ, Fintype.card_bool] using
-        Finset.card_product (candidateGrids D L m) (Finset.univ : Finset Bool)
 
 def degreeBound (D : ℝ) : ℕ := 18 * (2 * indexRadius D + 1) ^ 3
 
-theorem candidates_card_le (D : ℝ) (L : Label) :
-    (candidates D L).card ≤ degreeBound D := by
-  have hlevels : (Finset.Icc (L.1 - 4) (L.1 + 4)).card ≤ 9 := by
-    rw [Nat.card_Icc]
-    omega
-  calc
-    (candidates D L).card ≤
-        ∑ m ∈ Finset.Icc (L.1 - 4) (L.1 + 4), (candidatesAtLevel D L m).card :=
-      Finset.card_biUnion_le
-    _ ≤ ∑ _m ∈ Finset.Icc (L.1 - 4) (L.1 + 4), (2 * indexRadius D + 1) ^ 3 * 2 :=
-      Finset.sum_le_sum (fun m _ => candidatesAtLevel_card_le D L m)
-    _ = (Finset.Icc (L.1 - 4) (L.1 + 4)).card * ((2 * indexRadius D + 1) ^ 3 * 2) := by simp
-    _ ≤ 9 * ((2 * indexRadius D + 1) ^ 3 * 2) := Nat.mul_le_mul_right _ hlevels
-    _ = degreeBound D := by unfold degreeBound; ring
 
 /-- The actual finite neighbor set, obtained by filtering an explicit finite box. -/
 def neighbors (D : ℝ) (L : Label) : Finset Label := by

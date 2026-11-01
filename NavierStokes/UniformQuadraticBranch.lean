@@ -125,49 +125,6 @@ theorem contDiffOn {S : Set V}
   simpa only [he] using QuadraticLinearization.isInvertible e (A p) (c p)
     ν q δ hν hq heinv (hAn p hp) (hc p hp) hsmall
 
-/-- Uniform smallness selects one jointly smooth family of corrections,
-unique throughout the common correction ball. This applies in particular
-to the interval together with any additional compact parameter set. -/
-theorem exists_smooth_small_branch {S : Set V}
-    (B : V → E →L[ℝ] E) (A : V → E →L[ℝ] E →L[ℝ] E) (d : V → E)
-    (hB : ContDiffOn ℝ ∞ B S) (hA : ContDiffOn ℝ ∞ A S) (hd : ContDiffOn ℝ ∞ d S)
-    (ν q δ : ℝ) (hν : 0 ≤ ν) (hq : 0 ≤ q) (hδ : 0 ≤ δ)
-    (hBi : ∀ p ∈ S, (B p).IsInvertible)
-    (hBn : ∀ p ∈ S, ‖(B p).inverse‖ ≤ ν) (hAn : ∀ p ∈ S, ‖A p‖ ≤ q)
-    (hdn : ∀ p ∈ S, ‖d p‖ ≤ δ) (hsmall : 8 * ν ^ 2 * q * δ ≤ 1) :
-    ∃ c : V → E, ContDiffOn ℝ ∞ c S ∧
-      (∀ p ∈ S, ‖c p‖ ≤ 2 * ν * δ ∧ B p (c p) + A p (c p) (c p) = d p) ∧
-      ∀ p ∈ S, ∀ x : E, ‖x‖ ≤ 2 * ν * δ → B p x + A p x x = d p → x = c p := by
-  classical
-  have hpoints : ∀ p ∈ S, ∃! x : E,
-      ‖x‖ ≤ 2 * ν * δ ∧ B p x + A p x x = d p := by
-    intro p hp
-    obtain ⟨e, he⟩ := hBi p hp
-    have heinv : ‖e.symm.toContinuousLinearMap‖ ≤ ν := by
-      simpa only [← he, ContinuousLinearMap.inverse_equiv] using hBn p hp
-    have hs : 4 * ‖e.symm.toContinuousLinearMap‖ * ‖A p‖ * (2 * ν * δ) ≤ 1 := by
-      calc
-        _ ≤ 4 * ν * q * (2 * ν * δ) := by
-          apply mul_le_mul_of_nonneg_right _ (by positivity)
-          exact mul_le_mul (mul_le_mul_of_nonneg_left heinv (by norm_num))
-            (hAn p hp) (norm_nonneg (A p)) (by positivity)
-        _ = 8 * ν ^ 2 * q * δ := by ring
-        _ ≤ 1 := hsmall
-    have hdebt : 2 * ‖e.symm.toContinuousLinearMap‖ * ‖d p‖ ≤ 2 * ν * δ :=
-      mul_le_mul (mul_le_mul_of_nonneg_left heinv (by norm_num)) (hdn p hp)
-        (norm_nonneg _) (by positivity)
-    rw [← he]
-    exact SmoothMomentRepair.exists_unique_quadratic_correction e (A p) (d p)
-      (2 * ν * δ) (by positivity) hs hdebt
-  choose cp hcp using fun p hp => (hpoints p hp).exists
-  let c : V → E := fun p => if hp : p ∈ S then cp p hp else 0
-  have hc : ∀ p ∈ S, ‖c p‖ ≤ 2 * ν * δ ∧ B p (c p) + A p (c p) (c p) = d p := by
-    intro p hp
-    simpa only [c, dite_eq_left hp] using hcp p hp
-  refine ⟨c, contDiffOn B A d c hB hA hd ν q δ hν hq hδ hBi hBn hAn
-    (fun p hp => (hc p hp).1) (fun p hp => (hc p hp).2) hsmall, hc, ?_⟩
-  intro p hp x hx heq
-  exact (hpoints p hp).unique ⟨hx, heq⟩ (hc p hp)
 
 end Smooth
 

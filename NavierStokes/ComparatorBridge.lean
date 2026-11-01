@@ -72,19 +72,7 @@ theorem rescale_smooth {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
   intro z hz
   exact ⟨mul_nonneg hc hz.1, mem_univ _⟩
 
-theorem rescale_periodic {V : Type*} [SMul ℝ V] {f : SpaceTime → V}
-    (hf : UnitSpatialPeriodsOn (Ici 0) f) (a : ℝ) {c : ℝ} (hc : 0 ≤ c) :
-    UnitSpatialPeriodsOn (Ici 0) (rescale a c f) := by
-  intro t ht x i
-  exact congrArg (fun y => a • y) (hf (c * t) (mul_nonneg hc ht) x i)
 
-theorem rescale_support {f : VelocityField} (hf : CompactFutureTimeSupport f)
-    (a : ℝ) {c : ℝ} (hc : 0 < c) : CompactFutureTimeSupport (rescale a c f) := by
-  obtain ⟨T, hT, hz⟩ := hf
-  refine ⟨T / c, div_nonneg hT hc.le, ?_⟩
-  intro t ht x
-  dsimp [rescale]
-  rw [hz (c * t) (by nlinarith [(div_le_iff₀ hc).mp ht]) x, smul_zero]
 
 theorem fromComparator_smooth {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
     {f : Space → ℝ → V} (hf : ContDiffOn ℝ ∞ (↿f) (univ ×ˢ Ici 0)) :
@@ -180,13 +168,6 @@ theorem smooth_space_slice {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V
   exact hv.comp (contDiff_const.prodMk contDiff_id).contDiffOn
     (fun _ _ => ⟨ht, mem_univ _⟩)
 
-theorem differentiable_time_slice {v : VelocityField}
-    (hv : ContDiffOn ℝ ∞ v futureDomain) {t : ℝ} (ht : 0 < t) (x : Space) :
-    DifferentiableAt ℝ (fun s => v (s, x)) t := by
-  have h : ContDiffAt ℝ ∞ v (t, x) :=
-    hv.contDiffAt (prod_mem_nhds (Ici_mem_nhds ht) Filter.univ_mem)
-  exact (h.comp t (contDiffAt_id.prodMk contDiffAt_const)).differentiableAt
-    (by simp)
 
 /-- The original project conventions for a global viscosity-one solution. -/
 structure GlobalSolutionOne (f : VelocityField) (v : VelocityField) (p : PressureField) : Prop where
@@ -213,41 +194,5 @@ theorem comparator_equation {ν : ℝ} {u₀ : Space → Space} {f v : Space →
   rw [h.navier_stokes x t ht.le]
   abel
 
-/-- Pull a hypothetical viscosity-`ν` solution back to viscosity one. -/
-theorem normalized_solution {ν : ℝ} (hν : 0 < ν) {f : VelocityField}
-    {v : Space → ℝ → Space} {p : Space → ℝ → ℝ}
-    (h : Comparator.NavierStokesExistenceAndSmoothnessPeriodic ν (fun _ => 0)
-      (toComparator (rescaledForce ν f)) v p) :
-    GlobalSolutionOne f (rescale ν⁻¹ ν⁻¹ (fromComparator v))
-      (rescale (ν⁻¹ ^ 2) ν⁻¹ (fromComparator p)) := by
-  have hc : 0 < ν⁻¹ := inv_pos.mpr hν
-  have hv := fromComparator_smooth h.velocity_smooth
-  have hp := fromComparator_smooth h.pressure_smooth
-  refine ⟨rescale_smooth hv _ hc.le, rescale_smooth hp _ hc.le, ?_, ?_, ?_, ?_, ?_⟩
-  · apply rescale_periodic (a := ν⁻¹) (c := ν⁻¹) ?_ hc.le
-    intro t ht x i
-    exact h.isOnePeriodic_velocity t ht x i
-  · apply rescale_periodic (a := ν⁻¹ ^ 2) (c := ν⁻¹) ?_ hc.le
-    intro t ht x i
-    exact h.isOnePeriodic_pressure t ht x i
-  · intro x
-    simp [rescale, fromComparator, h.initial_condition]
-  · intro t ht x
-    rw [rescale_divergence, divergence_eq]
-    change ν⁻¹ * Comparator.divergence (v · (ν⁻¹ * t)) x = 0
-    rw [h.div_free x (ν⁻¹ * t) (mul_nonneg hc.le ht), mul_zero]
-  · intro t ht x
-    rw [navierStokesResidual, rescale_temporalDerivative _ _ _ _ _
-      (differentiable_time_slice hv (mul_pos hc ht) x),
-      rescale_advection, rescale_laplacian, rescale_gradient]
-    have he := congrArg (fun z : Space => ν⁻¹ ^ 2 • z)
-      (comparator_equation h (mul_pos hc ht) x)
-    have hcoef : ν⁻¹ ^ 2 * ν = ν⁻¹ := by field_simp
-    have hforce : ν⁻¹ ^ 2 • toComparator (rescaledForce ν f) x (ν⁻¹ * t) = f (t, x) := by
-      simp [toComparator, rescaledForce, rescale, smul_smul, hν.ne']
-    rw [hforce] at he
-    simp only [smul_add, smul_sub, smul_smul] at he
-    rw [hcoef] at he
-    simpa only [pow_two] using he
 
 end NavierStokes.ComparatorBridge

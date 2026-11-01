@@ -27,48 +27,8 @@ def H3ContinuousOn (u : VelocityField) (s : Set ℝ) : Prop :=
     ∀ t ∈ s, Tendsto (fun r => derivativeH3Norm (fun x => u (r, x) - u (t, x)))
       (𝓝[s] t) (𝓝 0)
 
-theorem finiteH3_of_compact_slab {a b : ℝ} (hab : a < b) {u : VelocityField}
-    {K : Set Space} (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K)
-    {t : ℝ} (ht : t ∈ Icc a b) : HasFiniteH3 (fun x => u (t, x)) := by
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · exact partialWord_square_integrable hab hK hu hsupp [] ht
-  · intro i
-    exact partialWord_square_integrable hab hK hu hsupp [i] ht
-  · intro i j
-    exact partialWord_square_integrable hab hK hu hsupp [i, j] ht
-  · intro i j k
-    exact partialWord_square_integrable hab hK hu hsupp [i, j, k] ht
 
-theorem continuousOn_derivativeH3Energy_of_compact_slab {a b : ℝ} (hab : a < b)
-    {u : VelocityField} {K : Set Space} (hK : IsCompact K)
-    (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K) :
-    ContinuousOn (fun t => derivativeH3Energy (fun x => u (t, x))) (Icc a b) := by
-  have hc (is : List (Fin 3)) := partialWord_square_continuousOn hab hK hu hsupp is
-  have hm : ContinuousOn (fun t => mixedEnergy (fun x => u (t, x))) (Icc a b) :=
-    (((((((hc []).add (hc [0])).add (hc [1])).add (hc [2])).add
-      (hc [1, 0])).add (hc [2, 0])).add (hc [2, 1])).add (hc [2, 1, 0])
-  apply (hm.add ?_).add ?_
-  · apply continuousOn_finsetSum
-    intro i _
-    apply continuousOn_finsetSum
-    intro j _
-    exact hc [i, j]
-  · apply continuousOn_finsetSum
-    intro i _
-    apply continuousOn_finsetSum
-    intro j _
-    apply continuousOn_finsetSum
-    intro k _
-    exact hc [i, j, k]
 
-theorem continuousOn_derivativeH3Norm_of_compact_slab {a b : ℝ} (hab : a < b)
-    {u : VelocityField} {K : Set Space} (hK : IsCompact K)
-    (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K) :
-    ContinuousOn (fun t => derivativeH3Norm (fun x => u (t, x))) (Icc a b) :=
-  (continuousOn_derivativeH3Energy_of_compact_slab hab hK hu hsupp).sqrt
 
 @[simp] theorem derivativeH3Norm_zero : derivativeH3Norm (fun _ : Space => (0 : Space)) = 0 := by
   have hz (i : Fin 3) : spatialPartial i (fun _ : Space => (0 : Space)) = fun _ => 0 := by
@@ -76,23 +36,6 @@ theorem continuousOn_derivativeH3Norm_of_compact_slab {a b : ℝ} (hab : a < b)
     simp [spatialPartial]
   simp [derivativeH3Norm, derivativeH3Energy, mixedEnergy, squareEnergy, hz]
 
-/-- Uniform compact support and joint smoothness imply actual H³ norm
-continuity, including the endpoints of a closed time interval. -/
-theorem h3ContinuousOn_of_compact_slab {a b : ℝ} (hab : a < b)
-    {u : VelocityField} {K : Set Space} (hK : IsCompact K)
-    (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K) :
-    H3ContinuousOn u (Icc a b) := by
-  refine ⟨fun t ht => finiteH3_of_compact_slab hab hK hu hsupp ht, ?_⟩
-  intro t ht
-  let w : VelocityField := fun z => u z - u (t, z.2)
-  have hw : ContDiffOn ℝ ∞ w (slab a b) :=
-    hu.sub (((spatial_smooth hu ht).comp contDiff_snd).contDiffOn)
-  have hs : ∀ r ∈ Icc a b, tsupport (fun x => w (r, x)) ⊆ K := by
-    intro r hr
-    exact (tsupport_sub _ _).trans (union_subset (hsupp r hr) (hsupp t ht))
-  have hc := (continuousOn_derivativeH3Norm_of_compact_slab hab hK hw hs) t ht
-  simpa only [ContinuousWithinAt, w, sub_self, derivativeH3Norm_zero] using hc
 
 
 end NavierStokesR3.H3Embedding

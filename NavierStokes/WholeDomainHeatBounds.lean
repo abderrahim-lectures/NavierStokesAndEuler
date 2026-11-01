@@ -85,17 +85,6 @@ theorem homogeneous_heat_bound {f : SpaceTime → V}
         have hm : 0 ≤ (m : ℝ) := by positivity
         linarith [hb.1])) hC
 
-/-- Every actual heat-velocity jet is uniformly bounded on the entire
-exterior region of the unit similarity sublevel. -/
-theorem heat_velocity_bound (C : ℝ) {h R : ℝ}
-    (hh : 0 < h) (hh1 : h < 1/2) (hR : 0 < R) (m : ℕ) :
-    ∃ K : ℝ, 0 ≤ K ∧ ∀ w ∈ preterminal, physicalQ h w ≤ 1 →
-      R < (SlowBorelBase.cartesianChart h w).2.1 →
-      ‖iteratedFDeriv ℝ m (BaseExterior.heatVelocity C h) w‖ ≤
-        K * physicalQ h w ^ (-heatLoss m) :=
-  homogeneous_heat_bound (BaseExterior.heatVelocity_contDiffOn_closed C hh)
-    (by unfold RadialHeatProfile.spatialExponent; constructor <;> linarith)
-    (fun a ha z _ hs => heatVelocity_rescale C h a ha z hs) hh hh1 hR m
 
 /-- The canonical improper-integral pressure satisfies the same global
 fixed-order bound; no bound on the radial coordinate is imposed. -/

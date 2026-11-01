@@ -153,35 +153,7 @@ theorem quotientPoint_lattice_add (k : Frequency) (z : Plane) :
     quotientPoint (latticePoint k + z) = quotientPoint z := by
   simp [quotientPoint, latticePoint, circle_int_eq_zero]
 
-/-- Each translated half-open unit square is an injective coordinate chart
-for the quotient to the torus. -/
-theorem quotientPoint_injOn_square (a : Plane) :
-    InjOn quotientPoint (Ico a.1 (a.1 + 1) ×ˢ Ico a.2 (a.2 + 1)) := by
-  intro x hx y hy hxy
-  apply Prod.ext
-  · exact (AddCircle.coe_eq_coe_iff_of_mem_Ico hx.1 hy.1).mp (congrArg Prod.fst hxy)
-  · exact (AddCircle.coe_eq_coe_iff_of_mem_Ico hx.2 hy.2).mp (congrArg Prod.snd hxy)
 
-/-- A concrete smallness criterion for the native parallelogram. The product
-norm on `Plane` is the maximum norm, so `ball 0 r` is the open native square. -/
-theorem quotientPoint_injOn_small_chart (L : Plane ≃L[ℝ] Plane) (center : Plane)
-    (r : ℝ) (hr : ‖(L : Plane →L[ℝ] Plane)‖ * r < 1 / 2) :
-    InjOn quotientPoint ((fun z => center + L z) '' Metric.ball (0 : Plane) r) := by
-  apply (quotientPoint_injOn_square (center - (1 / 2, 1 / 2))).mono
-  rintro _ ⟨z, hz, rfl⟩
-  have hz' : ‖z‖ < r := by simpa using hz
-  have hnorm : ‖L z‖ < 1 / 2 :=
-    ((L : Plane →L[ℝ] Plane).le_opNorm z).trans_lt
-      ((mul_le_mul_of_nonneg_left hz'.le (norm_nonneg _)).trans_lt hr)
-  have h1 : |(L z).1| < 1 / 2 := (norm_fst_le (L z)).trans_lt hnorm
-  have h2 : |(L z).2| < 1 / 2 := (norm_snd_le (L z)).trans_lt hnorm
-  change (center.1 + (L z).1 ∈ Ico (center.1 - 1 / 2) (center.1 - 1 / 2 + 1)) ∧
-    (center.2 + (L z).2 ∈ Ico (center.2 - 1 / 2) (center.2 - 1 / 2 + 1))
-  constructor <;> constructor
-  · linarith [(abs_lt.mp h1).1]
-  · linarith [(abs_lt.mp h1).2]
-  · linarith [(abs_lt.mp h2).1]
-  · linarith [(abs_lt.mp h2).2]
 
 
 theorem latticeTranslate_unique {s : Set Plane} (hs : InjOn quotientPoint s)
@@ -394,10 +366,6 @@ theorem nativeField_continuous {V : Type*} [TopologicalSpace V]
     Continuous (nativeField L center f) :=
   hf.comp (L.symm.continuous.comp (continuous_id.sub continuous_const))
 
-theorem nativeField_contDiff {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
-    (L : Plane ≃L[ℝ] Plane) (center : Plane) {f : Plane → V} (hf : ContDiff ℝ ∞ f) :
-    ContDiff ℝ ∞ (nativeField L center f) :=
-  hf.comp (L.symm.contDiff.comp (contDiff_id.sub contDiff_const))
 
 theorem nativeField_hasCompactSupport {V : Type*} [Zero V]
     (L : Plane ≃L[ℝ] Plane) (center : Plane) {f : Plane → V} (hf : HasCompactSupport f) :
@@ -425,15 +393,6 @@ theorem integral_nativeField {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ
     LinearEquiv.det_coe_symm L.toLinearEquiv
   rw [hd, inv_inv, ENNReal.toReal_ofReal (abs_nonneg _)]
 
-/-- The native compact-slot average is obtained from periodization and a
-Jacobian theorem, with no assumed averaging identity. -/
-theorem integral_periodize_nativeField {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
-    (L : Plane ≃L[ℝ] Plane) (center : Plane) {f : Plane → V}
-    (hf : Continuous f) (hcf : HasCompactSupport f) :
-    (∫ z in fundamentalSquare, periodize (nativeField L center f) z) =
-      |LinearMap.det (L : Plane →ₗ[ℝ] Plane)| • ∫ z, f z := by
-  rw [integral_periodize ((nativeField_continuous L center hf).integrable_of_hasCompactSupport
-    (nativeField_hasCompactSupport L center hcf)), integral_nativeField]
 
 /-- The linear map with the radial and longitudinal vectors as its columns. -/
 noncomputable def slotLinearMap (vr vt : Plane) : Plane →ₗ[ℝ] Plane :=

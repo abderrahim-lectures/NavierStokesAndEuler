@@ -61,14 +61,6 @@ theorem partialWord_support {a b : ℝ} {u : VelocityField} {K : Set Space}
   | nil => exact hsupp
   | cons i is ih => exact partialField_support ih i
 
-theorem partialWord_square_integrable {a b : ℝ} (hab : a < b) {u : VelocityField}
-    {K : Set Space} (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K)
-    (is : List (Fin 3)) {t : ℝ} (ht : t ∈ Icc a b) :
-    Integrable (fun x : Space => ‖partialWord is u (t, x)‖ ^ 2) := by
-  exact CompactEnergy.integrable_norm_sq
-    (spatial_smooth (partialWord_contDiffOn hab hu is) ht).continuous
-    (CompactEnergy.slice_compact hK (partialWord_support hsupp is t ht))
 
 theorem partialWord_square_continuousOn {a b : ℝ} (hab : a < b) {u : VelocityField}
     {K : Set Space} (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))

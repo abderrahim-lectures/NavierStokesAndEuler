@@ -224,33 +224,7 @@ omit [CompleteSpace E] in
 @[simp] theorem jointDerivative_apply (a b : E) (v : ℝ × ℂ) :
     jointDerivative a b v = v.1 • a + v.2 • b := rfl
 
-omit [CompleteSpace E] in
-/-- The radial partial derivative is obtained by evaluating the genuine
-supremum-norm derivative of the supplied disk curve. -/
-theorem hasDerivAt_parameter (c : ℂ) {σ : ℝ} {S : Set ℝ} (hS : IsOpen S)
-    (V : ℝ → C(Disk c σ, E)) (F : ℝ → ℂ → E)
-    (hV : ContDiffOn ℝ ∞ V S)
-    (hvalues : ∀ r ∈ S, ∀ z : Disk c σ, V r z = F r z)
-    {r : ℝ} (hr : r ∈ S) (z : Disk c σ) :
-    HasDerivAt (fun s => F s z) (deriv V r z) r := by
-  have hdV : HasDerivAt V (deriv V r) r :=
-    ((hV r hr).contDiffAt (hS.mem_nhds hr)).differentiableAt (by simp) |>.hasDerivAt
-  have heval : HasFDerivAt (ContinuousMap.evalCLM ℝ z)
-      (ContinuousMap.evalCLM ℝ z) (V r) :=
-    ContinuousLinearMap.hasFDerivAt (𝕜 := ℝ)
-      (E := C(Disk c σ, E)) (F := E) (ContinuousMap.evalCLM ℝ z)
-  apply (heval.comp_hasDerivAt r hdV).congr_of_eventuallyEq
-  filter_upwards [hS.mem_nhds hr] with s hs
-  exact (hvalues s hs z).symm
 
-/-- CauchyRestriction's bounded operator is the actual complex partial. -/
-theorem hasDerivAt_complex (c : ℂ) {ρ σ : ℝ} (hgap : ρ < σ)
-    (v : C(Disk c σ, E)) (F : ℂ → E)
-    (hF : DifferentiableOn ℂ F (ball c σ))
-    (hvalues : ∀ z : Disk c σ, v z = F z) (z : Disk c ρ) :
-    HasDerivAt F (derivativeCLM c hgap v z) z := by
-  rw [derivativeCLM_apply_of_eq c hgap v F (diffContOnCl_of_values c v F hF hvalues) hvalues]
-  exact (hF.differentiableAt (isOpen_ball.mem_nhds (z.2.trans_lt hgap))).hasDerivAt
 
 
 

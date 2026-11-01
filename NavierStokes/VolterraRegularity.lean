@@ -248,13 +248,6 @@ integer singular exponents. In the six-component system these are
 noncomputable def diagonalRegularPrimitive (c : ι → ℕ) (f : ℝ → ι → E) : ℝ → ι → E :=
   fun r i => regularPrimitive (c i) (fun s => f s i) r
 
-theorem diagonalRegularPrimitive_contDiffOn_succ [CompleteSpace E]
-    (n : ℕ) (c : ι → ℕ) {R : ℝ} {f : ℝ → ι → E}
-    (hf : ContDiffOn ℝ n f (radialDomain R)) :
-    ContDiffOn ℝ (n + 1 : ℕ) (diagonalRegularPrimitive c f) (radialDomain R) := by
-  apply contDiffOn_pi.2
-  intro i
-  exact regularPrimitive_contDiffOn_succ n (c i) (contDiffOn_pi.1 hf i)
 
 end DiagonalIntegral
 
@@ -553,48 +546,7 @@ theorem real_iteratedDeriv_contDiffOn {G : Type*} [NormedAddCommGroup G] [Normed
       rw [iteratedDeriv_succ]
       exact ih.deriv_of_isOpen hS (by simp)
 
-omit [CompleteSpace E] in
-/-- Evaluation of a smooth compact-function curve commutes with every
-fixed radial derivative. -/
-theorem iteratedDeriv_evaluate {K : Type*} [TopologicalSpace K] [CompactSpace K]
-    {S : Set ℝ} (hS : IsOpen S) {f : ℝ → C(K, E)} (hf : ContDiffOn ℝ ∞ f S)
-    {r : ℝ} (hr : r ∈ S) (n : ℕ) (z : K) :
-    iteratedDeriv n f r z = iteratedDeriv n (fun s => f s z) r := by
-  let ev : C(K, E) →L[ℝ] E := ContinuousMap.evalCLM ℝ z
-  have hcomp := ev.iteratedFDerivWithin_comp_left (hf r hr) hS.uniqueDiffOn hr
-    (ENat.natCast_le_of_coe_top_le_withTop le_rfl n)
-  have hv := congrArg (fun L : ℝ [×n]→L[ℝ] E => L (fun _ => 1)) hcomp.symm
-  change (iteratedFDerivWithin ℝ n f S r (fun _ => 1)) z =
-    iteratedFDerivWithin ℝ n (fun s => f s z) S r (fun _ => 1) at hv
-  simpa only [iteratedFDerivWithin_of_isOpen n hS hr,
-    ← iteratedDeriv_eq_iteratedFDeriv] using hv
 
-/-- Compact radial subintervals have uniform bounds for each fixed mixed
-derivative on the full inner parameter disk. Constants may depend on both
-derivative orders; no radial analyticity estimate is asserted. -/
-theorem parameterJets_uniform_mixed_bound (center : ℂ) (ρ : ℕ → ℝ)
-    (hρ : ∀ j, ρ j < ρ (j + 1))
-    (V : ∀ j, ℝ → C(Disk center (ρ j), E)) {S : Set ℝ} (hS : IsOpen S) {U : Set ℂ}
-    (hU : IsOpen U) (hDisk : ∀ j, Metric.closedBall center (ρ j) ⊆ U)
-    (F : ℝ → ℂ → E) (hF : ∀ r ∈ S, DifferentiableOn ℂ (F r) U)
-    (hV : ∀ j r, r ∈ S → ∀ z : Disk center (ρ j), V j r z = F r z)
-    (hs : ∀ j, ContDiffOn ℝ ∞ (V j) S)
-    {K : Set ℝ} (hK : IsCompact K) (hKS : K ⊆ S) (n k j : ℕ) :
-    ∃ B : ℝ, 0 ≤ B ∧ ∀ r ∈ K, ∀ z : Disk center (ρ j),
-      ‖iteratedDeriv n (fun s => iteratedDeriv k (F s) z) r‖ ≤ B := by
-  let G := cauchyJetCurve center ρ hρ V k j
-  have hG : ContDiffOn ℝ ∞ G S := cauchyJetCurve_contDiffOn center ρ hρ V hs k j
-  have hdG := real_iteratedDeriv_contDiffOn hS hG n
-  obtain ⟨B, hB⟩ := hK.exists_bound_of_continuousOn (hdG.continuousOn.mono hKS)
-  refine ⟨max B 0, le_max_right _ _, ?_⟩
-  intro r hr z
-  have heq : EqOn (fun s => G s z) (fun s => iteratedDeriv k (F s) z) S := by
-    intro s hs'
-    exact cauchyJetCurve_apply_of_eq center ρ hρ V hU hDisk F hF hV k j s hs' z
-  have hv := iteratedDeriv_evaluate hS hG (hKS hr) n z
-  have hactual := heq.iteratedDeriv_of_isOpen hS n (hKS hr)
-  rw [← hactual, ← hv]
-  exact ((iteratedDeriv n G r).norm_coe_le_norm z).trans ((hB r hr).trans (le_max_left _ _))
 
 end ParameterJets
 
@@ -709,31 +661,7 @@ theorem symmetric_solution_parameterJets_radial_contDiffOn_local
   exact symmetric_solution_parameterJets_radial_contDiffOn hR hU hW hdata z
     (interiorRadii δ) (interiorRadii_increasing hδ) (interiorRadii_subset hδ z hball) k 0 i z₀
 
-/-- All fixed mixed derivatives of the constructed field exist smoothly
-through the real radial origin. The order of operations here is parameter
-differentiation followed by radial differentiation. -/
-theorem symmetric_solution_mixed_contDiffOn
-    {R : ℝ} (hR : 0 ≤ R) {U : Set ℂ} (hU : IsOpen U)
-    {A₀ A₁ : Coeff} {f W : Field}
-    (hW : VolterraParity.IsSymmetricIntegralSolution R U A₀ A₁ f W)
-    (hdata : SmoothCoefficientData R U A₀ A₁ f)
-    {z : ℂ} (hz : z ∈ U) (n k : ℕ) (i : Fin 6) :
-    ContDiffOn ℝ ∞
-      (iteratedDeriv n (fun r => iteratedDeriv k (fun w : ℂ => W r w i) z))
-      (radialDomain R) :=
-  real_iteratedDeriv_contDiffOn Metric.isOpen_ball
-    (symmetric_solution_parameterJets_radial_contDiffOn_local hR hU hW hdata hz k i) n
 
-theorem symmetric_solution_mixed_contDiffAt_zero
-    {R : ℝ} (hR : 0 < R) {U : Set ℂ} (hU : IsOpen U)
-    {A₀ A₁ : Coeff} {f W : Field}
-    (hW : VolterraParity.IsSymmetricIntegralSolution R U A₀ A₁ f W)
-    (hdata : SmoothCoefficientData R U A₀ A₁ f)
-    {z : ℂ} (hz : z ∈ U) (n k : ℕ) (i : Fin 6) :
-    ContDiffAt ℝ ∞
-      (iteratedDeriv n (fun r => iteratedDeriv k (fun w : ℂ => W r w i) z)) 0 :=
-  (symmetric_solution_mixed_contDiffOn hR.le hU hW hdata hz n k i).contDiffAt
-    (Metric.ball_mem_nhds 0 hR)
 
 
 

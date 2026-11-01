@@ -502,16 +502,6 @@ variable {Label : Type*} {E V : Type}
   [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup V] [NormedSpace ℝ V]
 
-private theorem majorant_enlarge (s : StripData E) (w : ℕ → E → ℝ) (α : ℝ)
-    {C B : ℝ} {p q : ℕ} (hC : 0 ≤ C) (hCB : C ≤ B) (hpq : p ≤ q)
-    (n : ℕ) (x : E) (hw : 0 ≤ w n x) :
-    majorant s w α C p n x ≤ majorant s w α B q n x := by
-  have hp := raise_polynomial_bound hC hCB (s.growth_nonneg n x) le_rfl
-    (s.one_le_growth n x) hpq
-  have ht := mul_le_mul_of_nonneg_right hp
-    (mul_nonneg (Real.rpow_pos_of_pos (s.epsilon_pos n) α).le hw)
-  unfold majorant
-  nlinarith only [ht]
 
 
 end FiniteHarmonics

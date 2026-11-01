@@ -116,34 +116,6 @@ theorem compact_normalized_cone_gap {K : Set X} (hK : IsCompact K)
   refine ⟨lt_of_lt_of_le hpε (mul_le_mul_of_nonneg_left (hbounds x hx).1 hpzero.le), ?_⟩
   exact (hlarge p hpold x hx).2
 
-/-- The manuscript's strict source criterion (11), uniformly on any compact
-parameter family. The conclusion supplies uniform normalized margins and a
-single threshold for all stress amplitudes above it. -/
-theorem compact_equation_eleven {K : Set X} (hK : IsCompact K)
-    {a b w : X → ℝ} (ha : ContinuousOn a K) (hb : ContinuousOn b K)
-    (hw : ContinuousOn w K) (hapos : ∀ x ∈ K, 0 < a x)
-    (hfirst : ∀ x ∈ K, 0 < a x - b x * w x)
-    (hsecond : ∀ x ∈ K,
-      2 * b x * w x + b x ^ 2 / a x + (a x - 2) * w x ^ 2 < 2) :
-    ∃ ε p₀ : ℝ, 0 < ε ∧ 0 ≤ p₀ ∧
-      (∀ x ∈ K, ε ≤ 1 - b x * w x / a x ∧
-        ε ≤ 2 * (1 - b x * w x / a x) ^ 2 -
-          (a x * (1 + (b x / a x) ^ 2) - 2) * (w x + b x / a x) ^ 2) ∧
-      ∀ p : ℝ, p₀ < p → ∀ x ∈ K,
-        2 < p * (1 - b x * w x / a x) ∧
-        a x * (1 + (b x / a x) ^ 2) <
-          coneBound (p * (1 - b x * w x / a x)) (p * (w x + b x / a x)) := by
-  have hane : ∀ x ∈ K, a x ≠ 0 := fun x hx => ne_of_gt (hapos x hx)
-  apply compact_normalized_cone hK
-  · exact continuousOn_const.sub ((hb.mul hw).div ha hane)
-  · exact hw.add (hb.div ha hane)
-  · exact ha.mul (continuousOn_const.add ((hb.div ha hane).pow 2))
-  · intro x hx
-    apply sub_pos.mpr
-    exact (div_lt_one (hapos x hx)).mpr (by linarith [hfirst x hx])
-  · intro x hx
-    have h := normalized_test_negative (hapos x hx) (hsecond x hx)
-    linarith
 
 /-- Equation (11), with a common positive additive gap in both relaxed-cone
 inequalities for every parameter and every sufficiently large amplitude. -/
@@ -188,69 +160,8 @@ theorem isOpen_trueCone : IsOpen trueCone := by
     ((isOpen_lt continuous_const continuous_fst).inter
       (isOpen_lt (continuous_snd.comp continuous_snd) continuous_coneBound))
 
-/-- A continuous compact family inside the true cone stays a uniformly
-positive distance from each of its three defining scalar boundaries. -/
-theorem compact_trueCone_margins {K : Set X} (hK : IsCompact K)
-    {P J v : X → ℝ} (hP : ContinuousOn P K) (hJ : ContinuousOn J K)
-    (hv : ContinuousOn v K)
-    (hcone : ∀ x ∈ K, 2 < v x ∧ 2 < P x ∧ v x < coneBound (P x) (J x)) :
-    ∃ ε : ℝ, 0 < ε ∧ ∀ x ∈ K,
-      ε ≤ v x - 2 ∧ ε ≤ P x - 2 ∧ ε ≤ coneBound (P x) (J x) - v x := by
-  have hbound : ContinuousOn (fun x => coneBound (P x) (J x)) K :=
-    continuous_coneBound.comp_continuousOn (hP.prodMk (hJ.prodMk hv))
-  obtain ⟨εv, hεv, hboundv⟩ := positive_uniform_margin hK (hv.sub continuousOn_const)
-    (fun x hx => sub_pos.mpr (hcone x hx).1)
-  obtain ⟨εP, hεP, hboundP⟩ := positive_uniform_margin hK (hP.sub continuousOn_const)
-    (fun x hx => sub_pos.mpr (hcone x hx).2.1)
-  obtain ⟨εU, hεU, hboundU⟩ := positive_uniform_margin hK (hbound.sub hv)
-    (fun x hx => sub_pos.mpr (hcone x hx).2.2)
-  refine ⟨min εv (min εP εU), lt_min hεv (lt_min hεP hεU), fun x hx => ?_⟩
-  exact ⟨(min_le_left _ _).trans (hboundv x hx),
-    ((min_le_right _ _).trans (min_le_left _ _)).trans (hboundP x hx),
-    ((min_le_right _ _).trans (min_le_right _ _)).trans (hboundU x hx)⟩
 
-/-- Every compact subset of the true cone has one positive metric
-perturbation tolerance, including perturbations outside the original image. -/
-theorem compact_trueCone_stable {S : Set ConeDatum} (hS : IsCompact S)
-    (hcone : S ⊆ trueCone) :
-    ∃ ρ : ℝ, 0 < ρ ∧ ∀ z ∈ S, ∀ z' : ConeDatum,
-      dist z' z ≤ ρ → z' ∈ trueCone := by
-  obtain ⟨ρ, hρ, hsub⟩ := hS.exists_cthickening_subset_open isOpen_trueCone hcone
-  exact ⟨ρ, hρ, fun z hz z' hdist =>
-    hsub (Metric.mem_cthickening_of_dist_le z' z ρ S hz hdist)⟩
 
-/-- A continuous compact family in the true cone has uniform perturbation
-tolerance. The competing datum need not depend continuously on the parameter. -/
-theorem compact_family_trueCone_stable {K : Set X} (hK : IsCompact K)
-    {P J v : X → ℝ} (hP : ContinuousOn P K) (hJ : ContinuousOn J K)
-    (hv : ContinuousOn v K)
-    (hcone : ∀ x ∈ K, 2 < v x ∧ 2 < P x ∧ v x < coneBound (P x) (J x)) :
-    ∃ ρ : ℝ, 0 < ρ ∧ ∀ x ∈ K, ∀ P' J' v' : ℝ,
-      dist (P', J', v') (P x, J x, v x) ≤ ρ →
-        2 < v' ∧ 2 < P' ∧ v' < coneBound P' J' := by
-  let f : X → ConeDatum := fun x => (P x, J x, v x)
-  have hf : ContinuousOn f K := hP.prodMk (hJ.prodMk hv)
-  have himage : f '' K ⊆ trueCone := by
-    rintro z ⟨x, hx, rfl⟩
-    exact hcone x hx
-  obtain ⟨ρ, hρ, hstable⟩ := compact_trueCone_stable (hK.image_of_continuousOn hf) himage
-  exact ⟨ρ, hρ, fun x hx P' J' v' hdist =>
-    hstable (f x) (mem_image_of_mem f hx) (P', J', v') hdist⟩
 
-/-- Coordinatewise perturbations of a compact true-cone family preserve
-the exact quadratic criterion as well as the lower bound `v > 2`. -/
-theorem compact_family_quadratic_stable {K : Set X} (hK : IsCompact K)
-    {P J v : X → ℝ} (hP : ContinuousOn P K) (hJ : ContinuousOn J K)
-    (hv : ContinuousOn v K)
-    (hcone : ∀ x ∈ K, 2 < v x ∧ 2 < P x ∧ v x < coneBound (P x) (J x)) :
-    ∃ ρ : ℝ, 0 < ρ ∧ ∀ x ∈ K, ∀ P' J' v' : ℝ,
-      |P' - P x| ≤ ρ → |J' - J x| ≤ ρ → |v' - v x| ≤ ρ →
-        2 < v' ∧ v' < P' ∧ (v' - 2) * J' ^ 2 < 2 * (P' - v') ^ 2 := by
-  obtain ⟨ρ, hρ, hstable⟩ := compact_family_trueCone_stable hK hP hJ hv hcone
-  refine ⟨ρ, hρ, fun x hx P' J' v' hP' hJ' hv' => ?_⟩
-  have hdist : dist (P', J', v') (P x, J x, v x) ≤ ρ := by
-    simpa only [Prod.dist_eq, Real.dist_eq] using max_le hP' (max_le hJ' hv')
-  obtain ⟨hv₂, hP₂, hroot⟩ := hstable x hx P' J' v' hdist
-  exact ⟨hv₂, (true_cone_iff hv₂).mp ⟨hP₂, hroot⟩⟩
 
 end NavierStokes.UniformCone

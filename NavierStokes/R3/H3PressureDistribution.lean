@@ -43,36 +43,8 @@ theorem compact_integration_by_parts {f g : Space → ℂ}
   · intro x _; exact hf.differentiable (by norm_num) x
   · intro x _; exact hg.differentiable (by norm_num) x
 
-theorem partial_partial_eq {f : Space → ℂ} (hf : ContDiff ℝ ∞ f)
-    (i j : Fin 3) (x : Space) :
-    spatialPartial i (spatialPartial j f) x =
-      fderiv ℝ (fderiv ℝ f) x (coordinateVector i) (coordinateVector j) := by
-  have hdf := (hf.fderiv_right (m := 1) (by simp)).differentiable (by norm_num) x
-  change fderiv ℝ (fun y => fderiv ℝ f y (coordinateVector j)) x (coordinateVector i) = _
-  rw [fderiv_clm_apply hdf (differentiableAt_const (coordinateVector j))]
-  simp
 
-theorem partial_commute {f : Space → ℂ} (hf : ContDiff ℝ ∞ f)
-    (i j : Fin 3) : spatialPartial i (spatialPartial j f) = spatialPartial j (spatialPartial i f) := by
-  funext x
-  rw [partial_partial_eq hf, partial_partial_eq hf]
-  exact (hf.contDiffAt.isSymmSndFDerivAt (by simp)).eq _ _
 
-/-- Integration by parts twice puts all second derivatives on the compact
-test. Thus only one pressure derivative is used. -/
-theorem gradient_compact_test_commute {p ψ : Space → ℂ}
-    (hp : ContDiff ℝ 1 p) (hψ : ContDiff ℝ ∞ ψ) (hcψ : HasCompactSupport ψ)
-    (i j : Fin 3) :
-    (∫ x, spatialPartial i ψ x * spatialPartial j p x) =
-      ∫ x, spatialPartial j ψ x * spatialPartial i p x := by
-  calc
-    _ = -(∫ x, spatialPartial j (spatialPartial i ψ) x * p x) :=
-      compact_integration_by_parts ((spatial_partial_contDiff hψ i).of_le (by simp)) hp
-        (hcψ.fderiv_apply ℝ (coordinateVector i)) j
-    _ = -(∫ x, spatialPartial i (spatialPartial j ψ) x * p x) := by
-      rw [partial_commute hψ j i]
-    _ = _ := (compact_integration_by_parts ((spatial_partial_contDiff hψ j).of_le (by simp)) hp
-      (hcψ.fderiv_apply ℝ (coordinateVector j)) i).symm
 
 /-- Formula for a distributional derivative, using any L² representative. -/
 theorem derivative_toLp_apply {f : Space → ℂ} (hf : MemLp f 2 volume)
@@ -125,24 +97,5 @@ theorem H1Approximation.derivative_distribution {f : Space → ℂ}
     derivative_toLp_of_compact (h.smooth n) (h.compact n) i
   exact tendsto_nhds_unique (hl.congr (fun n => he n)) hr
 
-/-- A C¹ pressure with square-integrable gradient has zero distributional
-curl. No global bound, normalization, or integrability of the pressure is
-assumed. -/
-theorem gradient_curl_free {p : Space → ℂ} (hp : ContDiff ℝ 1 p)
-    (hg : ∀ i, MemLp (spatialPartial i p) 2 volume) (i j : Fin 3) :
-    ∂_{coordinateVector i} (distribution ((hg j).toLp (spatialPartial j p))) =
-      ∂_{coordinateVector j} (distribution ((hg i).toLp (spatialPartial i p))) := by
-  apply sub_eq_zero.mp
-  ext ψ
-  apply SchwartzCompactApproximation.continuous_zero_of_compactSupport
-    (F := fun φ =>
-      ((∂_{coordinateVector i} (distribution ((hg j).toLp (spatialPartial j p)))) -
-        (∂_{coordinateVector j} (distribution ((hg i).toLp (spatialPartial i p))))) φ)
-  · exact ContinuousLinearMap.continuous _
-  · intro φ hcφ
-    change (∂_{coordinateVector i} (distribution ((hg j).toLp (spatialPartial j p)))) φ -
-      (∂_{coordinateVector j} (distribution ((hg i).toLp (spatialPartial i p)))) φ = 0
-    rw [derivative_toLp_apply, derivative_toLp_apply,
-      gradient_compact_test_commute hp (φ.smooth ⊤) hcφ i j, sub_self]
 
 end NavierStokesR3.H3PressureDistribution

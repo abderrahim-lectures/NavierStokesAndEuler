@@ -129,14 +129,5 @@ theorem contDiffOn_pathFamily_nat (U : Set P) (V : Set ℝ)
       exact (WithTop.coe_ne_top hω).elim
     simpa only [Nat.cast_add, Nat.cast_one] using hh
 
-theorem contDiffOn_pathFamily (U : Set P) (V : Set ℝ)
-    (hU : Convex ℝ U) (hu : UniqueDiffOn ℝ U) (hv : UniqueDiffOn ℝ V)
-    (hI : Icc a b ⊆ V) (F : P × ℝ → E)
-    (hF : ContDiffOn ℝ ∞ F (U ×ˢ V)) :
-    ContDiffOn ℝ ∞ (pathFamily (a := a) (b := b) F) U := by
-  apply contDiffOn_infty.mpr
-  intro n
-  exact contDiffOn_pathFamily_nat U V hU hu hv hI n F
-    (hF.of_le (ENat.natCast_le_of_coe_top_le_withTop le_rfl n))
 
 end NavierStokes.WithinPathFamily

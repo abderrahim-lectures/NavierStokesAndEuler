@@ -268,25 +268,7 @@ def bounds (k : ℕ) (B C : ι → ℝ) : PolynomialExpression ι → ℝ × ℝ
       (2 : ℝ)^k*((bounds k B C p).2*(bounds k B C q).1+
         (bounds k B C p).1*(bounds k B C q).2))
 
-theorem bounds_nonneg (k : ℕ) {B C : ι → ℝ} (hB : ∀ i, 0 ≤ B i)
-    (hC : ∀ i, 0 ≤ C i) (p : PolynomialExpression ι) :
-    0 ≤ (bounds k B C p).1 ∧ 0 ≤ (bounds k B C p).2 := by
-  induction p with
-  | input i => exact ⟨hB i, hC i⟩
-  | constant c => exact ⟨abs_nonneg c, le_rfl⟩
-  | add p q hp hq | sub p q hp hq => exact ⟨add_nonneg hp.1 hq.1, add_nonneg hp.2 hq.2⟩
-  | mul p q hp hq => exact ⟨mul_nonneg (mul_nonneg (by positivity) hp.1) hq.1,
-      mul_nonneg (by positivity) (add_nonneg (mul_nonneg hp.2 hq.1) (mul_nonneg hp.1 hq.2))⟩
 
-theorem eval_pairBound {k : ℕ} {f g : ι → ℝ → ℝ} {B C : ι → ℝ} {ε : ℝ}
-    (h : ∀ i, PairBound k (f i) (g i) (B i) (C i) ε) (p : PolynomialExpression ι) :
-    PairBound k (p.eval f) (p.eval g) (bounds k B C p).1 (bounds k B C p).2 ε := by
-  induction p with
-  | input i => exact h i
-  | constant c => exact PairBound.const k c ε
-  | add p q hp hq => exact hp.add hq
-  | sub p q hp hq => exact hp.sub hq
-  | mul p q hp hq => exact hp.mul hq
 
 end PolynomialExpression
 

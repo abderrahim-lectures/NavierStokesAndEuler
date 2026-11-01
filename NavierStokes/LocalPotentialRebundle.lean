@@ -108,15 +108,6 @@ theorem velocity_eq_original {a : ℕ → ℕ}
   simp only [direct, MixedPeriodicAssembly.velocity]
   abel
 
-theorem velocity_eq_original_germ {a : ℕ → ℕ}
-    (hs : MixedDiagonalSchedule.ThreeSmoothSums a ActualPrimary.h
-      ActualCandidateAssembly.selectedPotentialStages ActualCandidateAssembly.selectedDirectStages
-      ActualCandidateAssembly.selectedPressureStages) {w : SpaceTime}
-    (hw : w ∈ PhysicalWaveSum.preterminal) :
-    velocity a =ᶠ[𝓝 w] MixedPeriodicAssembly.velocity
-      (LocalAngularGrowth.selectedPotential a) (LocalAngularGrowth.selectedDirect a) := by
-  filter_upwards [PhysicalWaveSum.preterminal_open.mem_nhds hw] with z hz
-  exact velocity_eq_original hs hz
 
 
 theorem sum_eq_first {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]

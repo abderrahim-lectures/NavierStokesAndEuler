@@ -135,10 +135,6 @@ theorem repair_tsupport_subset (a l u d : Fin n → ℝ) (hlu : ∀ j, l j < u j
     tsupport (repair a l u d) ⊆ repairRegion l u :=
   closure_minimal (repair_support_subset a l u d hlu) (repairRegion_isCompact l u).isClosed
 
-theorem repair_hasCompactSupport (a l u d : Fin n → ℝ) (hlu : ∀ j, l j < u j) :
-    HasCompactSupport (repair a l u d) :=
-  HasCompactSupport.of_support_subset_isCompact (repairRegion_isCompact l u)
-    (repair_support_subset a l u d hlu)
 
 theorem repair_tsupport_subset_open (a l u d : Fin n → ℝ) (hlu : ∀ j, l j < u j) :
     tsupport (repair a l u d) ⊆ ⋃ j, Ioo (l j) (u j) :=
@@ -195,10 +191,6 @@ theorem repair_smul (a l u d : Fin n → ℝ) (r : ℝ) :
   simp only [repair, coefficients, Matrix.mulVec_smul, Pi.smul_apply, smul_eq_mul,
     Finset.mul_sum, mul_assoc]
 
-theorem repair_sub (a l u d e : Fin n → ℝ) :
-    repair a l u (d - e) = repair a l u d - repair a l u e := by
-  ext t
-  simp only [repair, coefficients, Matrix.mulVec_sub, Pi.sub_apply, sub_mul, Finset.sum_sub_distrib]
 
 /-- The fixed-interval, fixed-exponent repair depends linearly on the moment debt. -/
 def repairLinearMap (a l u : Fin n → ℝ) : (Fin n → ℝ) →ₗ[ℝ] (ℝ → ℝ) where
@@ -206,15 +198,6 @@ def repairLinearMap (a l u : Fin n → ℝ) : (Fin n → ℝ) →ₗ[ℝ] (ℝ �
   map_add' := repair_add a l u
   map_smul' r d := repair_smul a l u d r
 
-theorem continuous_repair_eval (a l u : Fin n → ℝ) (t : ℝ) :
-    Continuous (fun d => repair a l u d t) := by
-  unfold repair coefficients Matrix.mulVec dotProduct
-  apply continuous_finsetSum
-  intro j _
-  apply Continuous.mul _ continuous_const
-  apply continuous_finsetSum
-  intro k _
-  exact continuous_const.mul (continuous_apply k)
 
 
 /-- Decomposition into the finite family of repairs of coordinate debts. -/
@@ -276,65 +259,8 @@ theorem smooth_compact_derivative_bound (f : ℝ → ℝ) (hf : ContDiff ℝ ∞
 
 variable {n : ℕ}
 
-/-- Every derivative of the repair is the same linear combination of fixed coordinate repairs. -/
-theorem repair_iteratedDeriv_coordinate (a l u d : Fin n → ℝ) (k : ℕ) (t : ℝ) :
-    iteratedDeriv k (repair a l u d) t =
-      ∑ j, d j * iteratedDeriv k (repair a l u (Pi.single j 1)) t := by
-  rw [repair_eq_sum_coordinate a l u d]
-  rw [iteratedDeriv_finite_sum Finset.univ
-    (fun j x => d j * repair a l u (Pi.single j 1) x)
-    (fun j => contDiff_const.mul (repair_contDiff a l u (Pi.single j 1))) k t]
-  apply Finset.sum_congr rfl
-  intro j _
-  exact iteratedDeriv_const_mul (d j)
-    ((repair_contDiff a l u (Pi.single j 1)).of_le
-      (by exact_mod_cast (le_top : (k : ℕ∞) ≤ ⊤))).contDiffAt
 
-/-- A uniform-in-space linear estimate for each derivative, with all geometric data fixed. -/
-theorem repair_derivative_bound (a l u : Fin n → ℝ) (hlu : ∀ j, l j < u j) (k : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ (d : Fin n → ℝ) (t : ℝ),
-      |iteratedDeriv k (repair a l u d) t| ≤ C * ‖d‖ := by
-  have hb : ∀ j : Fin n, ∃ C : ℝ, 0 ≤ C ∧ ∀ t,
-      |iteratedDeriv k (repair a l u (Pi.single j 1)) t| ≤ C := fun j =>
-    smooth_compact_derivative_bound _ (repair_contDiff a l u (Pi.single j 1))
-      (repair_hasCompactSupport a l u (Pi.single j 1) hlu) k
-  choose C hC hbound using hb
-  refine ⟨∑ j, C j, Finset.sum_nonneg (fun j _ => hC j), fun d t => ?_⟩
-  rw [repair_iteratedDeriv_coordinate]
-  calc
-    |∑ j, d j * iteratedDeriv k (repair a l u (Pi.single j 1)) t| ≤
-        ∑ j, |d j * iteratedDeriv k (repair a l u (Pi.single j 1)) t| :=
-      Finset.abs_sum_le_sum_abs _ _
-    _ ≤ ∑ j, ‖d‖ * C j := by
-      apply Finset.sum_le_sum
-      intro j _
-      rw [abs_mul]
-      apply mul_le_mul _ (hbound j t) (abs_nonneg _) (norm_nonneg _)
-      simpa only [Real.norm_eq_abs] using norm_le_pi_norm d j
-    _ = (∑ j, C j) * ‖d‖ := by rw [← Finset.mul_sum, mul_comm]
 
-/-- All derivatives through any prescribed finite order depend Lipschitz-continuously
-on the moment debt, uniformly over the spatial coordinate. -/
-theorem repair_finite_jet_bound (a l u : Fin n → ℝ) (hlu : ∀ j, l j < u j) (N : ℕ) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ k ≤ N, ∀ (d e : Fin n → ℝ) (t : ℝ),
-      |iteratedDeriv k (repair a l u d) t - iteratedDeriv k (repair a l u e) t| ≤
-        C * ‖d - e‖ := by
-  choose C hC hbound using repair_derivative_bound a l u hlu
-  refine ⟨∑ k ∈ Finset.range (N + 1), C k, Finset.sum_nonneg (fun k _ => hC k), ?_⟩
-  intro k hk d e t
-  have hsub : iteratedDeriv k (repair a l u (d - e)) t =
-      iteratedDeriv k (repair a l u d) t - iteratedDeriv k (repair a l u e) t := by
-    rw [repair_sub]
-    exact iteratedDeriv_sub
-      ((repair_contDiff a l u d).of_le
-        (by exact_mod_cast (le_top : (k : ℕ∞) ≤ ⊤))).contDiffAt
-      ((repair_contDiff a l u e).of_le
-        (by exact_mod_cast (le_top : (k : ℕ∞) ≤ ⊤))).contDiffAt
-  rw [← hsub]
-  apply (hbound k (d - e) t).trans
-  apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
-  exact Finset.single_le_sum (fun j _ => hC j)
-    (Finset.mem_range.mpr (Nat.lt_succ_of_le hk))
 
 end Jets
 

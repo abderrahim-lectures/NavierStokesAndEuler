@@ -65,11 +65,6 @@ theorem state_gr_mem {s : StripData D} {c : CorrectionState.Context D}
     MeanClass s (min (9 / 10) γ - 2 * κ) (u.gr c) :=
   radialSource_mem ho hb hu.velocity u.covariance hW
 
-theorem meanClass_unweighted {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {s : StripData D} {β : ℝ} {f : ℕ → D → E}
-    (hf : MeanClass s β f) (hζ : ∀ x ∈ s.domain, s.zeta x ≤ 1) :
-    UnweightedClass s β f :=
-  hf.mono_weight (fun _ _ _ => zero_le_one) (fun _ x hx => hζ x hx)
 
 end RadialSource
 
@@ -119,17 +114,6 @@ end VectorLifts
 
 section MovingWeight
 
-theorem movingStrip_zeta_le_one {coord a b cL cR : ℝ} (U : SlowRegion coord)
-    (ha : 0 < a) (hcL : 0 < cL) (hcR : 0 < cR)
-    (ε L : ℕ → ℝ) (hε : ∀ n, 0 < ε n) (hεone : ∀ n, ε n ≤ 1) (hL : ∀ n, 1 ≤ L n)
-    (x : MeanStateRegularity.Point) :
-    (movingStripData U a b cL cR ha hcL hcR ε L hε hεone hL).zeta x ≤ 1 := by
-  change WeightedRadialPrimitive.zeta cL cR (WeightedRadialPrimitive.logLength a b)
-    (WeightedRadialPrimitive.logPosition a (profileMap coord x).1) ≤ 1
-  unfold WeightedRadialPrimitive.zeta
-  exact (mul_le_mul (WeightedRadialPrimitive.edge_le_one hcL.le _)
-    (WeightedRadialPrimitive.edge_le_one hcR.le _) (FlatCutoff.edge_nonneg _ _)
-    zero_le_one).trans_eq (one_mul 1)
 
 end MovingWeight
 
@@ -200,38 +184,12 @@ theorem temporalAliasState_mean_bounds {α : ℝ}
   exact ⟨temporalAlias_vector_mem (actualGauge h a b Mbase hab index) h index c u hs,
     temporalAlias_angle_mem (actualGauge h a b Mbase hab index) h index c u hs⟩
 
-include hM D hgapLower hgapUpper hS in
-theorem temporalAliasState_bounds {α : ℝ}
-    (H : MeanStateRegularity.PrimitiveData U a b c u)
-    (hfixed : (reconstructState (actualGauge h a b Mbase hab index) c u).pressure = u.pressure)
-    (hfast : c.operators.fastCoefficient =
-      fun n => ChartScales.Tg ^ index n * ChartScales.Q n ^ (1 + h))
-    (hv : c.operators.vT = (0, (0, TorusInverse.vector .temporal)))
-    (hraw : MeanClass (actualStrip (b := b) U ha hcL hcR hh L hL) α (u.axialResidual c)) (β : ℝ) :
-    UnweightedClass (actualStrip (b := b) U ha hcL hcR hh L hL) β
-      (fun n z => temporalAliasState (actualGauge h a b Mbase hab index) h index c u n (z, 0)) ∧
-      UnweightedClass (HarmonicWaveInteraction.productStrip (actualStrip (b := b) U ha hcL hcR hh L hL)) β
-        (temporalAliasState (actualGauge h a b Mbase hab index) h index c u) := by
-  obtain ⟨hm, hl⟩ := temporalAliasState_mean_bounds U ha hab hcL hcR hh hM index D
-    hgapLower hgapUpper L hL hS c u H hfixed hfast hv hraw β
-  have hζ (x : Point) : (actualStrip (b := b) U ha hcL hcR hh L hL).zeta x ≤ 1 :=
-    movingStrip_zeta_le_one U ha hcL hcR _ L _ _ hL x
-  exact ⟨meanClass_unweighted hm (fun x _ => hζ x),
-    meanClass_unweighted hl (fun x _ => hζ x.1)⟩
 
 end ActualAliases
 
 section ReconstructedInput
 
-theorem primitiveData_reconstruct {coord a b : ℝ} {U : SlowRegion coord}
-    {c : CorrectionState.Context Point} {u : CorrectionState.State Point}
-    (H : MeanStateRegularity.PrimitiveData U a b c u) (g : GaugeData TorusInverse.Plane) :
-    MeanStateRegularity.PrimitiveData U a b c (reconstructState g c u) :=
-  ⟨H.operators, H.base, H.mean, H.covariance, H.virtualTheta, H.virtualAxial⟩
 
-theorem reconstructed_pressure_fixed (g : GaugeData TorusInverse.Plane)
-    (c : CorrectionState.Context Point) (u : CorrectionState.State Point) :
-    (reconstructState g c (reconstructState g c u)).pressure = (reconstructState g c u).pressure := rfl
 
 
 end ReconstructedInput
