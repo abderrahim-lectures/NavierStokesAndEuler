@@ -245,13 +245,9 @@ open scoped Interval ContDiff
 /-- Angular average over one full turn. -/
 def angularMean (f : ℝ → ℝ) : ℝ := (∫ θ in (0 : ℝ)..(2 * Real.pi), f θ) / (2 * Real.pi)
 
-theorem period_pos : (0 : ℝ) < 2 * Real.pi := mul_pos (by norm_num) Real.pi_pos
-
-theorem period_ne_zero : (2 : ℝ) * Real.pi ≠ 0 := ne_of_gt period_pos
-
 theorem angularMean_const (c : ℝ) : angularMean (fun _ => c) = c := by
   simp only [angularMean, intervalIntegral.integral_const, sub_zero, smul_eq_mul]
-  field_simp [period_ne_zero]
+  field_simp [Real.two_pi_pos.ne']
 
 theorem angularMean_add (f g : ℝ → ℝ) (hf : Continuous f) (hg : Continuous g) :
     angularMean (fun θ => f θ + g θ) = angularMean f + angularMean g := by
@@ -279,7 +275,7 @@ theorem angularMean_div_const (f : ℝ → ℝ) (c : ℝ) :
 theorem angularMean_pos (f : ℝ → ℝ) (hf : Continuous f) (hpos : ∀ θ, 0 < f θ) :
     0 < angularMean f := by
   exact div_pos (intervalIntegral.intervalIntegral_pos_of_pos
-    (hf.intervalIntegrable _ _) hpos period_pos) period_pos
+    (hf.intervalIntegrable _ _) hpos Real.two_pi_pos) Real.two_pi_pos
 
 theorem angularMean_cos : angularMean Real.cos = 0 := by
   simp [angularMean, Real.sin_two_pi]
@@ -570,7 +566,7 @@ theorem phaseMap_surjective (d : CircleDensity) : Function.Surjective (phaseMap 
   have hhi : phaseMap d ((n : ℝ) * (2 * Real.pi)) = (n : ℝ) := by
     simpa only [Int.cast_natCast] using phaseMap_int_fullTurn d (n : ℤ)
   have hab : -(n : ℝ) * (2 * Real.pi) ≤ (n : ℝ) * (2 * Real.pi) :=
-    mul_le_mul_of_nonneg_right (by linarith) (le_of_lt period_pos)
+    mul_le_mul_of_nonneg_right (by linarith) (le_of_lt Real.two_pi_pos)
   have hmem : y ∈ Set.Icc (phaseMap d (-(n : ℝ) * (2 * Real.pi)))
       (phaseMap d ((n : ℝ) * (2 * Real.pi))) := by
     simpa only [hlo, hhi, Set.mem_Icc] using hy
@@ -629,7 +625,7 @@ def densityOfTilt (t : ℝ → ℝ) (a m ρ v : ℝ)
     (hspeed : v = a * (1 + m ^ 2) + ρ) : CircleDensity where
   rate θ := phaseDensity a v (t θ) / (2 * Real.pi)
   smooth := ((contDiff_const.mul (contDiff_const.add (ht.pow 2))).div_const v).div_const _
-  positive θ := div_pos (phaseDensity_pos a v (t θ) ha hv) period_pos
+  positive θ := div_pos (phaseDensity_pos a v (t θ) ha hv) Real.two_pi_pos
   periodic := by intro θ; dsimp only; rw [hperiodic θ]
   integral_one := by
     rw [intervalIntegral.integral_div]

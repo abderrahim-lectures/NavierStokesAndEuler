@@ -184,7 +184,7 @@ theorem uniform_tilt_cone_margin {X : Type*} [TopologicalSpace X]
       apply coneBound_gt_two
       exact solvedTilt_projection (p₁ z.1) (m z.1) d (p₂ z.1) z.2.1 hd (hmargin z.1 hz.1) z.2.2)
   refine ⟨ε, hε, fun x hx r hr θ => ?_⟩
-  obtain ⟨θ₀, hθ₀, heq⟩ := (solvedTilt_periodic (m x) d (p₂ x) r).exists_mem_Ico₀ period_pos θ
+  obtain ⟨θ₀, hθ₀, heq⟩ := (solvedTilt_periodic (m x) d (p₂ x) r).exists_mem_Ico₀ Real.two_pi_pos θ
   have hbound := hb (x, r, θ₀) ⟨hx, hr, ⟨hθ₀.1, hθ₀.2.le⟩⟩
   dsimp [P, J, t] at hbound
   rw [heq]
@@ -470,7 +470,7 @@ theorem seedTilt_family_contDiffOn (a m p : E → ℝ) (d δ : ℝ)
 def constantDensity : CircleDensity where
   rate _ := 1 / (2 * Real.pi)
   smooth := contDiff_const
-  positive _ := one_div_pos.mpr period_pos
+  positive _ := one_div_pos.mpr Real.two_pi_pos
   periodic := fun _ => rfl
   integral_one := by
     rw [intervalIntegral.integral_const]

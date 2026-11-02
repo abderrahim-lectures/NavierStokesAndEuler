@@ -277,26 +277,16 @@ theorem pull_residual (ν l : ℝ) (u : VelocityField) (p : PressureField) (t : 
   simp only [ProblemStatement.navierStokesResidual, pull_temporalDerivative _ _ _ _ _ hu,
     pull_advection, pull_laplacian, pull_gradient, smul_add, smul_sub, smul_smul, h1, h2, h3]
 
-theorem residual_congr (ν : ℝ) {u v : VelocityField} {p q : PressureField} {z : SpaceTime}
-    (hu : u =ᶠ[𝓝 z] v) (hp : p =ᶠ[𝓝 z] q) :
-    ProblemStatement.navierStokesResidual ν u p z.1 z.2 =
-      ProblemStatement.navierStokesResidual ν v q z.1 z.2 := by
-  unfold ProblemStatement.navierStokesResidual
-  rw [NavierStokes.ResidualRegularity.temporalDerivative_congr hu,
-    NavierStokes.ResidualRegularity.advection_congr hu,
-    NavierStokes.ResidualRegularity.spatialLaplacian_congr hu,
-    NavierStokes.ResidualRegularity.pressureGradient_congr hp]
-
 theorem zeroBefore_residual {ν : ℝ} {u f : VelocityField} {p : PressureField} {K : Set Space}
     (hc : ProblemStatement.CandidateProperties ν u p f K)
     (hrest : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 ∧ p (t, x) = 0)
     {t : ℝ} (ht : t < 1) (x : Space) :
     ProblemStatement.navierStokesResidual ν (zeroBefore u) (zeroBefore p) t x = f (t, x) := by
   by_cases ht0 : 0 < t
-  · rw [residual_congr ν (z := (t, x))
+  · rw [NavierStokes.PeriodicLocalization.residual_viscosity_congr ν (z := (t, x))
       (zeroBefore_eventually_eq u ht0) (zeroBefore_eventually_eq p ht0)]
     exact hc.navier_stokes t ⟨ht0, ht⟩ x
-  · rw [residual_congr ν (z := (t, x))
+  · rw [NavierStokes.PeriodicLocalization.residual_viscosity_congr ν (z := (t, x))
       (zeroBefore_eventually_zero (fun s hs y => (hrest s hs y).1) (le_of_not_gt ht0))
       (zeroBefore_eventually_zero (fun s hs y => (hrest s hs y).2) (le_of_not_gt ht0))]
     rw [hc.force_support.eq_zero_of_nonpos (le_of_not_gt ht0)]

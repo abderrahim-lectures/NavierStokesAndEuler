@@ -45,7 +45,7 @@ def moment (n : ℕ) (s : ℝ) : ℝ :=
 theorem moment_eq_angularMean (n : ℕ) (s : ℝ) :
     moment n s = angularMean (fun θ => Real.cos θ ^ n * Real.exp (s * Real.cos θ)) := by
   simp only [moment, angularMean, angleMeasure,
-    intervalIntegral.integral_of_le (le_of_lt period_pos)]
+    intervalIntegral.integral_of_le (le_of_lt Real.two_pi_pos)]
 
 theorem normalizer_eq_moment (s : ℝ) : expNormalizer s = moment 0 s := by
   rw [moment_eq_angularMean]
@@ -66,7 +66,7 @@ theorem moment_analyticAt (n : ℕ) (s : ℝ) : AnalyticAt ℝ (moment n) s := b
     rfl
   rw [heq]
   exact (analyticAt_iteratedDeriv_mgf (mem_interior_integrableExpSet s) n).div
-    analyticAt_const period_ne_zero
+    analyticAt_const Real.two_pi_pos.ne'
 
 
 theorem normalizer_analyticAt (s : ℝ) : AnalyticAt ℝ expNormalizer s := by
@@ -85,8 +85,8 @@ def weightedSquare (s c : ℝ) : ℝ :=
 
 theorem weightedSquare_pos (s c : ℝ) : 0 < weightedSquare s c := by
   unfold weightedSquare angularMean
-  apply div_pos _ period_pos
-  apply intervalIntegral.integral_pos period_pos
+  apply div_pos _ Real.two_pi_pos
+  apply intervalIntegral.integral_pos Real.two_pi_pos
   · exact (((Real.continuous_cos.sub continuous_const).pow 2).mul
       (Real.continuous_exp.comp (continuous_const.mul Real.continuous_cos))).continuousOn
   · intro θ _
@@ -95,7 +95,7 @@ theorem weightedSquare_pos (s c : ℝ) : 0 < weightedSquare s c := by
     · refine ⟨Real.pi, ⟨Real.pi_pos.le, by linarith [Real.pi_pos]⟩, ?_⟩
       rw [hc, Real.cos_pi]
       positivity
-    · refine ⟨0, ⟨le_rfl, period_pos.le⟩, ?_⟩
+    · refine ⟨0, ⟨le_rfl, Real.two_pi_pos.le⟩, ?_⟩
       rw [Real.cos_zero]
       apply mul_pos
       · exact sq_pos_of_ne_zero (sub_ne_zero.mpr (Ne.symm hc))
@@ -399,7 +399,7 @@ theorem normalizer_square_upper (t : ℝ) (ht : 0 < t) :
       (Filter.Eventually.of_forall (fun x => Real.exp_nonneg _))
   have hfull := hloc.trans (mul_le_mul_of_nonneg_left hglobal (Real.exp_nonneg _))
   rw [normalizer_centered]
-  apply (div_le_div_of_nonneg_right hfull period_pos.le).trans_eq
+  apply (div_le_div_of_nonneg_right hfull Real.two_pi_pos.le).trans_eq
   ring
 
 /-- A matching lower bound follows by integrating over `[-1/t,1/t]`.
@@ -438,7 +438,7 @@ theorem normalizer_double_square_lower (t : ℝ) (ht : 1 ≤ t) :
       (Filter.Eventually.of_forall (fun x => Real.exp_nonneg _)) (he.intervalIntegrable _ _)
   have hfull := hloc.trans hsub
   rw [normalizer_centered]
-  convert! div_le_div_of_nonneg_right hfull period_pos.le using 1
+  convert! div_le_div_of_nonneg_right hfull Real.two_pi_pos.le using 1
   simp only [smul_eq_mul]
   ring
 
@@ -446,7 +446,7 @@ def growthConstant : ℝ := 2 * (2 * Real.pi) * Real.exp (-1) / gaussianMass ^ 2
 
 theorem growthConstant_pos : 0 < growthConstant := by
   unfold growthConstant
-  exact div_pos (mul_pos (mul_pos (by norm_num) period_pos) (Real.exp_pos _))
+  exact div_pos (mul_pos (mul_pos (by norm_num) Real.two_pi_pos) (Real.exp_pos _))
     (sq_pos_of_pos gaussianMass_pos)
 
 theorem baseVariance_square_growth (t : ℝ) (ht : 1 ≤ t) :
@@ -465,7 +465,7 @@ theorem baseVariance_square_growth (t : ℝ) (ht : 1 ≤ t) :
     dsimp [growthConstant, L, U]
     rw [show 2 * t ^ 2 - 1 = (t ^ 2 + t ^ 2) + (-1) by ring,
       Real.exp_add, Real.exp_add]
-    have hT := period_ne_zero
+    have hT := Real.two_pi_pos.ne'
     have htne := ne_of_gt htpos
     have hC := ne_of_gt gaussianMass_pos
     field_simp
