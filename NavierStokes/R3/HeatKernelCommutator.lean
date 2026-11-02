@@ -1562,9 +1562,8 @@ namespace NavierStokesR3.Comparison
 open ProblemStatement
 
 private theorem real_smul_as_complex_mul (a : ℝ) (z : ℂ) :
-    a • z = (a : ℂ) * z := by
-  rw [Algebra.smul_def]
-  rfl
+    a • z = (a : ℂ) * z :=
+  Complex.real_smul
 
 private theorem integrable_real_smul {α : Type*} [MeasurableSpace α]
     {μ : Measure α} {f : α → ℂ} (hf : Integrable f μ) (a : ℝ) :

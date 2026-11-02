@@ -333,7 +333,19 @@ eleven repointed uses. `period_pos` is kept: it is stated for the project's
 `period`, not for `2 * π`.
 
 That is the ceiling of statement-level substitution here, and it is small because
-the library does not restate Mathlib. The one case with volume was a duplicated
+the library does not restate Mathlib.
+
+**Generality, not just equality.** A project lemma can also be a *special case* of a
+more general library lemma without having the same statement. To test that, each
+theorem's proof was replaced by `exact?` in its own context (no re-printing of
+types) and the suggestion recorded. Sample: the 509 theorems whose statement
+mentions no project constant, of which the 173 in the 28 largest such files were
+run. The instrument was validated on `0 < 2 * Real.pi` and `x + 0 = x`, which must
+report `Real.two_pi_pos` and `AddMonoid.add_zero`. Result: 9 of 173 closed, of
+which only four named a library lemma (`Complex.real_smul`, `Measure.ae_ne volume
+0`, `ContDiff.deriv'`, `Std.LawfulOrderOrd.isGE_compare`); the other five named
+project lemmas, i.e. the development already factors them. All four were applied —
+each saved a line or two, because each theorem was already a one-liner. The one case with volume was a duplicated
 *construction*: `R3/SchwartzCompactApproximation.lean` rebuilt density of
 compactly supported smooth functions in Schwartz space from a cutoff family and a
 seminorm estimate, and nothing used the construction. TauCeti proves the statement

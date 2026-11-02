@@ -50,10 +50,10 @@ theorem moment_mul_const (n : ℕ) (f : ℝ → ℝ) (c : ℝ) :
 
 theorem deriv_smooth {f : ℝ → ℝ} (hf : ContDiff ℝ ∞ f) :
     ContDiff ℝ ∞ (deriv f) :=
-  (hf.fderiv_right (by simp)).clm_apply contDiff_const
+  ContDiff.deriv' hf
 
-theorem ae_radial_ne_zero : ∀ᵐ r : ℝ, r ≠ 0 := by
-  simpa only [mem_singleton_iff] using (countable_singleton (0 : ℝ)).ae_notMem volume
+theorem ae_radial_ne_zero : ∀ᵐ r : ℝ, r ≠ 0 :=
+  Measure.ae_ne volume 0
 
 
 /-- Weighted integration by parts; compact support supplies both endpoint terms. -/

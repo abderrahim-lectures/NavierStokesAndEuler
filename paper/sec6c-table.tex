@@ -128,3 +128,46 @@ the library at the time, and replacing them now would change the meaning of the 
 that the Euler development is made of. The honest intermediate step is the bridge lemma
 \lean{SobolevSpace\ q\ →\ MemSobolev\ q\ 2}, which would connect the project's carrier to
 \Mathlib's predicate and let the two theories be used side by side; it is not proved here.
+
+\paragraph{Is any of this a special case of a general library lemma?} The duplicate probe
+answers the question only for theorems whose \emph{statements} coincide. A project lemma can
+also be a special case of a strictly more general library lemma, and that would be worth
+replacing. To test it we asked the library directly: for each theorem, replace its proof by
+\lean{exact?} \emph{in its own context} (no re-printing of types, so nothing is lost in
+translation) and see whether a library term closes the goal.
+
+The sample is the population where such a replacement is plausible: the \textbf{509}
+\file{NavierStokes} theorems whose statement mentions \emph{no} project-defined constant, of
+which the \textbf{173} in the 28 largest such files were run. The instrument was validated
+first, on \lean{example : 0 < 2 * Real.pi := by exact?} and
+\lean{example (x : ℝ) : x + 0 = x := by exact?}, which must --- and do --- report
+\lean{Real.two\_pi\_pos} and \lean{AddMonoid.add\_zero}. (The first run of the harness looked
+for the wrong line of \lean{exact?}'s two-line output and reported 0 of 173; the control is
+what caught it.)
+
+\textbf{9 of 173} are closed by a suggestion, and of those nine only \textbf{four} name a
+library declaration:
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+project theorem & library lemma that proves it \\
+\midrule
+\lean{real\_smul\_as\_complex\_mul} & \lean{Complex.real\_smul} \\
+\lean{ae\_radial\_ne\_zero} & \lean{Measure.ae\_ne volume 0} \\
+\lean{deriv\_smooth} & \lean{ContDiff.deriv'} \\
+\lean{two\_le\_infty} & \lean{Std.LawfulOrderOrd.isGE\_compare} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The other five suggestions are \emph{project} lemmas, which is the healthy case: the
+development already factors them. All four replacements were applied; each saved one or two
+lines, because each theorem was already a one-liner. The remaining 164 theorems are not
+special cases of anything in the library: they are quantitative estimates about specific real
+numbers, and \Mathlib{} has no general lemma to offer.
+
+So the library overlap of this development is empty at the statement level (no theorem
+duplicates a library theorem, checked against the whole of \Mathlib{}), and near-empty at the
+level of generality (four one-line special cases out of 173 sampled). Whatever else accounts
+for 341{,}000 lines, it is not library material.
