@@ -251,3 +251,71 @@ PRUNE_BASE=<commit> python3 scripts/CheckPureDeletion.py Euler
 
 Each step is one `git revert` away; the removed text is in the commits, not
 discarded.
+
+## Modules merged into their importer
+
+A module that exactly one file imports cannot be used by anything else, so its
+body can move into that file. `scripts/MergeModules.py` does that for modules of
+at most 100 lines, iterating to a fixed point; `.scratch/keep-modules.txt` (the
+files the paper cites, the statement layer, the eighteen infrastructure files and
+the modules `scripts/` imports) is never merged away.
+
+| | files before | files after | lines |
+|---|---|---|---|
+| `NavierStokes` | 753 | 664 | 344,369 → 344,879 |
+
+89 modules moved; the text grows by 510 lines because each move adds a marker, a
+blank line, the `section` / `end` pair and, where needed, import lines.
+
+Three properties have to hold for the move to preserve meaning, and each was
+found by a build going red:
+
+* the moved body goes **before** the parent's body — `import` elaborates the
+  imported module first, which is the order the parent's proofs were written
+  against (appending at the end produced 79 unknown identifiers);
+* it is wrapped in `section … end`, because `open`, `variable` and `set_option`
+  are *section*-scoped in Lean 4 (checked directly: an `open` inside a section
+  does not survive the `end`, and neither does a `variable`);
+* `import C` is replaced **in place** by `C`'s own import lines, duplicates
+  dropped keeping the first, so the depth-first import order is unchanged.
+  Merging the import lines at the end instead made instance search pick
+  different (definitionally equal) instance terms and changed the elaborated type
+  of eighteen declarations.
+
+Verification, in the form of a before/after dump of every declaration's type
+(`scripts/DumpTypes.lean`, 50,127 entries):
+
+* `lake build NavierStokes` passes, 19,467 jobs, 0 errors;
+* the set of real declarations is unchanged — the only names that appear or
+  vanish are generated proof auxiliaries (`_proof_3`, `_simp_1_8`, `match_1`)
+  whose numbering shifts;
+* all eight statements the paper quotes are byte-identical, and `#print axioms`
+  on them is unchanged;
+* eighteen declarations have a type that differs only in which definitionally
+  equal instance term appears. No statement text changed.
+
+**`Euler` is not merged**, and the reason is a finding rather than a preference:
+see below.
+
+## How broken `Euler` is
+
+`lake build Euler` fails at 29 sites in two modules, and Lake then skips the
+1,795 modules that import them, so the error list is only what the build can
+reach. Replacing the twenty failing theorem proofs by `sorry`
+(`scripts/SorryPatch.py`, a verification harness — the patches are reverted
+afterwards and never committed) lets the build run on, and it reports:
+
+| wave | errors | modules |
+|---|---|---|
+| first (20 theorems sorried) | 61 | 11 |
+| second | 42 | 11 |
+| third | 31 | 6 |
+
+The first wave is clean: it comes from twenty theorems and nothing in it is an
+artefact of the patch. The later waves also sorry definitions, so their counts
+are indicative. The remaining migration cost in `Euler` is therefore at least 90
+sites in thirteen modules, and possibly several hundred; every statement in
+`paper/` about Euler's state means "what the build reports", not "what is wrong".
+
+This is why no Euler module was merged: a refactoring that cannot be
+type-checked is not a refactoring.

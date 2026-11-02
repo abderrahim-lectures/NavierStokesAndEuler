@@ -267,8 +267,20 @@ needed \lean{(s\ :=\ ...)} and four \lean{(t\ :=\ ...)}; applying one convention
 does nothing and looks as though the argument had been ignored.
 
 The \file{Euler} library is a different story and we do not dress it up. Its 1{,}839 modules
-stand at 42 elaborated; \file{Euler/EulerProof} rejects 28 sites, five of which need a
-measurability lemma the development never had (see below), three are \lean{case hf}
-hypotheses, two are \lean{ContinuousAdd} instances that no longer resolve, and eighteen are
-one-offs spread over 20{,}755 lines.
+stand at 42 elaborated; \file{Euler/EulerProof} rejects 28 sites and
+\file{Euler/GevreyComposition} one. Of the 28, five need a measurability lemma the
+development never had (see below), three are \lean{case hf} hypotheses, two are
+\lean{ContinuousAdd} instances that no longer resolve, and eighteen are one-offs spread over
+20{,}751 lines.
+
+That count is only the visible part. Replacing the twenty failing theorem proofs in those
+two modules by \lean{sorry} lets Lake run past them, and it then reports \textbf{61 further
+errors in eleven modules}---35 of them in \file{Euler/LpSupportedSubspace} alone. Sorrying
+those exposes 42 more in eleven further modules, and those 31 more in six. The two later
+waves are produced by sorrying definitions as well as theorems, so their counts are
+indicative rather than exact; the first is clean, since it comes from twenty theorems and
+nothing in it is an artefact of the patch. The migration's remaining cost in \file{Euler} is
+therefore at least 90 sites in thirteen modules, and the build cannot see far enough to say
+how much further it goes. Every later statement in this paper about Euler's state means
+``what the build reports'', not ``what is wrong''.
 

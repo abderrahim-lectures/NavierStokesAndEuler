@@ -49,8 +49,9 @@ Both pins are full commit hashes, so the resolution is deterministic.
 moved to the pins above. `NavierStokes` and `ComparatorChallenges` build; `Euler` does not:
 `Euler/EulerProof.lean` rejects 28 sites and `Euler/GevreyComposition.lean` one, so 42 of
 its 1,839 modules produce an object file and the 1,795 that import the two failures are not
-attempted. Five of those
-sites are not syntax: they apply `eLpNorm_le_mul_eLpNorm_of_ae_le_mul` to an iterated field
+attempted. Those 29 are the visible part only: with them replaced by `sorry` the build runs
+on and reports 61 further errors in eleven modules, then 42 more, then 31 (see
+[MIGRATION.md](MIGRATION.md)). Five of the 29 are not syntax: they apply `eLpNorm_le_mul_eLpNorm_of_ae_le_mul` to an iterated field
 derivative with no measurability hypothesis, which the old Mathlib did not need — `eLpNorm`
 was `0` on non-a.e.-strongly-measurable functions and is now `∞`. Closing them requires a
 measurability lemma the development never had. The full record is in
@@ -59,11 +60,13 @@ measurability lemma the development never had. The full record is in
 The four headline theorems are unaffected: `lake build NavierStokes` typechecks them, and
 `#print axioms` reports `[propext, Classical.choice, Quot.sound]` for each.
 
-**Size.** Two reduction steps are recorded in [MIGRATION.md](MIGRATION.md): 74 unreachable
-modules (26,089 lines) and 6,330 unreachable `theorem`/`lemma` declarations (73,943 lines)
-were removed, leaving 541,562 lines and 30,630 theorem/lemma declarations in 2,584 files.
-The second step is checked by a build on `NavierStokes` and, on `Euler`, by a diff of the
-build's failure set, which is unchanged.
+**Size.** Three reduction steps are recorded in [MIGRATION.md](MIGRATION.md): 74 unreachable
+modules (26,089 lines) were deleted, 6,330 unreachable `theorem`/`lemma` declarations
+(73,943 lines) were pruned, and 89 modules that exactly one file imported were folded into
+that file (`NavierStokes` 753 -> 664). The two libraries now stand at 542,072 lines and
+30,630 theorem/lemma declarations in 2,495 files. The pruning is checked by a build on
+`NavierStokes`, by a diff of `Euler`'s failure set (unchanged), and, for the merges, by a
+before/after dump of the type of every declaration.
 
 ## Paper
 

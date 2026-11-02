@@ -14,31 +14,31 @@ cannot depend on the Navier--Stokes material or conversely.
 \toprule
 library & \Lean{} files & lines & \lean{theorem}/\lean{lemma} \\
 \midrule
-\file{NavierStokes} & 753 & 344{,}369 & 20{,}651 \\
+\file{NavierStokes} & 664 & 344{,}879 & 20{,}651 \\
 \file{Euler} & 1{,}829 & 196{,}721 & 9{,}970 \\
 \file{ComparatorChallenges} & 2 & 472 & 9 \\
 \midrule
-total & 2{,}584 & 541{,}562 & 30{,}630 \\
+total & 2{,}495 & 542{,}072 & 30{,}630 \\
 \bottomrule
 \end{tabular}
 \caption{Size of the development after the dead-code removal of
 Section~\ref{sec:cleanup} and the unused-lemma removal of Section~\ref{sec:unused}, counted
 over the library directories
-(\file{NavierStokes.lean} and \file{Euler.lean} add two root files, for 2{,}588 in the tree). Lines are physical
+(\file{NavierStokes.lean} and \file{Euler.lean} add two root files and \file{scripts/} three, for 2{,}500 in the tree). Lines are physical
 lines of Lean source including comments; a \lean{theorem} or \lean{lemma} is counted at
 any indentation, with or without an attribute. Both numbers are reproduced by
 \file{scripts/MeasureSize.py} at the commit that carries them.}
 \label{tab:scale}
 \end{table}
 
-The import graph is unusually \emph{flat}. On average a file imports 2.74 modules, of
-which 2.30 are project-local; 73 files import no project-local module at all (they sit
+The import graph is unusually \emph{flat}. On average a file imports 2.79 modules, of
+which 2.34 are project-local; 66 files import no project-local module at all (they sit
 directly on \Mathlib); the longest chain of project-local imports is 96 modules; and only
-57 modules are imported by eight or more others. The largest single files are
+53 modules are imported by eight or more others. The largest single files are
 \file{Euler/EulerProof.lean} (20{,}751 lines), \file{NavierStokes/CorrectionStep.lean}
-(7{,}411), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
+(7{,}511), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
 \file{NavierStokes/VariableGaugeMean.lean} (2{,}876); everything else is under 2{,}800
-lines, ninety-two per cent of them are under 600 lines, and the median file is 103
+lines, ninety-two per cent of them are under 600 lines, and the median file is 107
 lines long.
 
 This shape is a consequence of how the development was produced and is worth commenting
@@ -246,3 +246,61 @@ first and removed 3{,}963 lines from \file{EulerProof.lean} alone---including th
 criterion too. That would have shrunk the documented gap by deleting the work that
 constitutes it. The failure set is the object a repairer starts from, so both files are kept
 byte for byte.
+
+\subsection{Modules merged into their importer}
+\label{sec:merge}
+
+A module that exactly one file imports cannot be used by anything else, so its body can be
+moved into that file: the importer keeps its name, the moved module disappears, and every
+other file that saw the declarations through the importer still sees them. The same
+``nothing else can be using this'' argument as before, applied to a whole module.
+
+Three details decide whether the move preserves meaning, and each of them was found by a
+build going red.
+
+\emph{The moved body goes before the parent's body.} \lean{import} elaborates the imported
+module first; that is the order the parent's proofs were written against. Appending at the
+end instead leaves the parent's proofs referring to declarations that now come later, and the
+first attempt failed with 79 unknown identifiers.
+
+\emph{It is wrapped in \lean{section} \lean{...} \lean{end}.} \lean{open}, \lean{variable} and
+\lean{set_option} are \emph{section}-scoped in Lean~4, so a section keeps the moved text from
+changing the parent's elaboration and the parent's header from changing the moved text. (We
+checked this directly before relying on it: an \lean{open} inside a section does not survive
+the \lean{end}, and neither does a \lean{variable}.)
+
+\emph{\lean{import C} is replaced in place by $C$'s own import lines.} Duplicates are dropped
+keeping the first occurrence, so the depth-first import order stays exactly what it was.
+This matters more than it sounds: with the imports appended at the end instead, instance
+search picked different---definitionally equal---instance terms, and eighteen declarations
+changed their elaborated type.
+
+The result, and what it is checked against:
+
+\begin{center}\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+ & files before & files after & lines \\
+\midrule
+\file{NavierStokes} & 753 & 664 & 344{,}369 $\to$ 344{,}879 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The line count rises by 510 because each move adds a marker comment, a blank line, the
+\lean{section}/\lean{end} pair and, where needed, import lines. That is the honest accounting:
+the file count falls, the text grows by about half a per cent.
+
+\emph{Verification.} The build passes (19{,}467 jobs). More than that, the type of every
+declaration was dumped before and after (\file{scripts/DumpTypes.lean}, 50{,}127 entries):
+the set of real declarations is the same, the only names that appear or vanish are generated
+proof auxiliaries (\lean{\_proof\_3}, \lean{\_simp\_1\_8}, \lean{match\_1}) whose numbering
+shifts, all eight statements the paper quotes are byte-identical, and the eighteen types that
+do differ differ only in which definitionally equal instance term appears---merging changes
+the order in which instances enter the environment, and instance search then picks another
+member of the same class. No statement text changed.
+
+\emph{\file{Euler} is not merged.} The same operation on Euler would touch 537 modules, and
+Section~\ref{sec:obstacles} explains why it was not attempted: with two modules failing and
+1{,}795 never attempted, there is nothing to check a moved Euler module against. A
+refactoring that cannot be type-checked is not a refactoring.
