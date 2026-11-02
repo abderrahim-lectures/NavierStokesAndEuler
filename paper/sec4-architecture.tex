@@ -14,17 +14,19 @@ cannot depend on the Navier--Stokes material or conversely.
 \toprule
 library & \Lean{} files & lines & \lean{theorem}/\lean{lemma} \\
 \midrule
-\file{NavierStokes} & 753 & 405{,}375 & 24{,}694 \\
-\file{Euler} & 1{,}829 & 212{,}155 & 10{,}594 \\
-\file{ComparatorChallenges} & 2 & 474 & 9 \\
+\file{NavierStokes} & 753 & 344{,}369 & 20{,}651 \\
+\file{Euler} & 1{,}829 & 196{,}721 & 9{,}970 \\
+\file{ComparatorChallenges} & 2 & 472 & 9 \\
 \midrule
-total & 2{,}584 & 618{,}004 & 35{,}297 \\
+total & 2{,}584 & 541{,}562 & 30{,}630 \\
 \bottomrule
 \end{tabular}
-\caption{Size of the development after the dead-code removal of
-Section~\ref{sec:cleanup}, counted over the library directories
+\caption{Size of the development after the dead-code removal and the unused-lemma
+removal of Section~\ref{sec:cleanup}, counted over the library directories
 (\file{NavierStokes.lean} and \file{Euler.lean} add two root files, for 2{,}588 in the tree). Lines are physical
-lines of Lean source including comments.}
+lines of Lean source including comments; a \lean{theorem} or \lean{lemma} is counted at
+any indentation, with or without an attribute. Both numbers are reproduced by
+\file{scripts/MeasureSize.py} at the commit that carries them.}
 \label{tab:scale}
 \end{table}
 
@@ -32,10 +34,10 @@ The import graph is unusually \emph{flat}. On average a file imports 2.74 module
 which 2.30 are project-local; 73 files import no project-local module at all (they sit
 directly on \Mathlib); the longest chain of project-local imports is 96 modules; and only
 57 modules are imported by eight or more others. The largest single files are
-\file{Euler/EulerProof.lean} (20{,}755 lines), \file{NavierStokes/CorrectionStep.lean}
-(9{,}849), \file{NavierStokes/CorrectionInitializationNoOptions.lean} (5{,}573) and
-\file{NavierStokes/CorrectionInitialization.lean} (5{,}562); everything else is under
-3{,}000 lines, ninety per cent of them are under 600 lines, and the median file is 114
+\file{Euler/EulerProof.lean} (20{,}751 lines), \file{NavierStokes/CorrectionStep.lean}
+(7{,}411), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
+\file{NavierStokes/VariableGaugeMean.lean} (2{,}876); everything else is under 2{,}800
+lines, ninety-two per cent of them are under 600 lines, and the median file is 103
 lines long.
 
 This shape is a consequence of how the development was produced and is worth commenting
@@ -161,9 +163,85 @@ reachable declaration changed meaning. It is also reversible with a single \lean
 The one unreachable module that was kept is \file{NavierStokes/TauCetiBridge.lean}, which is
 deliberately a leaf.
 
-This is the only substantial reduction of code available in the repository, and it is worth
-being precise about why. Removing dead code took out 4\% of the lines at zero risk. Replacing
-project code by library code would take out 162 lines (the two ``free'' files of
-Table~\ref{tab:infra}) plus part of nine others, and carries the risk of touching
-declarations the unfinished build depends on. The remaining 99\% of the code is not
-duplicated library material and cannot be reduced by substitution; it is the proof.
+This is not the only substantial reduction of code available in the repository, and the
+second one is worth being precise about. Removing dead code took out 4\% of the lines at
+zero risk, because no remaining file named any of the removed modules. Removing
+\emph{unreachable lemmas} takes out another 12\%, at a price that is not zero but is
+explicit: a \lean{theorem} whose name occurs nowhere else in the tree is referenced by
+nothing, so deleting it cannot change any remaining declaration---and deleting it also
+deletes the only record of a proof idea that nothing used. Section~\ref{sec:unused} reports
+what that came to and how it was checked.
+
+What is left is not reducible by substitution. Replacing project code by library code would
+take out 162 lines (the two ``free'' files of Table~\ref{tab:infra}) plus part of nine
+others, and carries the risk of touching declarations the unfinished build depends on. The
+remaining 88\% of the code is not duplicated library material; it is the proof.
+
+\subsection{Unused lemmas, removed}
+\label{sec:unused}
+
+A declaration that nothing names is not part of any proof. That is the whole criterion, and
+it is mechanical: for every \lean{theorem} and \lean{lemma} in a library, count how many
+times its name occurs in that library; if the answer is one---the declaration itself---and
+the declaration carries no attribute, delete its span: docstring, \lean{omit}/\lean{include}/
+\lean{variable}/\lean{open} prefix, and body.
+
+Three details decide whether this is safe in practice, and each of the first two cost a
+build to find.
+
+\emph{One pass is not enough.} Deleting a lemma can remove the last reference to another, so
+the passes have to be repeated to the fixed point. In \file{NavierStokes} the first pass
+removes 2{,}720 \lean{theorem}s and the repeated passes remove 5{,}082: nearly half of the
+reduction exists only because the passes were iterated.
+
+\emph{The paper protects its own content.} A syntactically unused lemma is not
+necessarily dead: a standalone theorem that states a result and is used by nothing is
+exactly what a formalization is \emph{for}, and it is what this paper cites. Deleting on the
+name criterion alone removed the eighteen theorems of \file{AppendixHeatResults}---the
+endpoint jets of the gamma integral, which nothing else uses---and
+\lean{theorem\_1\_1\_with\_dissipation}, a variant of the headline theorem that the paper
+quotes. The tool therefore takes a keep-list: every name the paper cites, and every
+declaration of the eighteen infrastructure files and of the statement layer. That is 435
+names, and it costs 926 of the 74,869 lines.
+
+\emph{Attributes are excluded.} A lemma used only through \lean{@[simp]} is never named by
+its user, and a lemma used through \lean{attribute [...]} lower down the file is named there
+but would not look like a use to a naive count. Declarations carrying any attribute are
+therefore kept. This is conservative in the direction that matters: the tool cannot delete
+something it cannot see a use for.
+
+The result, measured over the two libraries:
+
+\begin{center}\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{lines} & \multicolumn{2}{c}{\lean{theorem}/\lean{lemma}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+library & before & after & before & after \\
+\midrule
+\file{NavierStokes} & 404{,}716 & 344{,}369 & 25{,}733 & 20{,}651 \\
+\file{Euler} & 210{,}317 & 196{,}721 & 11{,}218 & 9{,}970 \\
+\midrule
+total & 615{,}033 & 541{,}090 & 36{,}951 & 30{,}621 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+13{,}596 of the 73{,}943 deleted lines are Euler's, and the two numbers are not comparable
+in what they are checked against. \file{NavierStokes} is checked by a build: it elaborates,
+so the deletion is verified to have changed nothing that elaborates. \file{Euler} does not
+elaborate (Section~\ref{sec:obstacles})---42 of its 1{,}839 modules produce an object file,
+and Lake skips rather than attempts the 1{,}795 that depend on the two modules that fail---so
+compilation says little there, and the deletion is checked three ways instead: the name
+criterion; a structural check that every change is a pure deletion of whole blocks (797
+blocks, each starting on a declaration boundary and bracket-balanced, no line edited or
+inserted); and a comparison of the build's failure set before and after, which is
+\emph{identical}---the same 29 sites, in the same categories, in the same two modules.
+
+\emph{What was deliberately not deleted.} \file{Euler/EulerProof.lean} and
+\file{Euler/GevreyComposition.lean} are excluded from the prune. Pruning them was tried
+first and removed 3{,}963 lines from \file{EulerProof.lean} alone---including three of its
+29 error sites, because a lemma whose proof fails and which nothing references satisfies the
+criterion too. That would have shrunk the documented gap by deleting the work that
+constitutes it. The failure set is the object a repairer starts from, so both files are kept
+byte for byte.

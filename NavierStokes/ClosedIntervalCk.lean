@@ -207,7 +207,20 @@ theorem value_injective (k : ℕ) : Function.Injective (value (E := E) k) := by
   intro x
   rw [← actual_jet f j.val (by omega) x, ← actual_jet g j.val (by omega) x, he]
 
+theorem norm_value_le {k : ℕ} (f : CK (E := E) k) : ‖value k f‖ ≤ ‖f‖ := by
+  apply (ContinuousMap.norm_le _ (norm_nonneg f)).mpr
+  intro x
+  simpa only [iteratedDerivWithin_zero, value_apply, extend_apply] using
+    (norm_le_iff f (norm_nonneg f)).mp le_rfl 0 (Nat.zero_le _) x
 
+theorem norm_zero_eq_value (f : CK (E := E) 0) : ‖f‖ = ‖value 0 f‖ := by
+  apply le_antisymm _ (norm_value_le f)
+  apply (norm_le_iff f (norm_nonneg _)).mpr
+  intro n hn x
+  have hn0 : n = 0 := Nat.eq_zero_of_le_zero hn
+  subst n
+  simpa only [iteratedDerivWithin_zero, value_apply, extend_apply] using
+    (value 0 f).norm_coe_le_norm x
 
 /-- The actual derivative tuple of a `C^k` function. -/
 def functionJets {k : ℕ} (f : ℝ → E) (hf : ContDiffOn ℝ k f I) : Jets E k :=
@@ -306,6 +319,13 @@ def lower {k l : ℕ} (h : l ≤ k) : CK (E := E) k →L[ℝ] CK (E := E) l :=
 
 @[simp] theorem lower_apply {k l : ℕ} (h : l ≤ k) (f : CK (E := E) k) : lower h f = lowerValue h f := rfl
 
+theorem lower_injective {k l : ℕ} (h : l ≤ k) : Function.Injective (lower (E := E) h) := by
+  intro f g hfg
+  apply value_injective k
+  apply ContinuousMap.ext
+  intro x
+  have he := congrArg (fun u : CK (E := E) l => value l u x) hfg
+  simpa only [lower_apply, lowerValue_value] using he
 
 @[simp] theorem lower_ofContDiffOn {k l : ℕ} (h : l ≤ k) (f : ℝ → E) (hf : ContDiffOn ℝ k f I) :
     lower h (ofContDiffOn f hf) = ofContDiffOn f (hf.of_le (by exact_mod_cast h)) := by

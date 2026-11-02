@@ -470,7 +470,6 @@ theorem divergence_congr {U : Set D} (hU : IsOpen U)
 
 
 
-open ProblemStatement in
 
 noncomputable def fixedGeometry {s : StripData D} {κ : ℝ}
     (R : D → ℝ) (Vr Vθ Vz : ℕ → D → D)

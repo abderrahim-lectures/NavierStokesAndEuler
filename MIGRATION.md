@@ -97,7 +97,7 @@ lake build NavierStokes.R3.Theorem     # a single target
 ```
 
 Mathlib's prebuilt oleans make the first step a download (about 4.8 GB of build artifacts)
-rather than a three-hour compile; the project's own 644k lines are then elaborated from
+rather than a three-hour compile; the project's own 540k lines are then elaborated from
 source.
 
 ## Where TauCeti is used
@@ -116,8 +116,10 @@ whose declarations are not `public` under the module system. `scripts/PlantedCon
 supplies two deliberate duplicates so that a "no duplicates" report can be distinguished
 from a broken probe.
 
-Sample result (22 modules, 944 project theorems scanned): 2,401 duplicate groups in the
-environment, **none** involving this repository once the planted controls are removed. The
+Sample result (22 modules, 802 project theorems scanned): 1,533 duplicate groups in the
+environment, **none** involving this repository once the planted controls are removed. (The
+same sample scanned 944 theorems and 2,401 groups before the unused-lemma removal below; the
+last number is the one that matters and it was zero both times.) The
 duplication that does exist is conceptual — eighteen infrastructure files rebuilding
 mollification, cutoffs, Sobolev spaces and parametric integration in project-specific form —
 and is catalogued in Section 6 of `paper/main.tex`.
@@ -154,3 +156,98 @@ git revert <this-commit>          # or: git checkout HEAD~1 -- <paths>
 ```
 
 Nothing else in the repository was deleted, and no `.lean` file was edited by this step.
+
+## Unused lemmas removed
+
+The second reduction pass deletes `theorem`s and `lemma`s that nothing names.
+`scripts/PruneUnusedLemmas.py` counts, for every declaration, how many times its
+name occurs in the library; if the answer is one — the declaration itself — and
+the declaration carries no attribute, its whole span goes: docstring,
+`omit`/`include`/`variable`/`open … in` prefix, and body.
+
+| | lines before | lines after | `theorem`/`lemma` before | after |
+|---|---|---|---|---|
+| `NavierStokes` | 404,716 | 344,369 | 25,733 | 20,651 |
+| `Euler` | 210,317 | 196,721 | 11,218 | 9,970 |
+| total | 615,033 | 541,090 | 36,951 | 30,621 |
+
+12.0% of the two libraries, in three commits, one of which is the first pass and
+two of which carry the fixed point.
+
+### Why it is safe, and what the safety actually consists of
+
+A declaration whose name occurs nowhere else is referenced by nothing, so
+deleting it cannot change any remaining declaration. Everything else is tool
+hygiene, and each item below cost a build to find:
+
+* **One pass is not a fixed point.** Deleting a lemma can remove the last
+  reference to another. The tool iterates: on `NavierStokes` the first pass
+  removes 2,720 theorems and the fixed point removes 5,082.
+* **The paper protects its own content.** A lemma that nothing uses is not
+  necessarily dead: a standalone theorem stating a result is the point of a
+  formalization, and it is what the paper cites. The name criterion alone
+  deleted all eighteen theorems of `NavierStokes/AppendixHeatResults.lean` (the
+  endpoint jets of the gamma integral) and `theorem_1_1_with_dissipation`, a
+  variant of the headline theorem that `paper/sec2-results.tex` quotes. The tool
+  takes `--keep` with a list of names --- every name the paper cites, every
+  declaration of the eighteen infrastructure files and of the statement layer,
+  435 names in all --- and costs 926 lines of the reduction.
+* **Attributes are excluded.** A lemma used only through `@[simp]` is never
+  named by its user, and `attribute [...]` lower down a file is a use a naive
+  count will not associate with the declaration. Any attributed declaration is
+  kept.
+* **Indented declarations.** `NavierStokes/PositiveAxisSystem.lean` indents nine
+  of its theorems by one space. A span that does not stop at them swallows the
+  following declaration; the build then reports unknown identifiers far from the
+  edit. `scripts/PruneUnusedLemmas.py` stops at indented declarations and
+  refuses any span that contains a second declaration.
+* **Prefixes can be multi-line.** An `omit`/`include`/`variable` block may run
+  over several lines, and a deletion that misses one leaves a prefix with no
+  command after it — `end Foo` then reports *the current section is unnamed*.
+  Orphaned prefixes (and `open X in`, which is a prefix too) are removed by the
+  same tool.
+* **Docstrings are prose.** One of them contains the sentence *"theorem makes
+  no assertion of cancellation on every normalized band"*, which reads as a
+  declaration unless comment blocks are masked.
+
+### What each library is checked against
+
+`NavierStokes` elaborates, so the deletion is checked by the build: 19,645 jobs,
+816 modules, 0 errors, and `#print axioms` on the six headline statements still
+gives `[propext, Classical.choice, Quot.sound]`.
+
+`Euler` does not elaborate. Two modules fail — `Euler/EulerProof.lean` (28
+sites) and `Euler/GevreyComposition.lean` (1) — and Lake skips rather than
+attempts the 1,795 modules that import them, so 42 of the 1,839 modules produce
+an object file. Compilation therefore says little, and three other checks are
+used:
+
+1. the name criterion above;
+2. `scripts/CheckPureDeletion.py`, which verifies against a commit that every
+   change is a *pure deletion of whole blocks* — 797 blocks, 13,596 lines, each
+   block starting on a declaration boundary and bracket-balanced, no line edited
+   or inserted;
+3. a diff of the build's error set before and after, which is **identical**: the
+   same 29 sites, in the same categories, in the same two modules.
+
+### What was deliberately not deleted
+
+`Euler/EulerProof.lean` and `Euler/GevreyComposition.lean` are excluded from the
+prune. Pruning them was tried first and removed 3,963 lines from `EulerProof.lean`
+alone — including three of its 29 error sites, because a lemma whose proof fails
+and which nothing references satisfies the criterion too. That would have shrunk
+the documented gap by deleting the work that constitutes it, so both files are
+kept byte for byte.
+
+### Reproducing and undoing
+
+```sh
+python3 scripts/MeasureSize.py NavierStokes Euler          # the counts above
+python3 scripts/PruneUnusedLemmas.py --dry NavierStokes    # report only
+python3 scripts/PruneUnusedLemmas.py --exclude Euler/EulerProof.lean,Euler/GevreyComposition.lean \
+        --also NavierStokes.lean,ComparatorChallenges,scripts Euler
+PRUNE_BASE=<commit> python3 scripts/CheckPureDeletion.py Euler
+```
+
+Each step is one `git revert` away; the removed text is in the commits, not
+discarded.

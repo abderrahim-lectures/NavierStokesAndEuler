@@ -61,5 +61,21 @@ theorem coreBreakdownStatement : ProblemStatement.coreBreakdownStatement :=
 /-- The whole-space breakdown assertion is an unconditional theorem. -/
 theorem breakdownStatement : ProblemStatement.breakdownStatement := theorem_1_1
 
+/-- Theorem 1.1 and all energy conclusions of Lemma 10.4 hold for the same
+constructed fields. Total dissipation is explicitly integrable up to time one. -/
+theorem theorem_1_1_with_dissipation (ν : ℝ) (hν : 0 < ν) :
+    ∃ u : VelocityField, ∃ p : PressureField, ∃ f : VelocityField, ∃ K : Set Space,
+      CandidateProperties ν u p f K ∧
+      ¬ Nonempty (GlobalFiniteEnergySolution ν f) ∧
+      IntervalIntegrable (CompactEnergy.l2Norm f) volume 0 1 ∧
+      IntegrableOn (CompactEnergy.dissipation u) (Ico (0 : ℝ) 1) ∧
+      (∀ T ∈ Ico (0 : ℝ) 1,
+        CompactEnergy.l2Sq u T +
+          2 * ν * (∫ t in (0 : ℝ)..T, CompactEnergy.dissipation u t) ≤
+            (CompactEnergy.cumulativeForceNorm f T) ^ 2) ∧
+      2 * ν * (∫ t in Ico (0 : ℝ) 1, CompactEnergy.dissipation u t) ≤
+        (CompactEnergy.cumulativeForceNorm f 1) ^ 2 := by
+  obtain ⟨u, p, f, K, hc, hg⟩ := theorem_1_1 ν hν
+  exact ⟨u, p, f, K, hc, hg, CompactEnergy.candidate_energy_estimates hν hc⟩
 
 end NavierStokesR3

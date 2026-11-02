@@ -33,8 +33,10 @@ converge in every Sobolev norm while the gradients at the target times diverge.
 
 Both results, and both Navier--Stokes alternatives, have been formalized in Lean~4
 \cite{lean} on top of \Mathlib{} \cite{mathlib}. The development reported here consists of
-2{,}659 files and 643{,}986 lines of Lean source containing 36{,}825 theorem and lemma
-declarations. It has no \lean{sorry} in its proof libraries and no axioms beyond
+2{,}588 files and 541{,}562 lines of Lean source containing 30{,}630 theorem and lemma
+declarations; two reductions along the way, the removal of unreachable modules and the
+removal of unused lemmas, took it down from 2{,}659 files and 643{,}986 lines with 36{,}825
+declarations (Section~\ref{sec:cleanup}, Section~\ref{sec:unused}). It has no \lean{sorry} in its proof libraries and no axioms beyond
 \lean{propext}, \lean{Classical.choice} and \lean{Quot.sound} (Section~\ref{sec:verification}).
 The headline statements are the reference statements: the Euler definitions and both
 challenge modules are adapted from the Formal Conjectures formalization

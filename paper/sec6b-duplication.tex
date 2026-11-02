@@ -8,7 +8,12 @@ interesting part.
 
 \paragraph{Name overlap.} Extracting every \lean{theorem}, \lean{lemma}, \lean{def},
 \lean{abbrev} and \lean{instance} name from the three trees gives 43{,}101 declarations
-here, 170{,}982 in \Mathlib{} (at the pinned commit) and 237{,}302 in \TauCeti{}.
+here, 170{,}982 in \Mathlib{} (at the pinned commit) and 237{,}302 in \TauCeti{}. The count
+for this repository was taken before the unused-lemma removal of
+Section~\ref{sec:unused}; that removal deletes 6{,}328 declaration names, and repeating the
+two exact-match rows on the pruned tree gives 422 (1.1\%) and 513 (1.4\%)---the shares move
+by a tenth of a percentage point, which is the size of the effect that a 12\% reduction in
+code has on this measurement.
 
 \begin{center}\small
 \begin{tabular}{@{}lrr@{}}
@@ -29,7 +34,7 @@ descriptively (\lean{jetPolynomial}, \lean{majorant\_mul}, \lean{rising\_mono}),
 duplication is under-counted.
 
 \paragraph{Where the duplication actually is.} The infrastructure layer is the answer. Of
-the 2{,}659 files, eighteen---3{,}777 lines, 382 declarations, 0.6\% of the lines---rebuild
+the 2{,}588 files, eighteen---3{,}855 lines, 0.7\% of the lines---rebuild
 standard analysis: smooth cutoffs with all-order bounds, the exponential edge
 $\exp(-c/x^2)$, zero extension across it, finite-order jet bookkeeping, the Banach space
 $C^k([-1,1];E)$, differentiation under the integral sign (twice, in incompatible forms),
@@ -70,13 +75,18 @@ most likely---gives:
 \begin{center}\small
 \begin{tabular}{@{}lr@{}}
 \toprule
-theorem-duplicate groups in the environment & 2{,}401 \\
-project theorems passing the filters & 944 \\
+theorem-duplicate groups in the environment & 1{,}533 \\
+project theorems passing the filters & 802 \\
 groups involving a project theorem & 2 (both planted controls) \\
 groups involving a project theorem, controls removed & \textbf{0} \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+The two counts above the line are lower than in the first measurement of this tree (2{,}401
+groups, 944 theorems) because the unused-lemma removal of Section~\ref{sec:unused} took
+142 theorems out of the sample as well (6{,}330 out of the tree); the number that matters,
+the last row, is unchanged at zero.
 
 So not a single theorem in the sample restates a library theorem, even up to binder
 reordering. This does not contradict the infrastructure finding above: the duplication that

@@ -117,11 +117,18 @@ end DupProbe
 set_option maxHeartbeats 0 in
 run_meta do
   let env ← getEnv
+  let mut projTheorems : Nat := 0
+  for (name, cinfo) in env.constants.map₁ do
+    if name.isInternalDetail || name.isMetaprogramming
+        || !allowCompletion env name || Linter.isDeprecated env name then continue
+    unless ← isProp cinfo.type do continue
+    if DupProbe.isProj name then projTheorems := projTheorems + 1
   let groups ← DupProbe.dups
   let proj := groups.filter (fun g => g.any DupProbe.isProj)
   let cross := proj.filter (fun g => g.any (fun n => !DupProbe.isProj n))
   let internal := proj.filter (fun g => g.all DupProbe.isProj)
   logInfo m!"theorem-duplicate groups in environment: {groups.size}"
+  logInfo m!"project theorems passing the filters: {projTheorems}"
   logInfo m!"groups involving a project theorem: {proj.size}"
   logInfo m!"  project vs library (Mathlib/Lean/Std): {cross.size}"
   logInfo m!"  project vs project: {internal.size}"

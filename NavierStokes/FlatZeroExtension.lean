@@ -168,11 +168,76 @@ theorem extendedJets_hasFDerivAt {c : ℝ} (hc : 0 < c)
     exact (iteratedFDeriv_hasFDerivAt hfp n).congr_of_eventuallyEq
       (zeroExtension_germ_pos _ hpos)
 
+/-- The proved extended tensors form the actual Taylor family of the zero
+extension on the open set `U × ℝ`. -/
+theorem hasFTaylorSeriesUpToOn_zeroExtension {c : ℝ} (hc : 0 < c)
+    {U : Set E} (hU : IsOpen U) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (U ×ˢ Ioi 0)) (hB : LocalGaussianJets c U f) :
+    HasFTaylorSeriesUpToOn ∞ (zeroExtension f) (extendedJets f) (U ×ˢ univ) := by
+  constructor
+  · intro p _
+    by_cases hp : 0 < p.2
+    · simp only [extendedJets, zeroExtension, ite_eq_left hp]
+      rfl
+    · simp only [extendedJets, zeroExtension, ite_eq_right hp]
+      rfl
+  · intro n _ p hp
+    exact (extendedJets_hasFDerivAt hc hU hf hB n hp).hasFDerivWithinAt
+  · intro n _ p hp
+    exact (extendedJets_hasFDerivAt hc hU hf hB n hp).continuousAt.continuousWithinAt
 
+/-- Main gluing theorem. Neither the parameter space nor the target needs a
+finite-dimensionality or completeness hypothesis. -/
+theorem contDiffOn_zeroExtension {c : ℝ} (hc : 0 < c)
+    {U : Set E} (hU : IsOpen U) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (U ×ˢ Ioi 0)) (hB : LocalGaussianJets c U f) :
+    ContDiffOn ℝ ∞ (zeroExtension f) (U ×ˢ univ) :=
+  (hasFTaylorSeriesUpToOn_zeroExtension hc hU hf hB).contDiffOn
 
+/-- The ordinary full tensors of the extension equal the zero extensions
+of the original ordinary full tensors. -/
+theorem iteratedFDeriv_zeroExtension {c : ℝ} (hc : 0 < c)
+    {U : Set E} (hU : IsOpen U) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (U ×ˢ Ioi 0)) (hB : LocalGaussianJets c U f)
+    (n : ℕ) {p : E × ℝ} (hp : p ∈ U ×ˢ (univ : Set ℝ)) :
+    iteratedFDeriv ℝ n (zeroExtension f) p = zeroExtension (iteratedFDeriv ℝ n f) p := by
+  have h := hasFTaylorSeriesUpToOn_zeroExtension hc hU hf hB
+  have he := (h.eq_iteratedFDerivWithin_of_uniqueDiffOn
+    (ENat.natCast_lt_of_coe_top_le_withTop le_rfl n).le
+    (hU.prod isOpen_univ).uniqueDiffOn hp).symm
+  rwa [iteratedFDerivWithin_of_isOpen n (hU.prod isOpen_univ) hp] at he
 
+theorem iteratedFDeriv_zeroExtension_nonpos {c : ℝ} (hc : 0 < c)
+    {U : Set E} (hU : IsOpen U) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (U ×ˢ Ioi 0)) (hB : LocalGaussianJets c U f)
+    (n : ℕ) {p : E × ℝ} (hp : p.1 ∈ U) (hδ : p.2 ≤ 0) :
+    iteratedFDeriv ℝ n (zeroExtension f) p = 0 := by
+  rw [iteratedFDeriv_zeroExtension hc hU hf hB n ⟨hp, mem_univ _⟩,
+    zeroExtension_of_nonpos _ hδ]
 
+/-- In particular every mixed derivative at the joining edge is zero. -/
+theorem iteratedFDeriv_zeroExtension_edge {c : ℝ} (hc : 0 < c)
+    {U : Set E} (hU : IsOpen U) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (U ×ˢ Ioi 0)) (hB : LocalGaussianJets c U f)
+    (n : ℕ) {x : E} (hx : x ∈ U) :
+    iteratedFDeriv ℝ n (zeroExtension f) (x, 0) = 0 :=
+  iteratedFDeriv_zeroExtension_nonpos hc hU hf hB n hx le_rfl
 
+/-- The main theorem stated directly with local exponential estimates of
+every actual tensor. The interval and neighborhood bounds remain explicit. -/
+theorem contDiffOn_zeroExtension_of_exp_bounds {c : ℝ} (hc : 0 < c)
+    {U : Set E} (hU : IsOpen U) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (U ×ˢ Ioi 0))
+    (hbound : ∀ n : ℕ, ∀ x ∈ U, ∃ V ∈ 𝓝 x, ∃ C : ℝ, 0 ≤ C ∧ ∃ N : ℕ,
+      ∀ y ∈ V ∩ U, ∀ δ ∈ Ioo (0 : ℝ) 1,
+        ‖iteratedFDeriv ℝ n f (y, δ)‖ ≤ C * Real.exp (-c / δ ^ 2) / δ ^ N) :
+    ContDiffOn ℝ ∞ (zeroExtension f) (U ×ˢ univ) :=
+  contDiffOn_zeroExtension hc hU hf (fun n => LocalGaussianBound.of_exp_bound (hbound n))
 
+theorem contDiff_zeroExtension {c : ℝ} (hc : 0 < c) {f : E × ℝ → F}
+    (hf : ContDiffOn ℝ ∞ f (univ ×ˢ Ioi 0)) (hB : LocalGaussianJets c univ f) :
+    ContDiff ℝ ∞ (zeroExtension f) := by
+  simpa only [univ_prod_univ, contDiffOn_univ] using
+    contDiffOn_zeroExtension hc isOpen_univ hf hB
 
 end NavierStokes.FlatZeroExtension
