@@ -14,11 +14,11 @@ cannot depend on the Navier--Stokes material or conversely.
 \toprule
 library & \Lean{} files & lines & \lean{theorem}/\lean{lemma} \\
 \midrule
-\file{NavierStokes} & 664 & 344{,}879 & 20{,}651 \\
+\file{NavierStokes} & 571 & 344{,}743 & 20{,}636 \\
 \file{Euler} & 1{,}829 & 196{,}721 & 9{,}970 \\
 \file{ComparatorChallenges} & 2 & 472 & 9 \\
 \midrule
-total & 2{,}495 & 542{,}072 & 30{,}630 \\
+total & 2{,}402 & 541{,}936 & 30{,}615 \\
 \bottomrule
 \end{tabular}
 \caption{Size of the development after the dead-code removal of
@@ -31,14 +31,14 @@ any indentation, with or without an attribute. Both numbers are reproduced by
 \label{tab:scale}
 \end{table}
 
-The import graph is unusually \emph{flat}. On average a file imports 2.79 modules, of
-which 2.34 are project-local; 66 files import no project-local module at all (they sit
+The import graph is unusually \emph{flat}. On average a file imports 2.84 modules, of
+which 2.37 are project-local; 61 files import no project-local module at all (they sit
 directly on \Mathlib); the longest chain of project-local imports is 96 modules; and only
-53 modules are imported by eight or more others. The largest single files are
+49 modules are imported by eight or more others. The largest single files are
 \file{Euler/EulerProof.lean} (20{,}751 lines), \file{NavierStokes/CorrectionStep.lean}
-(7{,}511), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
-\file{NavierStokes/VariableGaugeMean.lean} (2{,}876); everything else is under 2{,}800
-lines, ninety-two per cent of them are under 600 lines, and the median file is 107
+(7{,}812), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
+\file{NavierStokes/InitialPhysicalData.lean} (2{,}896); everything else is under 2{,}900
+lines, ninety-one per cent of them are under 600 lines, and the median file is 105
 lines long.
 
 This shape is a consequence of how the development was produced and is worth commenting

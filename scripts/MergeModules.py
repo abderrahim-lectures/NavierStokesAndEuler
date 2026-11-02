@@ -77,6 +77,53 @@ def body_start(lines):
     return last + 1
 
 
+SCOPING = re.compile(r'^(?:variable|set_option|local|attribute|notation|scoped|'
+                     r'macro|syntax|elab|binder_predicate)\b')
+
+
+def file_scope_opens(lines):
+    """The `open`/`open scoped` heads of `lines` that are at file scope."""
+    out, section = set(), 0
+    for l in lines:
+        t = l.strip()
+        if not t or t.startswith('--') or t.startswith('/-') or t.endswith('-/'):
+            continue
+        if re.match(r'^section\b', t):
+            section += 1
+            continue
+        if re.match(r'^end\b', t):
+            section = max(section - 1, 0)
+            continue
+        if section:
+            continue
+        m = re.match(r'^open\s+(scoped\s+)?(.*?)(\s+in)?$', t)
+        if m:
+            for w in m.group(2).split():
+                out.add((bool(m.group(1)), w))
+    return out
+
+
+def opens_within(body, parent):
+    return file_scope_opens(body) <= file_scope_opens(parent)
+
+
+def has_scoping(body):
+    section = 0
+    for l in body:
+        t = l.strip()
+        if not t or t.startswith('--') or t.startswith('/-') or t.endswith('-/'):
+            continue
+        if re.match(r'^section\b', t):
+            section += 1
+            continue
+        if re.match(r'^end\b', t):
+            section = max(section - 1, 0)
+            continue
+        if section == 0 and SCOPING.match(t) and not t.endswith(' in'):
+            return True
+    return False
+
+
 def insert_at(lines):
     """Where a merged module goes: after the imports and after a leading module
     docstring, so that the parent keeps its own header at the top."""
@@ -107,6 +154,12 @@ def main(argv):
             if l and not l.startswith('#'):
                 keep.add(l)
                 keep.add(l.split('.')[-1])
+        del argv[k:k + 2]
+    skip_parent = set()
+    while '--skip-parent' in argv:
+        k = argv.index('--skip-parent')
+        skip_parent |= {os.path.normpath(x) for x in argv[k + 1].split(',')}
+        skip_parent |= {x.split('.')[-1] for x in argv[k + 1].split(',')}
         del argv[k:k + 2]
     root = [a for a in argv if not a.startswith('--')][0]
 
@@ -140,6 +193,11 @@ def main(argv):
                 continue
             parent = imps[0]
             if parent not in inside or len(texts[p]) > max_lines:
+                continue
+            # A parent can be unsuitable as a merge target even when the move is
+            # sound: `PaperAdditionalResults` lost instance search for
+            # `CompleteSpace (RepairData E)` when 109 modules were folded in.
+            if parent in skip_parent or module_name(parent).split('.')[-1] in skip_parent:
                 continue
             # `importers` is a snapshot of the pass. A parent merged away earlier
             # in the same pass no longer exists, and writing to it would recreate
@@ -175,14 +233,24 @@ def main(argv):
             # The child's body goes *before* the parent's body, because `import`
             # elaborates the imported module first: that is the order the parent's
             # proofs were written against. It is wrapped in `section ... end`
-            # because `open`, `variable` and `set_option` are section-scoped in
-            # Lean 4, so the moved text cannot change the parent's elaboration
-            # and the parent's header cannot change the moved text's.
-            marker = (f'/-! Merged from `{name}`. The body is wrapped in a section so '
-                      f'that its `open`s cannot leak into this file. -/')
+            # unless nothing in it can leak: `open`, `variable` and `set_option`
+            # are section-scoped in Lean 4, so a section keeps the two bodies from
+            # affecting each other. When the child opens nothing the parent does
+            # not already open and declares no file-scope `variable`, `set_option`,
+            # `local`, `attribute` or `notation`, the wrapper is unnecessary.
+            body = child[body_start(child):]
+            while body and not body[0].strip():
+                body = body[1:]
+            while body and not body[-1].strip():
+                body = body[:-1]
+            need_section = not opens_within(body, new_parent) or has_scoping(body)
+            marker = (f'/-! Merged from `{name}`'
+                      + (' (in a section, so its `open`s cannot leak).' if need_section else '.')
+                      + ' -/')
             at = insert_at(new_parent)
-            merged = (new_parent[:at] + ['', marker, 'section']
-                      + child[body_start(child):] + ['', 'end', ''] + new_parent[at:])
+            block = [marker] + (['section'] if need_section else []) + body \
+                + (['end'] if need_section else []) + ['']
+            merged = new_parent[:at] + block + new_parent[at:]
             if not dry:
                 with open(parent, 'w') as fh:
                     fh.write('\n'.join(merged))

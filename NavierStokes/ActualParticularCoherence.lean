@@ -1,9 +1,11 @@
 import NavierStokes.ActualReferenceRebase
 import NavierStokes.ActualParticularRealization
-import NavierStokes.GaussianErrorNaturality
+import NavierStokes.CorrectionStep
 import NavierStokes.CycleStateCoherence
 import NavierStokes.IntervalCopyTransport
-import NavierStokes.ActualCopySliceRegularity
+import NavierStokes.ActualParticularStageControls
+import NavierStokes.ActualCoreSupport
+import NavierStokes.ActualCarrierGeometry
 
 /-!
 # Coherence of the actual particular increment
@@ -12,6 +14,465 @@ The source is the residual of the current state.  Its reference value is
 rebased to the native cover before solving.  The identities below retain the
 full auxiliary fibers and the differentiated copy cutoffs.
 -/
+/-! Merged from `NavierStokes.ActualCopySliceRegularity` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Continuity on the actual finite tangent-copy intervals
+
+The projected operator is built from the selected frame's normal, normal
+motion, base action, and damping. Only the native slow point and finite
+clock interval enter its regularity; the transverse coordinate is free.
+-/
+
+noncomputable section
+
+namespace NavierStokes.ActualCopySliceRegularity
+
+open Set Function Filter
+open CommonCoverSolve PhaseJetBounds PrimaryPulseBounds
+open CorrectionInitialization
+open scoped ContDiff Topology InnerProductSpace
+
+
+abbrev Space := ProblemStatement.Space
+abbrev Plane := TorusInverse.Plane
+abbrev Parameter := PhysicalParticularWave.Parameter
+abbrev Label (B N0 : ℕ) := ActualParticularStageControls.Label B N0
+
+theorem negativeProjection_continuousOn {X : Type*} [TopologicalSpace X]
+    {U : Set X} {N : X → Space} (hN : ContinuousOn N U)
+    (hne : ∀ x ∈ U, N x ≠ 0) :
+    ContinuousOn (fun x => negativeTangentProjection (N x)) U := by
+  have hv : ContinuousOn (fun x => (⟪N x, N x⟫_ℝ)⁻¹ • N x) U :=
+    ((hN.inner hN).inv₀ (fun x hx => inner_self_ne_zero.mpr (hne x hx))).fun_smul hN
+  have hi := (innerSL ℝ).continuous.comp_continuousOn hN
+  exact (continuousOn_const.sub
+    (isBoundedBilinearMap_smulRight.continuous.comp_continuousOn (hi.prodMk hv))).neg
+
+section Frame
+
+variable {ι : Type} {D : Domain ι PhaseCalculus.Slow}
+
+/-- The actual ambient projected operator and forcing projection of the
+selected frame are continuous on the entire closed slot. -/
+theorem frame_slices (F : PhaseConstruction D) (i : ι) (j : ℤ)
+    (p : PhaseCalculus.Slow) (hp : p ∈ D.carrier i) :
+    Continuous (fun s : Icc (0 : ℝ) (F.L i) =>
+      TangentODE.projectedOperator ((F.frame i).normal (p, s))
+        ((F.frame i).normalMotion (p, s))
+        (PrimaryCopyBridge.baseOperator ((F.frame i).F (p, s)) ((F.frame i).shear (p, s)))
+        ((F.frame i).damping j (p, s))) ∧
+    Continuous (fun s : Icc (0 : ℝ) (F.L i) => negativeTangentProjection ((F.frame i).normal (p, s))) := by
+  have hd := (ActualParticularControl.selected_frame_jets F).smoothOn i
+  have hmap : MapsTo (fun s : ℝ => (p, s)) (Icc 0 (F.L i)) ((D.slot F.V F.openV).carrier i) :=
+    fun s hs => ⟨hp, F.interval i hs⟩
+  have hn := (PrimaryCopyBridge.frame_normal_continuousOn hd).comp
+    (continuous_const.prodMk continuous_id).continuousOn hmap
+  have hnd := (PrimaryCopyBridge.frame_normalMotion_continuousOn hd).comp
+    (continuous_const.prodMk continuous_id).continuousOn hmap
+  have hA := (PrimaryCopyBridge.frame_baseOperator_continuousOn hd).comp
+    (continuous_const.prodMk continuous_id).continuousOn hmap
+  have hδ : ContinuousOn (fun s : ℝ => (F.frame i).damping j (p, s)) (Icc 0 (F.L i)) :=
+    (continuousOn_const.mul hd.viscosity.continuousOn).comp
+      (continuous_const.prodMk continuous_id).continuousOn hmap
+  have hne : ∀ s ∈ Icc 0 (F.L i), (F.frame i).normal (p, s) ≠ 0 := by
+    intro s hs
+    exact MovingFrameODE.normal_ne_zero _
+      ((ActualParticularControl.selected_kinematics F i hp).beta_ne_zero s hs)
+  exact ⟨(PrimaryCopyBridge.projectedOperator_continuousOn hn hnd hA hδ hne).domRestrict,
+    (negativeProjection_continuousOn hn hne).domRestrict⟩
+
+end Frame
+
+section Transport
+
+variable {P Q : Type}
+
+theorem transported_coefficient (t : TangentData P Space) (φ : Q → P)
+    (gap : ℕ) (rate amplitude normal : ℝ) (hn : normal ≠ 0) (q : Q) (Y : Plane) :
+    (ScaledTangentTransport.transportTangent t φ gap 0 rate amplitude normal).linearData.coefficient (q, Y) =
+      rate • t.linearData.coefficient (φ q, CopySolveCompatibility.nativeTimeMap 0 rate Y) :=
+  NormalScaling.projectedOperator_rescale _ _ _ rate _ hn
+
+theorem transported_forcingMap (t : TangentData P Space) (φ : Q → P)
+    (gap : ℕ) (rate amplitude normal : ℝ) (hn : normal ≠ 0) (q : Q) (Y : Plane) :
+    (ScaledTangentTransport.transportTangent t φ gap 0 rate amplitude normal).linearData.forcingMap (q, Y) =
+      t.linearData.forcingMap (φ q, CopySolveCompatibility.nativeTimeMap 0 rate Y) :=
+  NormalScaling.negativeTangentProjection_smul _ hn
+
+theorem transported_slices (t : TangentData P Space) (φ : Q → P)
+    (gap : ℕ) (rate amplitude normal L : ℝ) (hrate : 0 < rate) (hn : normal ≠ 0)
+    (q : Q) (xi : ℝ)
+    (hA : Continuous (fun s : Icc (0 : ℝ) L => t.linearData.coefficient (φ q, (xi, s))))
+    (hB : Continuous (fun s : Icc (0 : ℝ) L => t.linearData.forcingMap (φ q, (xi, s)))) :
+    Continuous (fun s : Icc (0 : ℝ) (L / rate) =>
+      (ScaledTangentTransport.transportTangent t φ gap 0 rate amplitude normal).linearData.coefficient (q, (xi, s))) ∧
+    Continuous (fun s : Icc (0 : ℝ) (L / rate) =>
+      (ScaledTangentTransport.transportTangent t φ gap 0 rate amplitude normal).linearData.forcingMap (q, (xi, s))) := by
+  let clock : Icc (0 : ℝ) (L / rate) → Icc (0 : ℝ) L := fun s =>
+    ⟨rate * s, mul_nonneg hrate.le s.property.1,
+      by simpa only [mul_comm] using (le_div_iff₀ hrate).mp s.property.2⟩
+  have hc : Continuous clock :=
+    Continuous.subtype_mk (continuous_const.mul continuous_subtype_val) _
+  constructor
+  · apply ((hA.comp hc).fun_const_smul rate).congr
+    intro s
+    simpa only [Function.comp_apply, clock, CopySolveCompatibility.nativeTimeMap, zero_add] using
+      (transported_coefficient t φ gap rate amplitude normal hn q (xi, s)).symm
+  · apply (hB.comp hc).congr
+    intro s
+    simpa only [Function.comp_apply, clock, CopySolveCompatibility.nativeTimeMap, zero_add] using
+      (transported_forcingMap t φ gap rate amplitude normal hn q (xi, s)).symm
+
+end Transport
+
+section Actual
+
+open ActualParticularStageControls
+
+variable {B N0 : ℕ}
+
+theorem reference_slices (l : Label B N0) (j : ℤ) (p : Parameter)
+    (hp : ActualSignedGeometry.swapParameter p ∈
+      (PrimaryGeometryAssembly.domain ActualPrimary.nominal (ActualPrimary.choice B N0).prepared.N).carrier l.2)
+    (xi : ℝ) :
+    Continuous (fun s : Icc (0 : ℝ) (reference l).length =>
+      ((reference l).tangent j).linearData.coefficient (p, (xi, s))) ∧
+    Continuous (fun s : Icc (0 : ℝ) (reference l).length =>
+      ((reference l).tangent j).linearData.forcingMap (p, (xi, s))) :=
+  frame_slices (ActualPrimary.phases B N0 l.1) l.2 j (ActualSignedGeometry.swapParameter p) hp
+
+theorem normalWeight_ne (l : Label B N0) (j : ℤ) (hj : j ≠ 0) (n : ℕ) :
+    PhysicalParticularWave.normalWeight (ChartScales.Q n) (ChartScales.Q (reference l).band)
+      ((j : ℝ) * ChartScales.carrier ActualPrimary.h n)
+      ((j : ℝ) * ChartScales.carrier ActualPrimary.h (reference l).band) ≠ 0 := by
+  rw [ScaledActualParticularControl.normalWeight_harmonic _ _ _ _ j hj]
+  apply mul_ne_zero
+  · exact div_ne_zero (ActualPrimary.chartCoefficients_frequency_pos l.1 l.2 _).ne'
+      (ActualPrimary.chartCoefficients_frequency_pos l.1 l.2 _).ne'
+  · exact (PhysicalParticularWave.ratioPower_pos (ChartScales.Q_pos n) (ChartScales.Q_pos _) _).ne'
+
+/-- No transverse or copy restriction occurs in these two primitive slice
+continuities. The only spatial hypothesis is the actual native phase cell. -/
+theorem canonical_slices (l : Label B N0) (j : ℤ) (hj : j ≠ 0) (n : ℕ) (p : Parameter)
+    (hp : ActualSignedGeometry.swapParameter
+      (PhysicalParticularWave.parameterChange ActualPrimary.h (ChartScales.Q n)
+        (ChartScales.Q (reference l).band) p) ∈
+      (PrimaryGeometryAssembly.domain ActualPrimary.nominal (ActualPrimary.choice B N0).prepared.N).carrier l.2)
+    (xi : ℝ) :
+    Continuous (fun s : Icc (0 : ℝ) ((canonicalParameters l).length n) =>
+      ((canonicalParameters l).tangent j n).linearData.coefficient (p, (xi, s))) ∧
+    Continuous (fun s : Icc (0 : ℝ) ((canonicalParameters l).length n) =>
+      ((canonicalParameters l).tangent j n).linearData.forcingMap (p, (xi, s))) := by
+  obtain ⟨hA, hB⟩ := reference_slices l j _ hp xi
+  exact transported_slices ((reference l).tangent j) _ _ _ _ _ _
+    (PhysicalParticularWave.ratioPower_pos (ChartScales.Q_pos n) (ChartScales.Q_pos _) _)
+    (normalWeight_ne l j hj n) p xi hA hB
+
+theorem actual_slices (x : CorrectionStep.CycleState (Label B N0)) (l : Label B N0)
+    (hfrequency : ∀ n, (x.coefficients.blocks l).frequency n = ChartScales.carrier ActualPrimary.h n)
+    (j : ℤ) (hj : j ≠ 0) (n : ℕ) (p : Parameter)
+    (hp : ActualSignedGeometry.swapParameter
+      (PhysicalParticularWave.parameterChange ActualPrimary.h (ChartScales.Q n)
+        (ChartScales.Q (reference l).band) p) ∈
+      (PrimaryGeometryAssembly.domain ActualPrimary.nominal (ActualPrimary.choice B N0).prepared.N).carrier l.2)
+    (xi : ℝ) :
+    Continuous (fun s : Icc (0 : ℝ) ((parameters x l).length n) =>
+      ((parameters x l).tangent j n).linearData.coefficient (p, (xi, s))) ∧
+    Continuous (fun s : Icc (0 : ℝ) ((parameters x l).length n) =>
+      ((parameters x l).tangent j n).linearData.forcingMap (p, (xi, s))) := by
+  rw [parameters_eq_canonical x l hfrequency]
+  exact canonical_slices l j hj n p hp xi
+
+theorem actual_copy_slices (x : CorrectionStep.CycleState (Label B N0)) (l : Label B N0)
+    (hfrequency : ∀ n, (x.coefficients.blocks l).frequency n = ChartScales.carrier ActualPrimary.h n)
+    (j : ℤ) (hj : j ≠ 0) (n : ℕ) (p : Parameter)
+    (hp : ActualSignedGeometry.swapParameter
+      (PhysicalParticularWave.parameterChange ActualPrimary.h (ChartScales.Q n)
+        (ChartScales.Q (reference l).band) p) ∈
+      (PrimaryGeometryAssembly.domain ActualPrimary.nominal (ActualPrimary.choice B N0).prepared.N).carrier l.2)
+    (Y : Plane) (k : TorusInverse.Frequency) :
+    Continuous (fun s : Icc (0 : ℝ) ((parameters x l).length n) =>
+      ((parameters x l).tangent j n).linearData.coefficientAlong ((parameters x l).geometry n) k ((p, Y), s)) ∧
+    Continuous (fun s : Icc (0 : ℝ) ((parameters x l).length n) =>
+      ((parameters x l).tangent j n).linearData.forcingMap
+        (p, ((((parameters x l).geometry n).coordinates k Y).1, s))) :=
+  actual_slices x l hfrequency j hj n p hp _
+
+end Actual
+
+section SourceFiber
+
+open ActualParticularStageControls
+
+variable {B N0 : ℕ}
+
+theorem native_parameter_eq (l : Label B N0) (n : ℕ) (p : Parameter) (Y : Plane) :
+    ActualSignedGeometry.swapParameter
+      (PhysicalParticularWave.parameterChange ActualPrimary.h (ChartScales.Q n)
+        (ChartScales.Q (reference l).band) p) =
+      ActualPrimaryCovariance.nativePoint n (p.1, (p.2, Y)) l.2 := by
+  ext <;> simp [ActualSignedGeometry.swapParameter, PhysicalParticularWave.parameterChange,
+    PhysicalParticularWave.ratioPower, ActualPrimaryCovariance.nativePoint,
+    ActualPrimary.nativeSlow, ActualPrimary.toAbsolute, reference, Real.sqrt_eq_rpow,
+    div_eq_mul_inv, mul_assoc, mul_comm]
+
+theorem native_cell_of_refinedCarrier (l : Label B N0) (n : ℕ) (p : Parameter)
+    (hT : 0 < p.2.1) {Y : Plane}
+    (hY : (p.1, (p.2, Y)) ∈ ActualCoreSupport.refinedCarrier (l.2, l.1) n) :
+    ActualSignedGeometry.swapParameter
+      (PhysicalParticularWave.parameterChange ActualPrimary.h (ChartScales.Q n)
+        (ChartScales.Q (reference l).band) p) ∈
+      (PrimaryGeometryAssembly.domain ActualPrimary.nominal (ActualPrimary.choice B N0).prepared.N).carrier l.2 := by
+  rw [native_parameter_eq l n p Y]
+  exact ActualCarrierGeometry.labelCarrier_in_cell l n hT
+    (ActualCoreSupport.refinedCarrier_subset_broad (l.2, l.1) n hY)
+
+/-- A nonempty refined source fiber supplies the native phase-cell
+hypothesis. All copies and every transverse coordinate are then covered. -/
+theorem actual_copy_slices_of_refinedFiber (x : CorrectionStep.CycleState (Label B N0)) (l : Label B N0)
+    (hfrequency : ∀ n, (x.coefficients.blocks l).frequency n = ChartScales.carrier ActualPrimary.h n)
+    (j : ℤ) (hj : j ≠ 0) (n : ℕ) (p : Parameter) (hT : 0 < p.2.1)
+    (hs : ∃ Z : Plane, (p.1, (p.2, Z)) ∈ ActualCoreSupport.refinedCarrier (l.2, l.1) n)
+    (Y : Plane) (k : TorusInverse.Frequency) :
+    Continuous (fun s : Icc (0 : ℝ) ((parameters x l).length n) =>
+      ((parameters x l).tangent j n).linearData.coefficientAlong ((parameters x l).geometry n) k ((p, Y), s)) ∧
+    Continuous (fun s : Icc (0 : ℝ) ((parameters x l).length n) =>
+      ((parameters x l).tangent j n).linearData.forcingMap
+        (p, ((((parameters x l).geometry n).coordinates k Y).1, s))) := by
+  obtain ⟨Z, hZ⟩ := hs
+  exact actual_copy_slices x l hfrequency j hj n p (native_cell_of_refinedCarrier l n p hT hZ) Y k
+
+end SourceFiber
+
+end NavierStokes.ActualCopySliceRegularity
+end
+
+/-! Merged from `NavierStokes.GaussianErrorNaturality` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Naturality of the actual Gaussian cutoff error
+
+The error is the sum of differentiated-cutoff terms and the uncovered
+source. Both terms are transported from their primitive data before the
+copy sum is taken.
+-/
+
+noncomputable section
+
+namespace NavierStokes.GaussianErrorNaturality
+
+open Set Filter Function HarmonicCalculus LinearWaveBounds
+open scoped Topology ContDiff
+
+section CopyTransport
+
+variable {D E I : Type} [NormedAddCommGroup D] [NormedSpace ℝ D]
+  [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+theorem fast_cutoff_transport (Γ : D →L[ℝ] E)
+    (d : GraphDirections D) (dr : GraphDirections E)
+    (a : PeriodizedWaveBounds.CopyData D I) (b : PeriodizedWaveBounds.CopyData E I)
+    (n nr : ℕ) (rate : ℝ) (i : I) (x : D)
+    (hcutoff : a.cutoff n i = fun y => b.cutoff nr i (Γ y))
+    (hfast : Γ (d.fastField n x) = rate • dr.fastField nr (Γ x))
+    (hdiff : DifferentiableAt ℝ (b.cutoff nr i) (Γ x)) :
+    d.Dfast (fun m => a.cutoff m i) n x =
+      rate * dr.Dfast (fun m => b.cutoff m i) nr (Γ x) := by
+  have hc := hdiff.hasFDerivAt.comp x Γ.hasFDerivAt
+  simp only [Function.comp_def] at hc
+  simp only [GraphDirections.Dfast, along, hcutoff, hc.fderiv,
+    ContinuousLinearMap.comp_apply, hfast, map_smul, smul_eq_mul]
+
+theorem cutoffSum_transport (Γ : D →L[ℝ] E)
+    (a : PeriodizedWaveBounds.CopyData D I) (b : PeriodizedWaveBounds.CopyData E I)
+    (n nr : ℕ) (x : D)
+    (hcutoff : ∀ i, a.cutoff n i x = b.cutoff nr i (Γ x)) :
+    a.cutoffSum n x = b.cutoffSum nr (Γ x) := by
+  exact tsum_congr hcutoff
+
+theorem localTail_transport (Γ : D →L[ℝ] E)
+    (d : GraphDirections D) (dr : GraphDirections E)
+    (a : PeriodizedWaveBounds.CopyData D I) (b : PeriodizedWaveBounds.CopyData E I)
+    (n nr : ℕ) (rate c : ℝ) (i : I) (x : D)
+    (hcutoff : a.cutoff n i = fun y => b.cutoff nr i (Γ y))
+    (hfast : Γ (d.fastField n x) = rate • dr.fastField nr (Γ x))
+    (hdiff : DifferentiableAt ℝ (b.cutoff nr i) (Γ x))
+    (hamplitude : dr.Dfast (fun m => b.cutoff m i) nr (Γ x) ≠ 0 →
+      a.amplitude n i x = c • b.amplitude nr i (Γ x)) :
+    a.localTail d n i x = (rate * c) • b.localTail dr nr i (Γ x) := by
+  unfold PeriodizedWaveBounds.CopyData.localTail
+  rw [fast_cutoff_transport Γ d dr a b n nr rate i x hcutoff hfast hdiff]
+  by_cases hz : dr.Dfast (fun m => b.cutoff m i) nr (Γ x) = 0
+  · simp [hz]
+  · rw [hamplitude hz, smul_smul, smul_smul]
+    congr 1
+    ring
+
+/-- Only copies with a nonzero differentiated reference cutoff need an
+amplitude comparison. No exterior continuation of a Volterra solve is assumed. -/
+theorem globalTail_transport (Γ : D →L[ℝ] E)
+    (d : GraphDirections D) (dr : GraphDirections E)
+    (a : PeriodizedWaveBounds.CopyData D I) (b : PeriodizedWaveBounds.CopyData E I)
+    (n nr : ℕ) (rate c : ℝ) (x : D)
+    (hcutoff : ∀ i, a.cutoff n i = fun y => b.cutoff nr i (Γ y))
+    (hfast : Γ (d.fastField n x) = rate • dr.fastField nr (Γ x))
+    (hdiff : ∀ i, DifferentiableAt ℝ (b.cutoff nr i) (Γ x))
+    (hamplitude : ∀ i, dr.Dfast (fun m => b.cutoff m i) nr (Γ x) ≠ 0 →
+      a.amplitude n i x = c • b.amplitude nr i (Γ x)) :
+    a.globalTail d n x = (rate * c) • b.globalTail dr nr (Γ x) := by
+  change (∑' i, a.localTail d n i x) = (rate * c) • ∑' i, b.localTail dr nr i (Γ x)
+  calc
+    _ = ∑' i, (rate * c) • b.localTail dr nr i (Γ x) := tsum_congr fun i =>
+      localTail_transport Γ d dr a b n nr rate c i x (hcutoff i) hfast (hdiff i) (hamplitude i)
+    _ = _ := tsum_const_smul'' (rate * c)
+
+/-- Full transport of the actual Gaussian error, including the source
+on the part of the domain uncovered by native cutoffs. -/
+theorem globalGaussian_transport (Γ : D →L[ℝ] E)
+    (d : GraphDirections D) (dr : GraphDirections E)
+    (a : PeriodizedWaveBounds.CopyData D I) (b : PeriodizedWaveBounds.CopyData E I)
+    (n nr : ℕ) (rate c : ℝ) (x : D)
+    (hcutoff : ∀ i, a.cutoff n i = fun y => b.cutoff nr i (Γ y))
+    (hfast : Γ (d.fastField n x) = rate • dr.fastField nr (Γ x))
+    (hdiff : ∀ i, DifferentiableAt ℝ (b.cutoff nr i) (Γ x))
+    (hamplitude : ∀ i, dr.Dfast (fun m => b.cutoff m i) nr (Γ x) ≠ 0 →
+      a.amplitude n i x = c • b.amplitude nr i (Γ x))
+    (hsource : a.source n x = (rate * c) • b.source nr (Γ x)) :
+    a.globalGaussian d n x = (rate * c) • b.globalGaussian dr nr (Γ x) := by
+  rw [PeriodizedWaveBounds.CopyData.globalGaussian,
+    globalTail_transport Γ d dr a b n nr rate c x hcutoff hfast hdiff hamplitude,
+    cutoffSum_transport Γ a b n nr x (fun i => congrFun (hcutoff i) x), hsource]
+  simp only [PeriodizedWaveBounds.CopyData.globalGaussian, smul_add, smul_smul]
+  congr 1
+  congr 1
+  ring
+
+end CopyTransport
+
+section ReferenceData
+
+open CommonCoverSolve TorusInverse ParticularWaveAssembly ParticularWaveBounds
+open CorrectionState
+
+abbrev Parameter := PhysicalParticularWave.Parameter
+abbrev WaveSpace := PhysicalParticularWave.WaveSpace
+abbrev Cylinder := PhysicalParticularWave.Cylinder
+
+/-- The full native change of variables, conjugate to the actual
+cylindrical change of band and common cover. -/
+noncomputable def waveChange (h Q Qr : ℝ) (gap : ℕ) : WaveSpace →L[ℝ] WaveSpace :=
+  PhysicalParticularWave.waveEquiv.toContinuousLinearEquiv.toContinuousLinearMap.comp
+    ((PhysicalParticularWave.cylinderChange h Q Qr gap).comp
+      PhysicalParticularWave.waveEquiv.symm.toContinuousLinearEquiv.toContinuousLinearMap)
+
+@[simp] theorem waveChange_apply (h Q Qr : ℝ) (gap : ℕ) (x : WaveSpace) :
+    waveChange h Q Qr gap x =
+      ((PhysicalParticularWave.parameterChange h Q Qr x.1.1, x.1.2), coverPower gap x.2) := rfl
+
+
+/-- The actual untransported reference data, evaluated at its own band. -/
+noncomputable def referenceParameters (D : AssemblyData Parameter) :
+    CorrectionStep.ParticularParameters Parameter where
+  tangent j _ := D.reference.tangent j
+  geometry _ := D.reference.geometry
+  length _ := D.reference.length
+  length_pos _ := D.reference.length_pos
+  cutoff _ := D.reference.cutoff
+  background := D.background
+  directions := D.directions
+
+noncomputable def nativeData (D : AssemblyData Parameter) (h : ℝ) (gap : ℕ → ℕ) (j : ℤ) :
+    PeriodizedWaveBounds.CopyData WaveSpace Frequency :=
+  (CorrectionStep.ParticularParameters.fromReference D h gap).copyData
+    D.context D.state D.carrierBlock D.gaussianInput D.aliasInput j
+
+noncomputable def referenceData (D : AssemblyData Parameter) (j : ℤ) :
+    PeriodizedWaveBounds.CopyData WaveSpace Frequency :=
+  (referenceParameters D).copyData D.context D.state D.carrierBlock D.gaussianInput D.aliasInput j
+
+theorem copyData_amplitude (p : CorrectionStep.ParticularParameters Parameter)
+    (C : Context (Parameter × Plane)) (u : State (Parameter × Plane))
+    (b : HarmonicBlock (Parameter × Plane))
+    (G A : HarmonicResidual.BlockCoefficients (Parameter × Plane))
+    (j : ℤ) (n : ℕ) (copy : Frequency) (x : WaveSpace) :
+    (p.copyData C u b G A j).amplitude n copy x =
+      complexCopyVelocity (p.tangent j n) (residualSource C u b G A j n)
+        (p.geometry n) (p.length_pos n).le copy (x.1.1, x.2) :=
+  complexCopyVelocity_angle (p.tangent j n) (residualSource C u b G A j n)
+    (p.geometry n) (p.length_pos n).le copy x.1.1 x.1.2 x.2
+
+
+
+/-- A nonzero actual directional derivative is supported in any closed
+set supporting the original cutoff. -/
+theorem along_ne_zero_mem_closed {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {f : E → ℝ} {K : Set E} (hK : IsClosed K) (hf : support f ⊆ K)
+    (V : E → E) {x : E} (hx : along V f x ≠ 0) : x ∈ K := by
+  have hd : x ∈ support (fderiv ℝ f) := by
+    intro hz
+    apply hx
+    simp only [along, hz, _root_.zero_apply]
+  exact (closure_minimal hf hK) (support_fderiv_subset ℝ hd)
+
+
+
+theorem interval_congr {E : Type} (F : (a b : ℝ) → a ≤ b → E)
+    {a b c d : ℝ} (hab : a ≤ b) (hcd : c ≤ d) (ha : a = c) (hb : b = d) :
+    F a b hab = F c d hcd := by
+  subst c
+  subst d
+  rfl
+
+theorem complexCopyVelocity_zeroEntry
+    (t : TangentData Parameter ProblemStatement.Space) (f : Parameter × Plane → ComplexVector)
+    (parameter : Parameter → Parameter) (g : Geometry) (gap : ℕ)
+    (L rate amplitude normalScale : ℝ) (hL : 0 < L) (hrate : 0 < rate) (hnormal : normalScale ≠ 0)
+    {U : Set Parameter} (hA : ContinuousOn t.linearData.coefficient (U ×ˢ univ))
+    (hB : ContinuousOn t.linearData.forcingMap (U ×ˢ univ))
+    (hf : ContinuousOn f (U ×ˢ univ)) (q : Parameter) (hq : parameter q ∈ U)
+    (copy : Frequency) (Y : Plane)
+    (hslot : ((CopySolveCompatibility.transportGeometry g gap 0 rate hrate.ne').coordinates copy Y).2 ∈
+      Icc 0 (L / rate)) :
+    complexCopyVelocity (ScaledTangentTransport.transportTangent t parameter gap 0 rate amplitude normalScale)
+      (ScaledTangentTransport.transportSource f parameter gap rate amplitude)
+      (CopySolveCompatibility.transportGeometry g gap 0 rate hrate.ne') (div_pos hL hrate).le copy (q, Y) =
+        amplitude • complexCopyVelocity t f g hL.le copy (parameter q, coverPower gap Y) := by
+  have he := ScaledTangentTransport.complexCopyVelocity_transport t f parameter g (div_pos hL hrate).le
+    gap 0 rate amplitude normalScale hrate hnormal hA hB hf q hq copy Y hslot
+  refine he.trans (congrArg (fun z : ComplexVector => amplitude • z) ?_)
+  apply interval_congr (fun a b hab => complexCopyVelocity t f g (a := a) (b := b) hab
+    copy (parameter q, coverPower gap Y)) _ _ (by ring)
+  field_simp ; simp
+
+end ReferenceData
+
+section ActualReference
+
+open CommonCoverSolve TorusInverse ParticularWaveAssembly ParticularWaveBounds
+open CorrectionState PhysicalParticularWave
+
+
+
+
+
+
+end ActualReference
+
+section HarmonicAssembly
+
+open CommonCoverSolve TorusInverse ParticularWaveAssembly ParticularWaveBounds
+open CorrectionState PhysicalParticularWave
+open scoped BigOperators
+
+
+
+
+end HarmonicAssembly
+
+end NavierStokes.GaussianErrorNaturality
+end
+
 
 noncomputable section
 

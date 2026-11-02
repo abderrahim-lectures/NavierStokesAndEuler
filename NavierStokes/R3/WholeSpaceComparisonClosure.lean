@@ -5,7 +5,10 @@ import NavierStokes.R3.LocalizedDifferenceEnergy
 import Mathlib.MeasureTheory.Integral.DominatedConvergence
 import Mathlib.MeasureTheory.Measure.OpenPos
 import NavierStokes.R3.LocalizedFluxEstimates
-import NavierStokes.R3.ComparisonRateBound
+import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.Ring
 
 /-!
 # Closing the whole-space comparison estimate
@@ -14,6 +17,316 @@ This module isolates the final PDE energy calculation. Its explicit pressure
 flux hypothesis is discharged by the pressure reconstruction modules in the
 whole-space uniqueness theorem; it is not a competitor hypothesis.
 -/
+/-! Merged from `NavierStokes.R3.ComparisonYoung` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Scalar absorption for the whole-space comparison estimate
+
+The constants in these estimates are uniform in the cutoff radius and in the
+nonnegative quantity that will represent a weighted gradient norm. All
+fractional powers have real exponents.
+-/
+
+
+noncomputable section
+
+open Filter
+
+namespace NavierStokesR3.ComparisonYoung
+
+/-- Every nonnegative subquadratic power can be absorbed into an arbitrarily
+small multiple of the square, with a constant independent of the argument. -/
+theorem exists_rpow_absorption {C δ p : ℝ}
+    (hC : 0 ≤ C) (hδ : 0 < δ) (hp0 : 0 ≤ p) (hp2 : p < 2) :
+    ∃ D ≥ 0, ∀ A ≥ 0, C * A ^ p ≤ δ * A ^ 2 + D := by
+  have hevent : ∀ᶠ A : ℝ in atTop, C / δ ≤ A ^ (2 - p) :=
+    (tendsto_rpow_atTop (by linarith : 0 < 2 - p)).eventually
+      (eventually_ge_atTop (C / δ))
+  obtain ⟨b, hb⟩ := eventually_atTop.mp hevent
+  let K : ℝ := max 1 b
+  have hK : 0 ≤ K := le_trans zero_le_one (le_max_left _ _)
+  have hD : 0 ≤ C * K ^ p := mul_nonneg hC (Real.rpow_nonneg hK _)
+  refine ⟨C * K ^ p, hD, ?_⟩
+  intro A hA
+  by_cases hAK : A ≤ K
+  · calc
+      C * A ^ p ≤ C * K ^ p :=
+        mul_le_mul_of_nonneg_left (Real.rpow_le_rpow hA hAK hp0) hC
+      _ ≤ δ * A ^ 2 + C * K ^ p :=
+        le_add_of_nonneg_left (mul_nonneg hδ.le (sq_nonneg A))
+  · have hKA : K ≤ A := le_of_lt (lt_of_not_ge hAK)
+    have hApos : 0 < A := lt_of_lt_of_le zero_lt_one
+      ((le_max_left 1 b).trans hKA)
+    have hlarge : C ≤ A ^ (2 - p) * δ :=
+      (div_le_iff₀ hδ).mp (hb A ((le_max_right 1 b).trans hKA))
+    have hpow : A ^ (2 - p) * A ^ p = A ^ 2 := by
+      rw [← Real.rpow_add hApos]
+      norm_num
+    calc
+      C * A ^ p ≤ (A ^ (2 - p) * δ) * A ^ p :=
+        mul_le_mul_of_nonneg_right hlarge (Real.rpow_nonneg hA _)
+      _ = δ * (A ^ (2 - p) * A ^ p) := by ring
+      _ = δ * A ^ 2 := by rw [hpow]
+      _ ≤ δ * A ^ 2 + C * K ^ p := le_add_of_nonneg_right hD
+
+/-- The same absorption estimate is uniform for a fixed unit shift. -/
+theorem exists_shifted_rpow_absorption {C δ p : ℝ}
+    (hC : 0 ≤ C) (hδ : 0 < δ) (hp0 : 0 ≤ p) (hp2 : p < 2) :
+    ∃ D ≥ 0, ∀ A ≥ 0, C * (A + 1) ^ p ≤ δ * A ^ 2 + D := by
+  obtain ⟨D, hD, hbound⟩ := exists_rpow_absorption hC (half_pos hδ) hp0 hp2
+  refine ⟨D + δ, add_nonneg hD hδ.le, ?_⟩
+  intro A hA
+  have hboundA := hbound (A + 1) (by linarith)
+  have hsquare : (A + 1) ^ 2 ≤ 2 * A ^ 2 + 2 := by
+    nlinarith [sq_nonneg (A - 1)]
+  have hscaled := mul_le_mul_of_nonneg_left hsquare (half_pos hδ).le
+  nlinarith
+
+/-- Dividing the shifted estimate by a radius at least one preserves the
+arbitrarily small square coefficient and makes the constant decay as `1 / R`. -/
+theorem exists_scaled_shifted_rpow_absorption {C δ p : ℝ}
+    (hC : 0 ≤ C) (hδ : 0 < δ) (hp0 : 0 ≤ p) (hp2 : p < 2) :
+    ∃ D ≥ 0, ∀ A ≥ 0, ∀ R ≥ 1,
+      C / R * (A + 1) ^ p ≤ δ * A ^ 2 + D / R := by
+  obtain ⟨D, hD, hbound⟩ := exists_shifted_rpow_absorption hC hδ hp0 hp2
+  refine ⟨D, hD, ?_⟩
+  intro A hA R hR
+  have hRpos : 0 < R := lt_of_lt_of_le zero_lt_one hR
+  have hInv : 0 ≤ R⁻¹ := (inv_pos.mpr hRpos).le
+  have hInv1 : R⁻¹ ≤ 1 := (inv_le_one₀ hRpos).mpr hR
+  have hscaled := mul_le_mul_of_nonneg_right (hbound A hA) hInv
+  have hquadratic := mul_le_mul_of_nonneg_left hInv1
+    (mul_nonneg hδ.le (sq_nonneg A))
+  simp only [div_eq_mul_inv]
+  nlinarith
+
+/-- The pressure and transport cutoff remainders are controlled by one shifted
+subquadratic power. The estimate retains the full factor `1 / R`. -/
+theorem cutoff_expression_le {C A R : ℝ}
+    (hC : 0 ≤ C) (hA : 0 ≤ A) (hR : 1 ≤ R) :
+    C * ((A + R⁻¹) ^ (1 / 2 : ℝ) + 1) *
+        (R⁻¹ * A + R ^ (-2 : ℝ)) +
+      C * R ^ (-7 / 4 : ℝ) * (A + R⁻¹) ^ (3 / 4 : ℝ) +
+      C * R⁻¹ * (A + R⁻¹) ^ (3 / 2 : ℝ) ≤
+        4 * C / R * (A + 1) ^ (3 / 2 : ℝ) := by
+  have hRpos : 0 < R := lt_of_lt_of_le zero_lt_one hR
+  have hInv : 0 ≤ R⁻¹ := (inv_pos.mpr hRpos).le
+  have hInv1 : R⁻¹ ≤ 1 := (inv_le_one₀ hRpos).mpr hR
+  have hx : 0 ≤ A + R⁻¹ := add_nonneg hA hInv
+  have hxB : A + R⁻¹ ≤ A + 1 := add_le_add_right hInv1 A
+  have hB1 : 1 ≤ A + 1 := by linarith
+  have hBpos : 0 < A + 1 := by linarith
+  have hR2 : R ^ (-2 : ℝ) ≤ R⁻¹ := by
+    simpa only [Real.rpow_neg_one] using
+      (Real.rpow_le_rpow_of_exponent_le hR (by norm_num : (-2 : ℝ) ≤ -1))
+  have hR74 : R ^ (-7 / 4 : ℝ) ≤ R⁻¹ := by
+    simpa only [Real.rpow_neg_one] using
+      (Real.rpow_le_rpow_of_exponent_le hR (by norm_num : (-7 / 4 : ℝ) ≤ -1))
+  have hhalf : (A + R⁻¹) ^ (1 / 2 : ℝ) + 1 ≤
+      2 * (A + 1) ^ (1 / 2 : ℝ) := by
+    have hmon := Real.rpow_le_rpow hx hxB (by norm_num : (0 : ℝ) ≤ 1 / 2)
+    have hone := Real.one_le_rpow hB1 (by norm_num : (0 : ℝ) ≤ 1 / 2)
+    linarith
+  have hlinear : R⁻¹ * A + R ^ (-2 : ℝ) ≤ R⁻¹ * (A + 1) := by
+    nlinarith
+  have hlinear0 : 0 ≤ R⁻¹ * A + R ^ (-2 : ℝ) :=
+    add_nonneg (mul_nonneg hInv hA) (Real.rpow_nonneg hRpos.le _)
+  have hprod : (A + 1) ^ (1 / 2 : ℝ) * (A + 1) =
+      (A + 1) ^ (3 / 2 : ℝ) := by
+    rw [← Real.rpow_add_one hBpos.ne']
+    norm_num
+  have hfactor : ((A + R⁻¹) ^ (1 / 2 : ℝ) + 1) *
+      (R⁻¹ * A + R ^ (-2 : ℝ)) ≤ 2 * R⁻¹ * (A + 1) ^ (3 / 2 : ℝ) := by
+    calc
+      _ ≤ (2 * (A + 1) ^ (1 / 2 : ℝ)) * (R⁻¹ * (A + 1)) :=
+        mul_le_mul hhalf hlinear hlinear0
+          (mul_nonneg (by norm_num) (Real.rpow_nonneg hBpos.le _))
+      _ = 2 * R⁻¹ * ((A + 1) ^ (1 / 2 : ℝ) * (A + 1)) := by ring
+      _ = _ := by rw [hprod]
+  have hthreeQuarters : (A + R⁻¹) ^ (3 / 4 : ℝ) ≤
+      (A + 1) ^ (3 / 2 : ℝ) :=
+    (Real.rpow_le_rpow hx hxB (by norm_num : (0 : ℝ) ≤ 3 / 4)).trans
+      (Real.rpow_le_rpow_of_exponent_le hB1
+        (by norm_num : (3 / 4 : ℝ) ≤ 3 / 2))
+  have hthreeHalves : (A + R⁻¹) ^ (3 / 2 : ℝ) ≤
+      (A + 1) ^ (3 / 2 : ℝ) :=
+    Real.rpow_le_rpow hx hxB (by norm_num : (0 : ℝ) ≤ 3 / 2)
+  have hterm1 := mul_le_mul_of_nonneg_left hfactor hC
+  have hterm2 := mul_le_mul_of_nonneg_left
+    (mul_le_mul hR74 hthreeQuarters (Real.rpow_nonneg hx _) hInv) hC
+  have hterm3 := mul_le_mul_of_nonneg_left hthreeHalves (mul_nonneg hC hInv)
+  simp only [div_eq_mul_inv]
+  nlinarith only [hterm1, hterm2, hterm3]
+
+/-- Scalar Young absorption of all cutoff remainders. The same nonnegative
+constant works for every nonnegative gradient norm and every radius at least
+one. -/
+theorem exists_cutoff_absorption {C δ : ℝ} (hC : 0 ≤ C) (hδ : 0 < δ) :
+    ∃ D ≥ 0, ∀ A ≥ 0, ∀ R ≥ 1,
+      C * ((A + R⁻¹) ^ (1 / 2 : ℝ) + 1) *
+          (R⁻¹ * A + R ^ (-2 : ℝ)) +
+        C * R ^ (-7 / 4 : ℝ) * (A + R⁻¹) ^ (3 / 4 : ℝ) +
+        C * R⁻¹ * (A + R⁻¹) ^ (3 / 2 : ℝ) ≤
+          δ * A ^ 2 + D / R := by
+  obtain ⟨D, hD, hbound⟩ := exists_scaled_shifted_rpow_absorption
+    (mul_nonneg (by norm_num : (0 : ℝ) ≤ 4) hC) hδ
+    (by norm_num : (0 : ℝ) ≤ 3 / 2) (by norm_num : (3 / 2 : ℝ) < 2)
+  exact ⟨D, hD, fun A hA R hR =>
+    (cutoff_expression_le hC hA hR).trans (hbound A hA R hR)⟩
+
+end NavierStokesR3.ComparisonYoung
+end
+
+/-! Merged from `NavierStokes.R3.ComparisonRateBound`. -/
+/-!
+# A uniform rate bound from the localized energy estimate
+
+The Sobolev estimate for the cutoff velocity contains fixed multiplicative
+constants. They are absorbed into a single coefficient before applying the
+uniform Young estimate. The resulting error decays as `1 / R`, and no sign
+condition on the energy coefficient or energy value is used.
+-/
+
+
+noncomputable section
+
+namespace NavierStokesR3.ComparisonRateBound
+
+private theorem rpow_le_square_mul_rpow {B Q x p : ℝ}
+    (hB : 0 ≤ B) (hx : 0 ≤ x) (hQ : 1 ≤ Q) (hBQ : B ≤ Q * x)
+    (hp0 : 0 ≤ p) (hp2 : p ≤ 2) :
+    B ^ p ≤ Q ^ 2 * x ^ p := by
+  have hQ0 : 0 ≤ Q := zero_le_one.trans hQ
+  calc
+    B ^ p ≤ (Q * x) ^ p := Real.rpow_le_rpow hB hBQ hp0
+    _ = Q ^ p * x ^ p := Real.mul_rpow hQ0 hx
+    _ ≤ Q ^ (2 : ℝ) * x ^ p := mul_le_mul_of_nonneg_right
+      (Real.rpow_le_rpow_of_exponent_le hQ hp2) (Real.rpow_nonneg hx _)
+    _ = Q ^ 2 * x ^ p := by rw [Real.rpow_two]
+
+/-- Fixed constants in the cutoff Sobolev estimate preserve uniform absorption
+of the full pressure and transport error. -/
+theorem exists_uniform_flux_absorption {C1 C2 S M δ : ℝ}
+    (hC1 : 0 ≤ C1) (hC2 : 0 ≤ C2) (hS : 0 ≤ S) (hM : 0 ≤ M)
+    (hδ : 0 < δ) :
+    ∃ D ≥ 0, ∀ R ≥ 1, ∀ A ≥ 0, ∀ B ≥ 0, B ≤ S * (A + M / R) →
+      C1 / R * B ^ (3 / 2 : ℝ) +
+        C2 * ((B ^ (1 / 2 : ℝ) + 1) * (A / R + 1 / R ^ 2) +
+          R ^ (-7 / 4 : ℝ) * B ^ (3 / 4 : ℝ)) ≤ δ * A ^ 2 + D / R := by
+  let Q : ℝ := max 1 (S * max 1 M)
+  have hQ1 : 1 ≤ Q := le_max_left _ _
+  have hSQ : S ≤ Q := by
+    calc
+      S = S * 1 := by ring
+      _ ≤ S * max 1 M := mul_le_mul_of_nonneg_left (le_max_left _ _) hS
+      _ ≤ Q := le_max_right _ _
+  have hSMQ : S * M ≤ Q :=
+    (mul_le_mul_of_nonneg_left (le_max_right 1 M) hS).trans (le_max_right _ _)
+  have hQ0 : 0 ≤ Q := (mul_nonneg hS hM).trans hSMQ
+  have hQsq1 : 1 ≤ Q ^ 2 := by nlinarith [sq_nonneg (Q - 1)]
+  let C : ℝ := (C1 + C2) * Q ^ 2
+  have hC : 0 ≤ C := mul_nonneg (add_nonneg hC1 hC2) (sq_nonneg _)
+  have hC1Q : C1 * Q ^ 2 ≤ C :=
+    mul_le_mul_of_nonneg_right (le_add_of_nonneg_right hC2) (sq_nonneg _)
+  have hC2Q : C2 * Q ^ 2 ≤ C :=
+    mul_le_mul_of_nonneg_right (le_add_of_nonneg_left hC1) (sq_nonneg _)
+  obtain ⟨D, hD, hD_bound⟩ := ComparisonYoung.exists_cutoff_absorption hC hδ
+  refine ⟨D, hD, ?_⟩
+  intro R hR A hA B hB hSobolev
+  have hRpos : 0 < R := zero_lt_one.trans_le hR
+  have hInv : 0 ≤ R⁻¹ := (inv_pos.mpr hRpos).le
+  let x : ℝ := A + R⁻¹
+  have hx : 0 ≤ x := add_nonneg hA hInv
+  have hBQ : B ≤ Q * x := by
+    calc
+      B ≤ S * (A + M / R) := hSobolev
+      _ = S * A + (S * M) * R⁻¹ := by ring
+      _ ≤ Q * A + Q * R⁻¹ := add_le_add
+        (mul_le_mul_of_nonneg_right hSQ hA)
+        (mul_le_mul_of_nonneg_right hSMQ hInv)
+      _ = Q * x := by dsimp [x]; ring
+  have hhalf : B ^ (1 / 2 : ℝ) ≤ Q ^ 2 * x ^ (1 / 2 : ℝ) :=
+    rpow_le_square_mul_rpow hB hx hQ1 hBQ (by norm_num) (by norm_num)
+  have hthree : B ^ (3 / 2 : ℝ) ≤ Q ^ 2 * x ^ (3 / 2 : ℝ) :=
+    rpow_le_square_mul_rpow hB hx hQ1 hBQ (by norm_num) (by norm_num)
+  have hquarter : B ^ (3 / 4 : ℝ) ≤ Q ^ 2 * x ^ (3 / 4 : ℝ) :=
+    rpow_le_square_mul_rpow hB hx hQ1 hBQ (by norm_num) (by norm_num)
+  have hhalfOne : B ^ (1 / 2 : ℝ) + 1 ≤ Q ^ 2 * (x ^ (1 / 2 : ℝ) + 1) := by
+    calc
+      _ ≤ Q ^ 2 * x ^ (1 / 2 : ℝ) + Q ^ 2 := add_le_add hhalf hQsq1
+      _ = _ := by ring
+  have hfactor : C2 * (B ^ (1 / 2 : ℝ) + 1) ≤ C * (x ^ (1 / 2 : ℝ) + 1) := by
+    calc
+      _ ≤ C2 * (Q ^ 2 * (x ^ (1 / 2 : ℝ) + 1)) :=
+        mul_le_mul_of_nonneg_left hhalfOne hC2
+      _ = (C2 * Q ^ 2) * (x ^ (1 / 2 : ℝ) + 1) := by ring
+      _ ≤ _ := mul_le_mul_of_nonneg_right hC2Q (by positivity)
+  have hRminus2 : R ^ (-2 : ℝ) = 1 / R ^ 2 := by
+    rw [Real.rpow_neg hRpos.le, Real.rpow_two, one_div]
+  have hlinear : A / R + 1 / R ^ 2 = R⁻¹ * A + R ^ (-2 : ℝ) := by
+    rw [hRminus2]
+    ring
+  have hlinear0 : 0 ≤ R⁻¹ * A + R ^ (-2 : ℝ) :=
+    add_nonneg (mul_nonneg hInv hA) (Real.rpow_nonneg hRpos.le _)
+  have hpressure : C2 * ((B ^ (1 / 2 : ℝ) + 1) * (A / R + 1 / R ^ 2)) ≤
+      C * (x ^ (1 / 2 : ℝ) + 1) * (R⁻¹ * A + R ^ (-2 : ℝ)) := by
+    rw [hlinear, ← mul_assoc]
+    exact mul_le_mul_of_nonneg_right hfactor hlinear0
+  have hcommutator : C2 * (R ^ (-7 / 4 : ℝ) * B ^ (3 / 4 : ℝ)) ≤
+      C * R ^ (-7 / 4 : ℝ) * x ^ (3 / 4 : ℝ) := by
+    calc
+      _ = (C2 * R ^ (-7 / 4 : ℝ)) * B ^ (3 / 4 : ℝ) := by ring
+      _ ≤ (C2 * R ^ (-7 / 4 : ℝ)) * (Q ^ 2 * x ^ (3 / 4 : ℝ)) :=
+        mul_le_mul_of_nonneg_left hquarter (mul_nonneg hC2 (Real.rpow_nonneg hRpos.le _))
+      _ = (C2 * Q ^ 2) * (R ^ (-7 / 4 : ℝ) * x ^ (3 / 4 : ℝ)) := by ring
+      _ ≤ C * (R ^ (-7 / 4 : ℝ) * x ^ (3 / 4 : ℝ)) :=
+        mul_le_mul_of_nonneg_right hC2Q (by positivity)
+      _ = _ := by ring
+  have htransport : C1 / R * B ^ (3 / 2 : ℝ) ≤
+      C * R⁻¹ * x ^ (3 / 2 : ℝ) := by
+    calc
+      _ ≤ C1 / R * (Q ^ 2 * x ^ (3 / 2 : ℝ)) :=
+        mul_le_mul_of_nonneg_left hthree (div_nonneg hC1 hRpos.le)
+      _ = (C1 * Q ^ 2) * (R⁻¹ * x ^ (3 / 2 : ℝ)) := by ring
+      _ ≤ C * (R⁻¹ * x ^ (3 / 2 : ℝ)) :=
+        mul_le_mul_of_nonneg_right hC1Q (by positivity)
+      _ = _ := by ring
+  have hsum : C1 / R * B ^ (3 / 2 : ℝ) +
+      C2 * ((B ^ (1 / 2 : ℝ) + 1) * (A / R + 1 / R ^ 2) +
+        R ^ (-7 / 4 : ℝ) * B ^ (3 / 4 : ℝ)) ≤
+      C * (x ^ (1 / 2 : ℝ) + 1) * (R⁻¹ * A + R ^ (-2 : ℝ)) +
+        C * R ^ (-7 / 4 : ℝ) * x ^ (3 / 4 : ℝ) +
+        C * R⁻¹ * x ^ (3 / 2 : ℝ) := by
+    nlinarith only [hpressure, hcommutator, htransport]
+  exact hsum.trans (hD_bound A hA R hR)
+
+/-- One radius-independent constant turns the full localized energy inequality
+into the differential inequality required by Gronwall. -/
+theorem exists_uniform_rate_bound {C0 C1 C2 S M : ℝ}
+    (hC0 : 0 ≤ C0) (hC1 : 0 ≤ C1) (hC2 : 0 ≤ C2)
+    (hS : 0 ≤ S) (hM : 0 ≤ M) :
+    ∃ D ≥ 0, ∀ R ≥ 1, ∀ A ≥ 0, ∀ B ≥ 0, B ≤ S * (A + M / R) →
+      ∀ E E' G : ℝ,
+        (1 / 2 : ℝ) * E' + A ^ 2 ≤ G * E + C0 / R ^ 2 +
+          C1 / R * B ^ (3 / 2 : ℝ) +
+          C2 * ((B ^ (1 / 2 : ℝ) + 1) * (A / R + 1 / R ^ 2) +
+            R ^ (-7 / 4 : ℝ) * B ^ (3 / 4 : ℝ)) →
+        E' ≤ 2 * G * E + D / R := by
+  obtain ⟨D, hD, hflux⟩ := exists_uniform_flux_absorption hC1 hC2 hS hM
+    (by norm_num : (0 : ℝ) < 1 / 2)
+  refine ⟨2 * (C0 + D), by positivity, ?_⟩
+  intro R hR A hA B hB hSobolev E E' G henergy
+  have hRpos : 0 < R := zero_lt_one.trans_le hR
+  have hRsq : R ≤ R ^ 2 := by nlinarith [sq_nonneg (R - 1)]
+  have hC0radius : C0 / R ^ 2 ≤ C0 / R :=
+    div_le_div_of_nonneg_left hC0 hRpos hRsq
+  have hbound := hflux R hR A hA B hB hSobolev
+  have hdivide : 2 * (C0 + D) / R = 2 * (C0 / R + D / R) := by ring
+  rw [hdivide]
+  nlinarith only [henergy, hbound, hC0radius, sq_nonneg A]
+
+end NavierStokesR3.ComparisonRateBound
+
 
 /-! Merged from `NavierStokes.R3.WholeSpaceEnergyLimit`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
 section

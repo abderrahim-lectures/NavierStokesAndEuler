@@ -1,8 +1,13 @@
-import NavierStokes.R3.HeatKernelCancellation
+import NavierStokes.R3.ComparisonSetup
+import Mathlib.MeasureTheory.Integral.Prod
 import NavierStokes.R3.HeatKernelFourier
 import NavierStokes.R3.ComparisonFourierSetup
-import NavierStokes.R3.HeatKernelFubini
-import NavierStokes.R3.HeatKernelPairedBound
+import NavierStokes.R3.PairedKernelBound
+import Mathlib.MeasureTheory.Measure.Haar.NormedSpace
+import Mathlib.MeasureTheory.Integral.Layercake
+import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
+import NavierStokes.R3.HeatKernel
+import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral
 
 /-!
 # The pressure commutator
@@ -12,6 +17,873 @@ We first subtract the two time-integrable heat evolutions, insert the cutoff
 difference, and only then use the absolute-integrability theorem to interchange
 time and space. The resulting kernel has the proved radial `L^(4/3)` majorant.
 -/
+/-! Merged from `NavierStokes.R3.RadialKernelBounds` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# The radial majorant of the cutoff commutator
+
+The cancellation factor `min (‖z‖ / R) 1` makes the singular kernel belong to
+`L^(4/3)` in three dimensions. The proof uses the layer-cake formula and the
+volume of balls, so no principal-value integral occurs in this module.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped ENNReal NNReal
+
+namespace NavierStokesR3.Comparison
+
+open ProblemStatement
+
+/-- The positive radial majorant after inserting the cutoff difference. -/
+def radialCommutatorKernel (R : ℝ) (z : Space) : ℝ :=
+  ‖z‖ ^ (-3 : ℝ) * min (‖z‖ / R) 1
+
+theorem radialCommutatorKernel_nonneg {R : ℝ} (hR : 0 < R) (z : Space) :
+    0 ≤ radialCommutatorKernel R z := by
+  unfold radialCommutatorKernel
+  positivity
+
+theorem radialCommutatorKernel_measurable (R : ℝ) :
+    Measurable (radialCommutatorKernel R) := by
+  unfold radialCommutatorKernel
+  fun_prop
+
+@[simp] theorem radialCommutatorKernel_zero (R : ℝ) :
+    radialCommutatorKernel R 0 = 0 := by
+  simp [radialCommutatorKernel]
+
+private theorem kernel_one_le_cube (z : Space) :
+    radialCommutatorKernel 1 z ≤ ‖z‖ ^ (-3 : ℝ) := by
+  unfold radialCommutatorKernel
+  exact mul_le_of_le_one_right (Real.rpow_nonneg (norm_nonneg _) _) (min_le_right _ _)
+
+private theorem kernel_one_le_square (z : Space) :
+    radialCommutatorKernel 1 z ≤ ‖z‖ ^ (-2 : ℝ) := by
+  by_cases hz : z = 0
+  · simp [hz]
+  have hn : 0 < ‖z‖ := norm_pos_iff.mpr hz
+  calc
+    radialCommutatorKernel 1 z ≤ ‖z‖ ^ (-3 : ℝ) * ‖z‖ := by
+      unfold radialCommutatorKernel
+      gcongr
+      simp
+    _ = ‖z‖ ^ (-2 : ℝ) := by
+      calc
+        _ = ‖z‖ ^ (-3 : ℝ) * ‖z‖ ^ (1 : ℝ) := by rw [Real.rpow_one]
+        _ = _ := by rw [← Real.rpow_add hn]; norm_num
+
+private theorem kernel_one_power_le_four (z : Space) :
+    radialCommutatorKernel 1 z ^ (4 / 3 : ℝ) ≤ ‖z‖ ^ (-4 : ℝ) := by
+  calc
+    _ ≤ (‖z‖ ^ (-3 : ℝ)) ^ (4 / 3 : ℝ) :=
+      Real.rpow_le_rpow (radialCommutatorKernel_nonneg (by norm_num) z)
+        (kernel_one_le_cube z) (by norm_num)
+    _ = _ := by rw [← Real.rpow_mul (norm_nonneg _)]; norm_num
+
+private theorem kernel_one_power_le_eight_thirds (z : Space) :
+    radialCommutatorKernel 1 z ^ (4 / 3 : ℝ) ≤ ‖z‖ ^ (-(8 / 3) : ℝ) := by
+  calc
+    _ ≤ (‖z‖ ^ (-2 : ℝ)) ^ (4 / 3 : ℝ) :=
+      Real.rpow_le_rpow (radialCommutatorKernel_nonneg (by norm_num) z)
+        (kernel_one_le_square z) (by norm_num)
+    _ = _ := by rw [← Real.rpow_mul (norm_nonneg _)]; norm_num
+
+private theorem levelset_measure_le_ball {f : Space → ℝ} {q t : ℝ}
+    (hq : q < 0) (ht : 0 < t) (hf : ∀ z, f z ≤ ‖z‖ ^ q) :
+    volume {z | t ≤ f z} ≤ volume (Metric.closedBall (0 : Space) (t ^ q⁻¹)) := by
+  apply measure_mono
+  intro z hz
+  have hn : 0 < ‖z‖ := by
+    by_contra hn
+    have hnz : ‖z‖ = 0 := le_antisymm (not_lt.mp hn) (norm_nonneg _)
+    have := hz.trans (hf z)
+    rw [hnz, Real.zero_rpow hq.ne] at this
+    exact (not_le_of_gt ht) this
+  rw [Metric.mem_closedBall, dist_zero_right]
+  exact (Real.le_rpow_inv_iff_of_neg hn ht hq).mpr (hz.trans (hf z))
+
+private theorem ball_measure_power (t q : ℝ) (ht : 0 < t) :
+    volume (Metric.closedBall (0 : Space) (t ^ q)) =
+      ENNReal.ofReal (t ^ (q * 3)) * volume (Metric.ball (0 : Space) 1) := by
+  rw [Measure.addHaar_closedBall volume (0 : Space) (Real.rpow_nonneg ht.le _)]
+  congr 2
+  simp only [Space, NavierStokes.ProblemStatement.Space, finrank_euclideanSpace,
+    Fintype.card_fin]
+  rw [Real.rpow_mul ht.le]
+  exact (Real.rpow_natCast (t ^ q) 3).symm
+
+private theorem kernel_one_power_integrable :
+    Integrable (fun z : Space => radialCommutatorKernel 1 z ^ (4 / 3 : ℝ)) := by
+  let f : Space → ℝ := fun z => radialCommutatorKernel 1 z ^ (4 / 3 : ℝ)
+  have hm : Measurable f := (radialCommutatorKernel_measurable 1).pow_const _
+  have hn : ∀ z, 0 ≤ f z := fun z =>
+    Real.rpow_nonneg (radialCommutatorKernel_nonneg (by norm_num) z) _
+  refine ⟨hm.aestronglyMeasurable, ?_⟩
+  change HasFiniteIntegral f volume
+  rw [hasFiniteIntegral_iff_enorm, lintegral_enorm_of_nonneg hn,
+    lintegral_eq_lintegral_meas_le volume (Filter.Eventually.of_forall hn) hm.aemeasurable]
+  calc
+    (∫⁻ t in Ioi (0 : ℝ), volume {z | t ≤ f z}) ≤
+        ∫⁻ t in Ioc (0 : ℝ) 1 ∪ Ioi 1, volume {z | t ≤ f z} :=
+      lintegral_mono_set Ioi_subset_Ioc_union_Ioi
+    _ ≤ (∫⁻ t in Ioc (0 : ℝ) 1, volume {z | t ≤ f z}) +
+        ∫⁻ t in Ioi (1 : ℝ), volume {z | t ≤ f z} := lintegral_union_le _ _ _
+    _ < ∞ := by
+      apply ENNReal.add_lt_top.mpr
+      constructor
+      · calc
+          (∫⁻ t in Ioc (0 : ℝ) 1, volume {z | t ≤ f z}) ≤
+              ∫⁻ t in Ioc (0 : ℝ) 1,
+                ENNReal.ofReal (t ^ (-(3 / 4) : ℝ)) *
+                  volume (Metric.ball (0 : Space) 1) := by
+            apply setLIntegral_mono' measurableSet_Ioc
+            intro t ht
+            calc
+              volume {z | t ≤ f z} ≤
+                  volume (Metric.closedBall (0 : Space) (t ^ ((-4 : ℝ)⁻¹))) :=
+                levelset_measure_le_ball (by norm_num) ht.1 kernel_one_power_le_four
+              _ = _ := by
+                rw [ball_measure_power t _ ht.1]
+                norm_num
+          _ < ∞ := by
+            rw [lintegral_mul_const' _ _ measure_ball_lt_top.ne]
+            apply ENNReal.mul_lt_top _ measure_ball_lt_top
+            apply IntegrableOn.setLIntegral_lt_top
+            rw [← intervalIntegrable_iff_integrableOn_Ioc_of_le zero_le_one]
+            exact intervalIntegral.intervalIntegrable_rpow' (by norm_num)
+      · calc
+          (∫⁻ t in Ioi (1 : ℝ), volume {z | t ≤ f z}) ≤
+              ∫⁻ t in Ioi (1 : ℝ),
+                ENNReal.ofReal (t ^ (-(9 / 8) : ℝ)) *
+                  volume (Metric.ball (0 : Space) 1) := by
+            apply setLIntegral_mono' measurableSet_Ioi
+            intro t ht
+            have ht0 : 0 < t := zero_lt_one.trans ht
+            calc
+              volume {z | t ≤ f z} ≤
+                  volume (Metric.closedBall (0 : Space) (t ^ ((-(8 / 3) : ℝ)⁻¹))) :=
+                levelset_measure_le_ball (by norm_num) ht0 kernel_one_power_le_eight_thirds
+              _ = _ := by
+                rw [ball_measure_power t _ ht0]
+                norm_num
+          _ < ∞ := by
+            rw [lintegral_mul_const' _ _ measure_ball_lt_top.ne]
+            exact ENNReal.mul_lt_top
+              (IntegrableOn.setLIntegral_lt_top
+                (integrableOn_Ioi_rpow_of_lt (by norm_num) zero_lt_one))
+              measure_ball_lt_top
+
+/-- Dilation of the cutoff kernel. -/
+theorem radialCommutatorKernel_scale {R : ℝ} (hR : 0 < R) (z : Space) :
+    radialCommutatorKernel R z =
+      R ^ (-3 : ℝ) * radialCommutatorKernel 1 (R⁻¹ • z) := by
+  simp only [radialCommutatorKernel, norm_smul, Real.norm_eq_abs,
+    abs_of_pos (inv_pos.mpr hR), div_one]
+  rw [Real.mul_rpow (inv_nonneg.mpr hR.le) (norm_nonneg z), Real.inv_rpow hR.le]
+  have hpow : R ^ (-3 : ℝ) ≠ 0 := (Real.rpow_pos_of_pos hR _).ne'
+  simp only [div_eq_mul_inv, mul_comm R⁻¹ ‖z‖]
+  field_simp
+
+private theorem kernel_power_scale {R : ℝ} (hR : 0 < R) (z : Space) :
+    radialCommutatorKernel R z ^ (4 / 3 : ℝ) =
+      R ^ (-4 : ℝ) * radialCommutatorKernel 1 (R⁻¹ • z) ^ (4 / 3 : ℝ) := by
+  rw [radialCommutatorKernel_scale hR, Real.mul_rpow (Real.rpow_nonneg hR.le _)
+    (radialCommutatorKernel_nonneg (by norm_num) _), ← Real.rpow_mul hR.le]
+  norm_num
+
+/-- The `4/3` power of the radial kernel is integrable. -/
+theorem radialCommutatorKernel_power_integrable {R : ℝ} (hR : 0 < R) :
+    Integrable (fun z : Space => radialCommutatorKernel R z ^ (4 / 3 : ℝ)) := by
+  have h := (kernel_one_power_integrable.comp_smul (inv_ne_zero hR.ne')).const_mul
+    (R ^ (-4 : ℝ))
+  simpa only [kernel_power_scale hR] using h
+
+/-- The actual cancellation kernel belongs to `L^(4/3)`. -/
+theorem radialCommutatorKernel_memLp {R : ℝ} (hR : 0 < R) :
+    MemLp (radialCommutatorKernel R) (4 / 3 : ℝ≥0∞) volume := by
+  apply (integrable_norm_rpow_iff
+    (radialCommutatorKernel_measurable R).aestronglyMeasurable
+    (by norm_num : (4 / 3 : ℝ≥0∞) ≠ 0)
+    (ENNReal.div_lt_top (by norm_num) (by norm_num)).ne).mp
+  simpa only [ENNReal.toReal_div, ENNReal.toReal_ofNat, Real.norm_eq_abs,
+    abs_of_nonneg (radialCommutatorKernel_nonneg hR _)] using
+    radialCommutatorKernel_power_integrable hR
+
+private theorem kernel_power_integral_scale {R : ℝ} (hR : 0 < R) :
+    (∫ z : Space, radialCommutatorKernel R z ^ (4 / 3 : ℝ)) =
+      R ^ (-1 : ℝ) * ∫ z : Space, radialCommutatorKernel 1 z ^ (4 / 3 : ℝ) := by
+  have hpow : R ^ (-4 : ℝ) * R ^ (3 : ℕ) = R ^ (-1 : ℝ) := by
+    calc
+      _ = R ^ (-4 : ℝ) * R ^ (3 : ℝ) := by
+        exact congrArg (fun a => R ^ (-4 : ℝ) * a) (Real.rpow_natCast R 3).symm
+      _ = R ^ ((-4 : ℝ) + 3) := (Real.rpow_add hR _ _).symm
+      _ = _ := by norm_num
+  simp_rw [kernel_power_scale hR]
+  rw [integral_const_mul, Measure.integral_comp_inv_smul_of_nonneg volume
+    (fun z : Space => radialCommutatorKernel 1 z ^ (4 / 3 : ℝ)) hR.le]
+  simp only [Space, NavierStokes.ProblemStatement.Space, finrank_euclideanSpace,
+    Fintype.card_fin, smul_eq_mul, ← mul_assoc, hpow]
+
+private theorem kernel_lpNorm_formula {R : ℝ} (hR : 0 < R) :
+    comparisonLpNorm (4 / 3) (radialCommutatorKernel R) =
+      (∫ z : Space, radialCommutatorKernel R z ^ (4 / 3 : ℝ)) ^ (3 / 4 : ℝ) := by
+  unfold comparisonLpNorm
+  rw [(radialCommutatorKernel_memLp hR).eLpNorm_eq_integral_rpow_norm
+    (by norm_num) (ENNReal.div_lt_top (by norm_num) (by norm_num)).ne]
+  have hp : (4 / 3 : ℝ≥0∞).toReal = (4 / 3 : ℝ) := by norm_num
+  rw [hp]
+  have hinv : (4 / 3 : ℝ)⁻¹ = (3 / 4 : ℝ) := by norm_num
+  rw [hinv]
+  have hnorm : (fun z : Space => ‖radialCommutatorKernel R z‖ ^ (4 / 3 : ℝ)) =
+      (fun z : Space => radialCommutatorKernel R z ^ (4 / 3 : ℝ)) := by
+    funext z
+    rw [Real.norm_eq_abs, abs_of_nonneg (radialCommutatorKernel_nonneg hR z)]
+  have hi : 0 ≤ ∫ z : Space, radialCommutatorKernel R z ^ (4 / 3 : ℝ) :=
+    integral_nonneg fun z => Real.rpow_nonneg (radialCommutatorKernel_nonneg hR z) _
+  rw [hnorm, ENNReal.toReal_ofReal (Real.rpow_nonneg hi _)]
+
+/-- The norm has exactly the scale required by the cutoff commutator. -/
+theorem radialCommutatorKernel_lpNorm_scale {R : ℝ} (hR : 0 < R) :
+    comparisonLpNorm (4 / 3) (radialCommutatorKernel R) =
+      comparisonLpNorm (4 / 3) (radialCommutatorKernel 1) * R ^ (-(3 / 4) : ℝ) := by
+  have hi : 0 ≤ ∫ z : Space, radialCommutatorKernel 1 z ^ (4 / 3 : ℝ) :=
+    integral_nonneg fun z =>
+      Real.rpow_nonneg (radialCommutatorKernel_nonneg zero_lt_one z) _
+  rw [kernel_lpNorm_formula hR, kernel_lpNorm_formula zero_lt_one,
+    kernel_power_integral_scale hR,
+    Real.mul_rpow (Real.rpow_nonneg hR.le _) hi, ← Real.rpow_mul hR.le]
+  norm_num ; ring
+
+
+end NavierStokesR3.Comparison
+end
+
+/-! Merged from `NavierStokes.R3.HeatKernelTimeBound`. -/
+/-!
+# Integration in time for the heat-kernel Hessian
+
+The reciprocal substitution reduces the inverse-time Gaussian integrals to
+the ordinary Gamma integral. These estimates are uniform in the spatial
+indices and give the inverse-cube kernel bound in three dimensions.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+
+namespace NavierStokesR3.Comparison
+
+open ProblemStatement
+
+private theorem inverseTimeGamma_transform (a p s : ℝ) (hs : 0 < s) :
+    (|(-1 : ℝ)| * s ^ ((-1 : ℝ) - 1)) •
+        ((s ^ (-1 : ℝ)) ^ (p - 1) * Real.exp (-(a * s ^ (-1 : ℝ)))) =
+      s ^ (-(p + 1)) * Real.exp (-a / s) := by
+  norm_num only [abs_neg, abs_one, one_mul, smul_eq_mul]
+  rw [← Real.rpow_mul hs.le, ← mul_assoc, ← Real.rpow_add hs]
+  congr 1
+  · congr 1
+    ring
+  · rw [Real.rpow_neg_one]
+    simp only [div_eq_mul_inv, neg_mul]
+
+/-- The inverse-time Gaussian power is integrable for every positive shape
+parameter and positive spatial scale. -/
+theorem integrableOn_inverseTimeGamma {a p : ℝ} (ha : 0 < a) (hp : 0 < p) :
+    IntegrableOn (fun s : ℝ => s ^ (-(p + 1)) * Real.exp (-a / s)) (Ioi 0) := by
+  have hg : IntegrableOn (fun t : ℝ => t ^ (p - 1) * Real.exp (-(a * t)))
+      (Ioi 0) := by
+    simpa only [Real.rpow_one, neg_mul] using
+      (integrableOn_rpow_mul_exp_neg_mul_rpow
+        (p := (1 : ℝ)) (s := p - 1) (b := a) (by linarith) (by norm_num) ha)
+  have h := (integrableOn_Ioi_comp_rpow_iff
+    (fun t : ℝ => t ^ (p - 1) * Real.exp (-(a * t)))
+    (p := (-1 : ℝ)) (by norm_num)).mpr hg
+  exact h.congr_fun (fun s hs => inverseTimeGamma_transform a p s hs) measurableSet_Ioi
+
+/-- Reciprocal substitution evaluates the inverse-time Gamma integral. -/
+theorem integral_inverseTimeGamma {a p : ℝ} (ha : 0 < a) (hp : 0 < p) :
+    (∫ s : ℝ in Ioi 0, s ^ (-(p + 1)) * Real.exp (-a / s)) =
+      a ^ (-p) * Real.Gamma p := by
+  calc
+    (∫ s : ℝ in Ioi 0, s ^ (-(p + 1)) * Real.exp (-a / s)) =
+        ∫ s : ℝ in Ioi 0, (|(-1 : ℝ)| * s ^ ((-1 : ℝ) - 1)) •
+          ((s ^ (-1 : ℝ)) ^ (p - 1) * Real.exp (-(a * s ^ (-1 : ℝ)))) := by
+      apply setIntegral_congr_fun measurableSet_Ioi
+      intro s hs
+      exact (inverseTimeGamma_transform a p s hs).symm
+    _ = ∫ t : ℝ in Ioi 0, t ^ (p - 1) * Real.exp (-(a * t)) :=
+      integral_comp_rpow_Ioi (fun t : ℝ => t ^ (p - 1) * Real.exp (-(a * t)))
+        (by norm_num : (-1 : ℝ) ≠ 0)
+    _ = (1 / a) ^ p * Real.Gamma p :=
+      Real.integral_rpow_mul_exp_neg_mul_Ioi hp ha
+    _ = a ^ (-p) * Real.Gamma p := by
+      rw [one_div, Real.inv_rpow ha.le, Real.rpow_neg ha.le]
+
+private theorem square_quarter_rpow (r p : ℝ) (hr : 0 < r) :
+    (r ^ 2 / 4) ^ (-p) = 4 ^ p * r ^ (-2 * p) := by
+  rw [Real.div_rpow (sq_nonneg r) (by norm_num : (0 : ℝ) ≤ 4),
+    ← Real.rpow_natCast r 2, ← Real.rpow_mul hr.le,
+    Real.rpow_neg (by norm_num : (0 : ℝ) ≤ 4), div_inv_eq_mul]
+  convert! mul_comm (r ^ ((2 : ℝ) * -p)) (4 ^ p) using 1
+  congr 1
+  ring_nf
+
+/-- The scale occurring in the heat kernel gives the expected homogeneous
+power after integration in time. -/
+theorem integral_inverseTimeGamma_square_scale {r p : ℝ} (hr : 0 < r) (hp : 0 < p) :
+    (∫ s : ℝ in Ioi 0, s ^ (-(p + 1)) * Real.exp (-(r ^ 2 / 4) / s)) =
+      4 ^ p * r ^ (-2 * p) * Real.Gamma p := by
+  rw [integral_inverseTimeGamma (by positivity) hp, square_quarter_rpow r p hr]
+
+/-- A common, nonnegative majorant of the nine coordinate Hessians. -/
+def heatKernelSecondTimeEnvelope (r s : ℝ) : ℝ :=
+  (4 * Real.pi) ^ (-(3 / 2 : ℝ)) *
+    (r ^ 2 / 4 * (s ^ (-((5 / 2 : ℝ) + 1)) * Real.exp (-(r ^ 2 / 4) / s)) +
+      1 / 2 * (s ^ (-((3 / 2 : ℝ) + 1)) * Real.exp (-(r ^ 2 / 4) / s)))
+
+/-- One universal constant for the time-integrated three dimensional heat
+kernel Hessian. Its exact value is immaterial to the commutator estimate. -/
+def heatKernelTimeConstant : ℝ :=
+  (4 * Real.pi) ^ (-(3 / 2 : ℝ)) *
+    (4 ^ (5 / 2 : ℝ) / 4 * Real.Gamma (5 / 2) +
+      4 ^ (3 / 2 : ℝ) / 2 * Real.Gamma (3 / 2))
+
+theorem heatKernelTimeConstant_pos : 0 < heatKernelTimeConstant := by
+  unfold heatKernelTimeConstant
+  positivity
+
+
+theorem heatKernelSecondTimeEnvelope_integrable {r : ℝ} (hr : 0 < r) :
+    IntegrableOn (heatKernelSecondTimeEnvelope r) (Ioi 0) := by
+  have ha : 0 < r ^ 2 / 4 := by positivity
+  exact (((integrableOn_inverseTimeGamma ha (by norm_num : (0 : ℝ) < 5 / 2)).const_mul
+    (r ^ 2 / 4)).add
+      ((integrableOn_inverseTimeGamma ha (by norm_num : (0 : ℝ) < 3 / 2)).const_mul
+        (1 / 2))).const_mul _
+
+theorem integral_heatKernelSecondTimeEnvelope {r : ℝ} (hr : 0 < r) :
+    (∫ s : ℝ in Ioi 0, heatKernelSecondTimeEnvelope r s) =
+      heatKernelTimeConstant * r ^ (-3 : ℝ) := by
+  have ha : 0 < r ^ 2 / 4 := by positivity
+  have hfive := integrableOn_inverseTimeGamma ha (by norm_num : (0 : ℝ) < 5 / 2)
+  have hthree := integrableOn_inverseTimeGamma ha (by norm_num : (0 : ℝ) < 3 / 2)
+  have hpow : r ^ 2 * r ^ (-5 : ℝ) = r ^ (-3 : ℝ) := by
+    rw [← Real.rpow_natCast r 2, ← Real.rpow_add hr]
+    norm_num
+  simp only [heatKernelSecondTimeEnvelope, integral_const_mul,
+    integral_add (hfive.const_mul (r ^ 2 / 4)) (hthree.const_mul (1 / 2))]
+  rw [integral_inverseTimeGamma_square_scale hr (by norm_num : (0 : ℝ) < 5 / 2),
+    integral_inverseTimeGamma_square_scale hr (by norm_num : (0 : ℝ) < 3 / 2)]
+  norm_num only [show (-2 : ℝ) * (5 / 2) = -5 by norm_num,
+    show (-2 : ℝ) * (3 / 2) = -3 by norm_num]
+  unfold heatKernelTimeConstant
+  calc
+    _ = (4 * Real.pi) ^ (-(3 / 2 : ℝ)) *
+        (4 ^ (5 / 2 : ℝ) / 4 * Real.Gamma (5 / 2) * (r ^ 2 * r ^ (-5 : ℝ)) +
+          4 ^ (3 / 2 : ℝ) / 2 * Real.Gamma (3 / 2) * r ^ (-3 : ℝ)) := by ring
+    _ = _ := by rw [hpow]; ring
+
+private theorem heatKernel_invTime_decomposition {s : ℝ} (hs : 0 < s)
+    (z : Space) (a b : ℝ) :
+    (a / (4 * s ^ 2) + b / (2 * s)) * heatKernel s z =
+      (4 * Real.pi) ^ (-(3 / 2 : ℝ)) *
+        (a / 4 * (s ^ (-((5 / 2 : ℝ) + 1)) *
+          Real.exp (-(‖z‖ ^ 2 / 4) / s)) +
+        b / 2 * (s ^ (-((3 / 2 : ℝ) + 1)) *
+          Real.exp (-(‖z‖ ^ 2 / 4) / s))) := by
+  have hfive : s ^ (-((5 / 2 : ℝ) + 1)) = s ^ (-(3 / 2 : ℝ)) / s ^ 2 := by
+    rw [show -((5 / 2 : ℝ) + 1) = -(3 / 2 : ℝ) - (2 : ℕ) by norm_num]
+    exact Real.rpow_sub_natCast hs.ne' _ _
+  have hthree : s ^ (-((3 / 2 : ℝ) + 1)) = s ^ (-(3 / 2 : ℝ)) / s := by
+    rw [show -((3 / 2 : ℝ) + 1) = -(3 / 2 : ℝ) - 1 by norm_num]
+    exact Real.rpow_sub_one hs.ne' _
+  have he : Real.exp (-(‖z‖ ^ 2) / (4 * s)) =
+      Real.exp (-(‖z‖ ^ 2 / 4) / s) := by
+    congr 1
+    simp only [neg_div, div_div]
+  unfold heatKernel
+  rw [hfive, hthree, Real.mul_rpow (show 0 ≤ (4 : ℝ) * Real.pi by positivity) hs.le, he]
+  field_simp [hs.ne']
+
+
+/-- The Gaussian coordinate Hessian is the difference of two integrable
+inverse-time Gamma terms. -/
+theorem heatKernelSecond_inverseTime_decomposition {s : ℝ} (hs : 0 < s)
+    (i j : Fin 3) (z : Space) :
+    heatKernelSecond s i j z =
+      (4 * Real.pi) ^ (-(3 / 2 : ℝ)) *
+        (z i * z j / 4 * (s ^ (-((5 / 2 : ℝ) + 1)) *
+          Real.exp (-(‖z‖ ^ 2 / 4) / s)) -
+        (if i = j then 1 else 0) / 2 * (s ^ (-((3 / 2 : ℝ) + 1)) *
+          Real.exp (-(‖z‖ ^ 2 / 4) / s))) := by
+  simpa only [heatKernelSecond, neg_div, neg_mul, sub_eq_add_neg] using
+    heatKernel_invTime_decomposition hs z (z i * z j) (-(if i = j then 1 else 0))
+
+theorem heatKernelSecondTimeEnvelope_eq {s : ℝ} (hs : 0 < s) (z : Space) :
+    heatKernelSecondTimeEnvelope ‖z‖ s =
+      (‖z‖ ^ 2 / (4 * s ^ 2) + 1 / (2 * s)) * heatKernel s z :=
+  (heatKernel_invTime_decomposition hs z (‖z‖ ^ 2) 1).symm
+
+theorem norm_heatKernelSecond_le_timeEnvelope {s : ℝ} (hs : 0 < s)
+    (i j : Fin 3) (z : Space) :
+    ‖heatKernelSecond s i j z‖ ≤ heatKernelSecondTimeEnvelope ‖z‖ s := by
+  rw [heatKernelSecondTimeEnvelope_eq hs z]
+  exact norm_heatKernelSecond_le hs i j z
+
+/-- Away from the spatial origin, every Hessian component is integrable in
+positive time. -/
+theorem heatKernelSecond_integrable_time (i j : Fin 3) {z : Space} (hz : z ≠ 0) :
+    IntegrableOn (fun s : ℝ => heatKernelSecond s i j z) (Ioi 0) := by
+  have hr : 0 < ‖z‖ := norm_pos_iff.mpr hz
+  have ha : 0 < ‖z‖ ^ 2 / 4 := by positivity
+  have hfive := integrableOn_inverseTimeGamma ha (by norm_num : (0 : ℝ) < 5 / 2)
+  have hthree := integrableOn_inverseTimeGamma ha (by norm_num : (0 : ℝ) < 3 / 2)
+  have h := ((hfive.const_mul (z i * z j / 4)).sub
+    (hthree.const_mul ((if i = j then (1 : ℝ) else 0) / 2))).const_mul
+      ((4 * Real.pi) ^ (-(3 / 2 : ℝ)))
+  refine h.congr ?_
+  filter_upwards [self_mem_ae_restrict measurableSet_Ioi] with s hs
+  exact (heatKernelSecond_inverseTime_decomposition hs i j z).symm
+
+/-- The positive-time integral of the absolute Hessian kernel has the
+inverse-cube decay needed for the pressure commutator. -/
+theorem heatKernelSecond_integral_norm_le (i j : Fin 3) {z : Space} (hz : z ≠ 0) :
+    (∫ s : ℝ in Ioi 0, ‖heatKernelSecond s i j z‖) ≤
+      heatKernelTimeConstant * ‖z‖ ^ (-3 : ℝ) := by
+  have hr : 0 < ‖z‖ := norm_pos_iff.mpr hz
+  calc
+    (∫ s : ℝ in Ioi 0, ‖heatKernelSecond s i j z‖) ≤
+        ∫ s : ℝ in Ioi 0, heatKernelSecondTimeEnvelope ‖z‖ s := by
+      refine integral_mono_ae (heatKernelSecond_integrable_time i j hz).norm
+        (heatKernelSecondTimeEnvelope_integrable hr) ?_
+      filter_upwards [self_mem_ae_restrict measurableSet_Ioi] with s hs
+      exact norm_heatKernelSecond_le_timeEnvelope hs i j z
+    _ = _ := integral_heatKernelSecondTimeEnvelope hr
+
+theorem heatKernelSecond_integral_abs_le (i j : Fin 3) {z : Space} (hz : z ≠ 0) :
+    (∫ s : ℝ in Ioi 0, |heatKernelSecond s i j z|) ≤
+      heatKernelTimeConstant * ‖z‖ ^ (-3 : ℝ) := by
+  simpa only [Real.norm_eq_abs] using heatKernelSecond_integral_norm_le i j hz
+
+end NavierStokesR3.Comparison
+
+/-! Merged from `NavierStokes.R3.HeatKernelCancellation` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Cancellation in the heat-kernel commutator
+
+The multiplier is the square of a cutoff valued in `[0, 1]`.  Its difference
+is bounded by its Lipschitz variation near the diagonal and by `1` everywhere.
+The resulting minimum is the cancellation factor used before interchanging
+the heat-time and spatial integrals.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped ENNReal NNReal
+
+namespace NavierStokesR3.Comparison
+
+open ProblemStatement
+
+/-- The cancellation factor for the multiplier `φ²`. -/
+def cutoffSquareDifference (φ : Space → ℝ) (x y : Space) : ℝ :=
+  φ y ^ 2 - φ x ^ 2
+
+theorem abs_sq_sub_sq_le_two_mul_abs_sub {a b : ℝ}
+    (ha : a ∈ Icc (0 : ℝ) 1) (hb : b ∈ Icc (0 : ℝ) 1) :
+    |a ^ 2 - b ^ 2| ≤ 2 * |a - b| := by
+  have hab : |a + b| ≤ 2 := by
+    rw [abs_of_nonneg (add_nonneg ha.1 hb.1)]
+    linarith [ha.2, hb.2]
+  calc
+    |a ^ 2 - b ^ 2| = |a - b| * |a + b| := by
+      rw [← abs_mul]
+      congr 1
+      ring
+    _ ≤ |a - b| * 2 := mul_le_mul_of_nonneg_left hab (abs_nonneg _)
+    _ = 2 * |a - b| := mul_comm _ _
+
+theorem abs_sq_sub_sq_le_one {a b : ℝ}
+    (ha : a ∈ Icc (0 : ℝ) 1) (hb : b ∈ Icc (0 : ℝ) 1) :
+    |a ^ 2 - b ^ 2| ≤ 1 := by
+  rw [abs_le]
+  have ha2 : a * a ≤ 1 * 1 := mul_le_mul ha.2 ha.2 ha.1 (by norm_num)
+  have hb2 : b * b ≤ 1 * 1 := mul_le_mul hb.2 hb.2 hb.1 (by norm_num)
+  constructor <;> nlinarith [sq_nonneg a, sq_nonneg b]
+
+theorem cutoffSquareDifference_abs_le_one {φ : Space → ℝ}
+    (hφ : ∀ x, φ x ∈ Icc (0 : ℝ) 1) (x y : Space) :
+    |cutoffSquareDifference φ x y| ≤ 1 :=
+  abs_sq_sub_sq_le_one (hφ y) (hφ x)
+
+
+
+/-- A form with a real scale parameter, convenient for scaled bump functions. -/
+theorem cutoffSquareDifference_abs_le_scaled_min {φ : Space → ℝ}
+    {L R : ℝ} (hR : 0 < R)
+    (hφ : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖)
+    (x y : Space) :
+    |cutoffSquareDifference φ x y| ≤
+      max (2 * L) 1 * min (‖x - y‖ / R) 1 := by
+  have hsmall : |cutoffSquareDifference φ x y| ≤ 2 * L * (‖x - y‖ / R) := by
+    have hxy := hLip y x
+    rw [norm_sub_rev] at hxy
+    calc
+      |cutoffSquareDifference φ x y| ≤ 2 * |φ y - φ x| :=
+        abs_sq_sub_sq_le_two_mul_abs_sub (hφ y) (hφ x)
+      _ ≤ 2 * ((L / R) * ‖x - y‖) := mul_le_mul_of_nonneg_left hxy (by norm_num)
+      _ = 2 * L * (‖x - y‖ / R) := by ring
+  have hlarge := cutoffSquareDifference_abs_le_one hφ x y
+  have hnonneg : 0 ≤ ‖x - y‖ / R := div_nonneg (norm_nonneg _) hR.le
+  by_cases hx : ‖x - y‖ / R ≤ 1
+  · rw [min_eq_left hx]
+    exact hsmall.trans (mul_le_mul_of_nonneg_right (le_max_left _ _) hnonneg)
+  · rw [min_eq_right (le_of_lt (lt_of_not_ge hx)), mul_one]
+    exact hlarge.trans (le_max_right _ _)
+
+@[simp] theorem cutoffSquareDifference_self (φ : Space → ℝ) (x : Space) :
+    cutoffSquareDifference φ x x = 0 := sub_self _
+
+
+/-- The time-integrated kernel with cancellation already inserted. -/
+def cancelledTimeKernel (K : ℝ → Space → ℝ) (φ : Space → ℝ)
+    (x y : Space) : ℝ :=
+  ∫ s in Ioi (0 : ℝ), K s (x - y) * cutoffSquareDifference φ x y
+
+/-- The absolute time integral is used to justify the subsequent Fubini step. -/
+def absoluteCancelledTimeKernel (K : ℝ → Space → ℝ) (φ : Space → ℝ)
+    (x y : Space) : ℝ :=
+  ∫ s in Ioi (0 : ℝ), |K s (x - y) * cutoffSquareDifference φ x y|
+
+theorem cancelledTimeKernel_abs_le (K : ℝ → Space → ℝ) (φ : Space → ℝ)
+    (x y : Space) :
+    |cancelledTimeKernel K φ x y| ≤ absoluteCancelledTimeKernel K φ x y :=
+  abs_integral_le_integral_abs
+
+theorem absoluteCancelledTimeKernel_nonneg (K : ℝ → Space → ℝ) (φ : Space → ℝ)
+    (x y : Space) : 0 ≤ absoluteCancelledTimeKernel K φ x y :=
+  integral_nonneg fun _ => abs_nonneg _
+
+theorem cancelledTimeKernel_integrable_time {K : ℝ → Space → ℝ}
+    (hK : ∀ z ≠ 0, IntegrableOn (fun s => K s z) (Ioi (0 : ℝ)) volume)
+    (φ : Space → ℝ) (x y : Space) :
+    IntegrableOn (fun s => K s (x - y) * cutoffSquareDifference φ x y)
+      (Ioi (0 : ℝ)) volume := by
+  by_cases hxy : x = y
+  · simp only [hxy, cutoffSquareDifference_self, mul_zero]
+    exact integrable_zero _ _ _
+  · exact (hK (x - y) (sub_ne_zero.mpr hxy)).mul_const _
+
+theorem absoluteCancelledTimeKernel_le {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} {C L R : ℝ} (hC : 0 ≤ C) (hR : 0 < R)
+    (hK : ∀ z ≠ 0, (∫ s in Ioi (0 : ℝ), |K s z|) ≤ C * ‖z‖ ^ (-3 : ℝ))
+    (hφ : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖)
+    (x y : Space) :
+    absoluteCancelledTimeKernel K φ x y ≤
+      (C * max (2 * L) 1) * (‖x - y‖ ^ (-3 : ℝ) * min (‖x - y‖ / R) 1) := by
+  by_cases hxy : x = y
+  · simp [absoluteCancelledTimeKernel, hxy, cutoffSquareDifference_self]
+  have hc : 0 ≤ C * ‖x - y‖ ^ (-3 : ℝ) := by positivity
+  calc
+    absoluteCancelledTimeKernel K φ x y =
+        (∫ s in Ioi (0 : ℝ), |K s (x - y)|) * |cutoffSquareDifference φ x y| := by
+      simp only [absoluteCancelledTimeKernel, abs_mul, integral_mul_const]
+    _ ≤ (C * ‖x - y‖ ^ (-3 : ℝ)) * |cutoffSquareDifference φ x y| :=
+      mul_le_mul_of_nonneg_right (hK _ (sub_ne_zero.mpr hxy)) (abs_nonneg _)
+    _ ≤ (C * ‖x - y‖ ^ (-3 : ℝ)) *
+        (max (2 * L) 1 * min (‖x - y‖ / R) 1) :=
+      mul_le_mul_of_nonneg_left
+        (cutoffSquareDifference_abs_le_scaled_min hR hφ hLip x y) hc
+    _ = _ := by ring
+
+theorem cancelledTimeKernel_le {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} {C L R : ℝ} (hC : 0 ≤ C) (hR : 0 < R)
+    (hK : ∀ z ≠ 0, (∫ s in Ioi (0 : ℝ), |K s z|) ≤ C * ‖z‖ ^ (-3 : ℝ))
+    (hφ : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖)
+    (x y : Space) :
+    |cancelledTimeKernel K φ x y| ≤
+      (C * max (2 * L) 1) * (‖x - y‖ ^ (-3 : ℝ) * min (‖x - y‖ / R) 1) :=
+  (cancelledTimeKernel_abs_le K φ x y).trans
+    (absoluteCancelledTimeKernel_le hC hR hK hφ hLip x y)
+
+theorem cancelledTimeIntegrand_measurable {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} (hK : Measurable (Function.uncurry K))
+    (hφ : Measurable φ) :
+    Measurable (fun p : (Space × Space) × ℝ =>
+      K p.2 (p.1.1 - p.1.2) * cutoffSquareDifference φ p.1.1 p.1.2) := by
+  have hmap : Measurable (fun p : (Space × Space) × ℝ =>
+      (p.2, p.1.1 - p.1.2)) := by fun_prop
+  have hdiff : Measurable (fun p : (Space × Space) × ℝ =>
+      cutoffSquareDifference φ p.1.1 p.1.2) := by
+    unfold cutoffSquareDifference
+    fun_prop
+  exact (hK.comp hmap).mul hdiff
+
+theorem cancelledTimeKernel_measurable {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} (hK : Measurable (Function.uncurry K))
+    (hφ : Measurable φ) :
+    Measurable (Function.uncurry (cancelledTimeKernel K φ)) := by
+  exact (cancelledTimeIntegrand_measurable hK hφ).stronglyMeasurable.integral_prod_right'.measurable
+
+theorem absoluteCancelledTimeKernel_measurable {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} (hK : Measurable (Function.uncurry K))
+    (hφ : Measurable φ) :
+    Measurable (Function.uncurry (absoluteCancelledTimeKernel K φ)) := by
+  change Measurable (fun z : Space × Space => ∫ s in Ioi (0 : ℝ), |K s (z.1 - z.2) * cutoffSquareDifference φ z.1 z.2|)
+  simpa only [Real.norm_eq_abs] using
+    ((cancelledTimeIntegrand_measurable hK hφ).norm.stronglyMeasurable.integral_prod_right'
+      (ν := volume.restrict (Ioi (0 : ℝ)))).measurable
+
+/-- The algebraic cancellation is inserted before either variable is integrated. -/
+theorem cutoffSquareDifference_smul {E : Type*} [AddCommGroup E] [Module ℝ E]
+    (k : ℝ) (φ : Space → ℝ) (r : E) (x y : Space) :
+    k • (φ y ^ 2 • r) - φ x ^ 2 • (k • r) =
+      (k * cutoffSquareDifference φ x y) • r := by
+  simp only [cutoffSquareDifference, mul_sub, sub_smul, smul_smul]
+  rw [mul_comm (φ x ^ 2) k]
+
+end NavierStokesR3.Comparison
+end
+
+/-! Merged from `NavierStokes.R3.HeatKernelPairedBound` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# The paired estimate for the heat commutator kernel
+
+The time-integrated heat Hessian, after cutoff cancellation, is dominated by
+the radial `L^(4/3)` kernel. Its exact scaling and the sectionwise Hölder bound
+give the factor `R^(-3/4)` in the paired commutator estimate.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped ENNReal
+
+namespace NavierStokesR3.Comparison
+
+open ProblemStatement
+
+/-- The actual time-integrated heat Hessian with cutoff cancellation already
+inserted into the time integrand. -/
+def heatCommutatorKernel (i j : Fin 3) (φ : Space → ℝ) (x y : Space) : ℝ :=
+  cancelledTimeKernel (fun s z => heatKernelSecond s i j z) φ x y
+
+/-- A universal positive constant for the paired commutator estimate. -/
+def rieszCommutatorConstant : ℝ :=
+  heatKernelTimeConstant * (comparisonLpNorm (4 / 3) (radialCommutatorKernel 1) + 1)
+
+theorem rieszCommutatorConstant_pos : 0 < rieszCommutatorConstant := by
+  exact mul_pos heatKernelTimeConstant_pos
+    (add_pos_of_nonneg_of_pos ENNReal.toReal_nonneg zero_lt_one)
+
+/-- The explicit heat Hessian is jointly measurable in time and space,
+including the totalized formula at time zero. -/
+theorem heatKernelSecond_joint_measurable (i j : Fin 3) :
+    Measurable (Function.uncurry (fun s z => heatKernelSecond s i j z)) := by
+  have hcoord (a : Fin 3) : Measurable (fun p : ℝ × Space => p.2 a) := by
+    have hc : Continuous (fun z : Space => z a) := by
+      convert! (innerSL ℝ (NavierStokes.ProblemStatement.coordinateVector a)).continuous using 1
+      ext z
+      simp [NavierStokes.ProblemStatement.coordinateVector, EuclideanSpace.inner_single_left]
+    exact hc.measurable.comp measurable_snd
+  have hs : Measurable (fun p : ℝ × Space => p.1) := measurable_fst
+  have hz : Measurable (fun p : ℝ × Space => p.2) := measurable_snd
+  have hs2 : Measurable (fun p : ℝ × Space => p.1 ^ 2) := by
+    simpa only [pow_two] using! hs.mul hs
+  have hz2 : Measurable (fun p : ℝ × Space => ‖p.2‖ ^ 2) := by
+    simpa only [pow_two] using! hz.norm.mul hz.norm
+  have hcoeff : Measurable (fun p : ℝ × Space =>
+      p.2 i * p.2 j / (4 * p.1 ^ 2) - (if i = j then 1 else 0) / (2 * p.1)) :=
+    (((hcoord i).mul (hcoord j)).div (measurable_const.mul hs2)).sub
+      (measurable_const.div (measurable_const.mul hs))
+  have hbase : Measurable (fun p : ℝ × Space =>
+      (4 * Real.pi * p.1) ^ (-(3 / 2 : ℝ))) :=
+    (measurable_const.mul hs).pow_const _
+  have hexp : Measurable (fun p : ℝ × Space =>
+      Real.exp (-(‖p.2‖ ^ 2) / (4 * p.1))) :=
+    Real.continuous_exp.measurable.comp (hz2.neg.div (measurable_const.mul hs))
+  simpa only [Function.uncurry, heatKernelSecond, heatKernel] using!
+    hcoeff.mul (hbase.mul hexp)
+
+/-- The integrated, cancelled heat kernel is jointly measurable in its two
+spatial variables. -/
+theorem heatCommutatorKernel_measurable (i j : Fin 3) {φ : Space → ℝ}
+    (hφ : Measurable φ) :
+    Measurable (Function.uncurry (heatCommutatorKernel i j φ)) :=
+  cancelledTimeKernel_measurable (heatKernelSecond_joint_measurable i j) hφ
+
+/-- Pointwise domination by the radial commutator kernel. -/
+theorem heatCommutatorKernel_bound (i j : Fin 3) {φ : Space → ℝ} {L R : ℝ}
+    (hR : 0 < R) (hφ : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖) (x y : Space) :
+    ‖heatCommutatorKernel i j φ x y‖ ≤
+      (heatKernelTimeConstant * max (2 * L) 1) * radialCommutatorKernel R (x - y) := by
+  simpa only [heatCommutatorKernel, Real.norm_eq_abs, radialCommutatorKernel] using
+    cancelledTimeKernel_le heatKernelTimeConstant_pos.le hR
+      (fun z hz => heatKernelSecond_integral_abs_le i j hz) hφ hLip x y
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+
+
+
+/-- The actual heat commutator satisfies the required paired estimate, with
+the precise `R^(-3/4)` decay and a universal positive constant. -/
+theorem heatKernel_paired_commutator_bound (i j : Fin 3)
+    {φ g : Space → ℝ} {r : Space → E} {L R : ℝ}
+    (hR : 0 < R) (hφm : Measurable φ) (hφ : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖)
+    (hg : Integrable g volume) (hr : MemLp r 4 volume) :
+    ‖∫ x, g x • ∫ y, heatCommutatorKernel i j φ x y • r y‖ ≤
+      (rieszCommutatorConstant * max (2 * L) 1) * R ^ (-(3 / 4) : ℝ) *
+        comparisonLpNorm 1 g * comparisonLpNorm 4 r := by
+  have hmax : 0 ≤ max (2 * L) 1 := le_trans zero_le_one (le_max_right _ _)
+  have hcoeff : 0 ≤ heatKernelTimeConstant * max (2 * L) 1 :=
+    mul_nonneg heatKernelTimeConstant_pos.le hmax
+  calc
+    ‖∫ x, g x • ∫ y, heatCommutatorKernel i j φ x y • r y‖ ≤
+        (heatKernelTimeConstant * max (2 * L) 1) * comparisonLpNorm 1 g *
+          comparisonLpNorm (4 / 3) (radialCommutatorKernel R) * comparisonLpNorm 4 r :=
+      PairedKernelBound.norm_paired_kernel_le_scaled
+        (heatCommutatorKernel_measurable i j hφm) (radialCommutatorKernel_memLp hR)
+        hr hg hcoeff (heatCommutatorKernel_bound i j hR hφ hLip)
+    _ = (heatKernelTimeConstant * comparisonLpNorm (4 / 3) (radialCommutatorKernel 1)) *
+        max (2 * L) 1 * R ^ (-(3 / 4) : ℝ) * comparisonLpNorm 1 g * comparisonLpNorm 4 r := by
+      rw [radialCommutatorKernel_lpNorm_scale hR]
+      ring
+    _ ≤ (rieszCommutatorConstant * max (2 * L) 1) * R ^ (-(3 / 4) : ℝ) *
+        comparisonLpNorm 1 g * comparisonLpNorm 4 r := by
+      unfold rieszCommutatorConstant
+      apply mul_le_mul_of_nonneg_right _ ENNReal.toReal_nonneg
+      apply mul_le_mul_of_nonneg_right _ ENNReal.toReal_nonneg
+      apply mul_le_mul_of_nonneg_right _ (Real.rpow_nonneg hR.le _)
+      apply mul_le_mul_of_nonneg_right _ hmax
+      exact mul_le_mul_of_nonneg_left (le_add_of_nonneg_right zero_le_one)
+        heatKernelTimeConstant_pos.le
+
+end NavierStokesR3.Comparison
+end
+
+/-! Merged from `NavierStokes.R3.HeatKernelFubini`. -/
+/-!
+# Fubini after insertion of the cutoff difference
+
+The time kernel is multiplied by the cutoff difference before estimating its
+absolute integral. The resulting radial majorant belongs to `L^(4/3)`, so
+Hölder with the `L^4` test function proves integrability on space times time.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped ENNReal
+
+namespace NavierStokesR3.Comparison
+
+open ProblemStatement
+
+/-- The complex pairing integrand, with cancellation already inserted. -/
+def cancelledComplexTimeIntegrand (K : ℝ → Space → ℝ) (φ : Space → ℝ)
+    (r : Space → ℂ) (x : Space) (ys : Space × ℝ) : ℂ :=
+  (K ys.2 (x - ys.1) * cutoffSquareDifference φ x ys.1) • r ys.1
+
+theorem cancelledComplexTimeIntegrand_measurable {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} {r : Space → ℂ}
+    (hK : Measurable (Function.uncurry K)) (hφ : Measurable φ)
+    (hr : Measurable r) (x : Space) :
+    Measurable (cancelledComplexTimeIntegrand K φ r x) := by
+  have hmap : Measurable (fun p : Space × ℝ => ((x, p.1), p.2)) := by fun_prop
+  exact ((cancelledTimeIntegrand_measurable hK hφ).comp hmap).smul
+    (hr.comp measurable_fst)
+
+private theorem cancelledComplexTimeIntegrand_norm_timeIntegral
+    (K : ℝ → Space → ℝ) (φ : Space → ℝ) (r : Space → ℂ) (x y : Space) :
+    (∫ s in Ioi (0 : ℝ), ‖cancelledComplexTimeIntegrand K φ r x (y, s)‖) =
+      absoluteCancelledTimeKernel K φ x y * ‖r y‖ := by
+  simp only [cancelledComplexTimeIntegrand, norm_smul, Real.norm_eq_abs,
+    absoluteCancelledTimeKernel, integral_mul_const]
+
+/-- The cancelled integrand is absolutely integrable on the product space.
+The time-section hypothesis is needed only away from the origin; cancellation
+makes the diagonal section identically zero. -/
+theorem cancelledTimeKernel_product_integrable {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} {r : Space → ℂ} {C L R : ℝ}
+    (hKmeas : Measurable (Function.uncurry K)) (hφmeas : Measurable φ)
+    (hrmeas : Measurable r)
+    (hKint : ∀ z ≠ 0, IntegrableOn (fun s => K s z) (Ioi (0 : ℝ)) volume)
+    (hC : 0 ≤ C) (hR : 0 < R)
+    (hKbound : ∀ z ≠ 0, (∫ s in Ioi (0 : ℝ), |K s z|) ≤ C * ‖z‖ ^ (-3 : ℝ))
+    (hφrange : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖)
+    (hr : MemLp r 4 volume) (x : Space) :
+    Integrable (cancelledComplexTimeIntegrand K φ r x)
+      ((volume : Measure Space).prod ((volume : Measure ℝ).restrict (Ioi 0))) := by
+  have hD : 0 ≤ C * max (2 * L) 1 :=
+    mul_nonneg hC (zero_le_one.trans (le_max_right _ _))
+  have hm : AEStronglyMeasurable
+      (fun y : Space => absoluteCancelledTimeKernel K φ x y) volume :=
+    ((absoluteCancelledTimeKernel_measurable hKmeas hφmeas).comp
+      measurable_prodMk_left).aestronglyMeasurable
+  have hb : ∀ᵐ y ∂volume, ‖absoluteCancelledTimeKernel K φ x y‖ ≤
+      (C * max (2 * L) 1) * radialCommutatorKernel R (x - y) := by
+    refine Filter.Eventually.of_forall fun y => ?_
+    rw [Real.norm_eq_abs, abs_of_nonneg (absoluteCancelledTimeKernel_nonneg K φ x y)]
+    exact absoluteCancelledTimeKernel_le hC hR hKbound hφrange hLip x y
+  have hmarginal :=
+    PairedKernelBound.dominated_section_integrable_and_integral_norm_le_scaled
+      x hm (radialCommutatorKernel_memLp hR) hr.norm hD hb
+  have hmeas : AEStronglyMeasurable (cancelledComplexTimeIntegrand K φ r x)
+      ((volume : Measure Space).prod ((volume : Measure ℝ).restrict (Ioi 0))) :=
+    (cancelledComplexTimeIntegrand_measurable hKmeas hφmeas hrmeas x).aestronglyMeasurable
+  apply (integrable_prod_iff hmeas).mpr
+  constructor
+  · refine Filter.Eventually.of_forall fun y => ?_
+    exact (cancelledTimeKernel_integrable_time hKint φ x y).smul_const (r y)
+  · simpa only [cancelledComplexTimeIntegrand_norm_timeIntegral, smul_eq_mul] using
+      hmarginal.1
+
+/-- Cancellation justifies exchanging the heat-time and spatial integrals. -/
+theorem cancelledTimeKernel_integral_swap {K : ℝ → Space → ℝ}
+    {φ : Space → ℝ} {r : Space → ℂ} {C L R : ℝ}
+    (hKmeas : Measurable (Function.uncurry K)) (hφmeas : Measurable φ)
+    (hrmeas : Measurable r)
+    (hKint : ∀ z ≠ 0, IntegrableOn (fun s => K s z) (Ioi (0 : ℝ)) volume)
+    (hC : 0 ≤ C) (hR : 0 < R)
+    (hKbound : ∀ z ≠ 0, (∫ s in Ioi (0 : ℝ), |K s z|) ≤ C * ‖z‖ ^ (-3 : ℝ))
+    (hφrange : ∀ x, φ x ∈ Icc (0 : ℝ) 1)
+    (hLip : ∀ x y, |φ x - φ y| ≤ (L / R) * ‖x - y‖)
+    (hr : MemLp r 4 volume) (x : Space) :
+    (∫ s in Ioi (0 : ℝ), ∫ y : Space,
+      (K s (x - y) * cutoffSquareDifference φ x y) • r y) =
+      ∫ y : Space, cancelledTimeKernel K φ x y • r y := by
+  have hprod := cancelledTimeKernel_product_integrable hKmeas hφmeas hrmeas
+    hKint hC hR hKbound hφrange hLip hr x
+  calc
+    (∫ s in Ioi (0 : ℝ), ∫ y : Space,
+        (K s (x - y) * cutoffSquareDifference φ x y) • r y) =
+        ∫ y : Space, ∫ s in Ioi (0 : ℝ),
+          (K s (x - y) * cutoffSquareDifference φ x y) • r y := by
+      exact (integral_integral_swap
+        (f := fun (y : Space) (s : ℝ) =>
+          (K s (x - y) * cutoffSquareDifference φ x y) • r y) hprod).symm
+    _ = _ := by simp only [cancelledTimeKernel, integral_smul_const]
+
+end NavierStokesR3.Comparison
+
 
 /-! Merged from `NavierStokes.R3.FourierConvolution`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
 section

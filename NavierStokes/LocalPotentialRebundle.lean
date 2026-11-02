@@ -1,6 +1,5 @@
 import NavierStokes.LocalAngularGrowth
-import NavierStokes.LocalHeatExterior
-import NavierStokes.LocalAngularScalar
+import NavierStokes.TailGaugePotential
 
 /-!
 # The local paper's potential representation
@@ -9,6 +8,250 @@ The selected construction stores the base swirl in an axial potential.
 Moving that axial component into the direct angular field preserves the
 velocity and gives the paper's vanishing vector potential in the heat exterior.
 -/
+/-! Merged from `NavierStokes.LocalHeatExterior`. -/
+/-!
+# The axial part of the actual slow-base potential
+
+The stream coefficients vanish in the proved heat exterior. Consequently the
+anchored potential is purely axial there, and its axial projection has the
+same spatial curl as the constructed slow base.
+-/
+
+noncomputable section
+
+namespace NavierStokes.LocalHeatExterior
+
+open Set Filter ProblemStatement
+open scoped Topology ContDiff
+
+/-- Projection of a potential onto its axial component. -/
+noncomputable def axialPart (A : VelocityField) : VelocityField :=
+  fun w => A w 2 • coordinateVector 2
+
+theorem axialPart_smooth {A : VelocityField} {S : Set SpaceTime}
+    (hA : ContDiffOn ℝ ∞ A S) : ContDiffOn ℝ ∞ (axialPart A) S := by
+  exact ((AxisymmetricFields.projection 2).contDiff.comp_contDiffOn hA).smul_const
+    (coordinateVector 2)
+
+theorem axialPart_awayExtensions {A : VelocityField}
+    (hA : JointResidualLimits.AwayExtensions A) :
+    JointResidualLimits.AwayExtensions (axialPart A) := by
+  intro x hx
+  obtain ⟨e⟩ := hA x hx
+  refine ⟨{
+    value := axialPart e.value
+    domain := e.domain
+    isOpen := e.isOpen
+    mem := e.mem
+    smooth := axialPart_smooth e.smooth
+    agrees := ?_ }⟩
+  intro w hw
+  exact congrArg (fun u : Space => u 2 • coordinateVector 2) (e.agrees hw)
+
+theorem axialPart_potential (H K : AxisymmetricFields.Profile) :
+    axialPart (AxisymmetricFields.potential H K) = AxisymmetricFields.potential (fun _ => 0) K := by
+  ext w i
+  fin_cases i <;> simp [axialPart, AxisymmetricFields.potential, coordinateVector]
+
+theorem axialPotential_curl (K : AxisymmetricFields.Profile) {w : SpaceTime}
+    (hK : DifferentiableAt ℝ K (AxisymmetricFields.profilePoint w.1 w.2)) :
+    SpatialCurl.spatialCurl (AxisymmetricFields.potential (fun _ => 0) K) w =
+      (-AxisymmetricFields.partialS K (AxisymmetricFields.profilePoint w.1 w.2)) •
+        BaseResidual.angularVector w := by
+  change AxisymmetricFields.velocity (fun _ => 0) K w = _
+  ext i
+  fin_cases i
+  · change AxisymmetricFields.velocity (fun _ => 0) K (w.1, w.2) 0 = _
+    rw [AxisymmetricFields.velocity_zero (fun _ => 0) K w.1 w.2 (differentiableAt_const 0) hK]
+    simp [AxisymmetricFields.partialZ, BaseResidual.angularVector, coordinateVector]
+    ring
+  · change AxisymmetricFields.velocity (fun _ => 0) K (w.1, w.2) 1 = _
+    rw [AxisymmetricFields.velocity_one (fun _ => 0) K w.1 w.2 (differentiableAt_const 0) hK]
+    simp [AxisymmetricFields.partialZ, BaseResidual.angularVector, coordinateVector]
+    ring
+  · change AxisymmetricFields.velocity (fun _ => 0) K (w.1, w.2) 2 = _
+    rw [AxisymmetricFields.velocity_two (fun _ => 0) K w.1 w.2 (differentiableAt_const 0) hK]
+    simp [AxisymmetricFields.partialS, BaseResidual.angularVector, coordinateVector]
+
+section ActualBase
+
+variable {F : OutgoingProfile.Profile} {W : NominalProfile.Witness F}
+    (H : NominalConeAssembly.Certificate W) {ld : ModulatedProfileAssembly.LoopData W}
+    (v : ModulatedProfileAssembly.Witness ld)
+
+/-- The angular coefficient of the curl of the axial projection. -/
+noncomputable def axialCurlCoefficient (upper : ℝ) (B : ℕ) : AxisymmetricFields.Profile :=
+  fun p => -AxisymmetricFields.partialS
+    (TailGaugePotential.gaugedSwirl (FinalSlowBase.scales H v upper B) F.data.h
+      W.axis.normalization (FinalSlowBase.coefficients H v)) p
+
+
+theorem axialPart_finalPotential_curl_angular (upper : ℝ) (B : ℕ) {w : SpaceTime}
+    (ht : w.1 < 1) :
+    SpatialCurl.spatialCurl (axialPart (TailGaugePotential.finalPotential H v upper B)) w =
+      axialCurlCoefficient H v upper B (AxisymmetricFields.profilePoint w.1 w.2) •
+        BaseResidual.angularVector w := by
+  unfold TailGaugePotential.finalPotential TailGaugePotential.potential
+  rw [axialPart_potential]
+  exact axialPotential_curl _
+    ((TailGaugePotential.gaugedSwirl_smoothAt (FinalSlowBase.scales_strictMono H v upper B)
+      F.data.h_pos F.data.h_lt_half (FinalSlowBase.coefficients_smooth H v) ht).differentiableAt
+      (by simp))
+
+theorem finalPotential_eq_axialPart (upper : ℝ) (B : ℕ) {w : SpaceTime}
+    (hw : w ∈ BaseExterior.cartesianExterior F.data.h (BaseExterior.nominalExteriorRadius W)) :
+    TailGaugePotential.finalPotential H v upper B w =
+      axialPart (TailGaugePotential.finalPotential H v upper B) w := by
+  have hext := ModulatedExterior.realized_exterior_coefficients W v.profiles v.finiteModification
+    (FinalSlowBase.realizesScheme H v) (EntranceAlignedBase.modulated_base_eq H v)
+    (EntranceAlignedBase.modulated_outer H v)
+  have hzero := BaseExterior.exterior_stream_zero
+    (a := FinalSlowBase.scales H v upper B) (C := W.axis.normalization)
+    (p := AxisymmetricFields.profilePoint w.1 w.2)
+    F.data.h_pos F.data.h_lt_half (BaseExterior.nominalExteriorRadius_pos W).le hext hw
+  have he : TailGaugePotential.finalPotential H v upper B w =
+      TailGaugePotential.gaugedSwirl (FinalSlowBase.scales H v upper B) F.data.h
+        W.axis.normalization (FinalSlowBase.coefficients H v)
+        (AxisymmetricFields.profilePoint w.1 w.2) • coordinateVector 2 := by
+    simp only [TailGaugePotential.finalPotential, TailGaugePotential.potential,
+      AxisymmetricFields.potential, hzero, mul_zero, zero_smul, zero_add]
+  unfold axialPart
+  rw [he]
+  simp [coordinateVector]
+
+
+theorem axialPart_finalPotential_germ (upper : ℝ) (B : ℕ) {w : SpaceTime}
+    (hw : w ∈ BaseExterior.cartesianExterior F.data.h (BaseExterior.nominalExteriorRadius W)) :
+    axialPart (TailGaugePotential.finalPotential H v upper B) =ᶠ[𝓝 w]
+      TailGaugePotential.finalPotential H v upper B := by
+  filter_upwards [(BaseExterior.cartesianExterior_isOpen F.data.h_pos F.data.h_lt_half
+    (BaseExterior.nominalExteriorRadius W)).mem_nhds hw] with y hy
+  exact (finalPotential_eq_axialPart H v upper B hy).symm
+
+theorem axialPart_finalPotential_curl (upper : ℝ) (B : ℕ) {w : SpaceTime}
+    (hw : w ∈ BaseExterior.cartesianExterior F.data.h (BaseExterior.nominalExteriorRadius W)) :
+    SpatialCurl.spatialCurl (axialPart (TailGaugePotential.finalPotential H v upper B)) w =
+      FinalSlowBase.velocity H v upper B w := by
+  rw [(SolenoidalDiagonal.spatialCurl_eventuallyEq
+    (axialPart_finalPotential_germ H v upper B hw)).self_of_nhds]
+  exact TailGaugePotential.finalPotential_sameCurl H v upper B hw.1
+
+
+
+end ActualBase
+
+end NavierStokes.LocalHeatExterior
+
+/-! Merged from `NavierStokes.LocalAngularScalar` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# A scalar representation of the selected direct angular field
+
+The same locally finite cutoffs can be summed as scalar cylindrical
+coefficients. The resulting scalar is independent of the polar angle, and
+its angular vector field is the actual selected direct sum.
+-/
+
+noncomputable section
+
+open Set Filter
+open scoped Topology
+
+namespace NavierStokes.LocalAngularScalar
+
+open ProblemStatement DirectAngularDiagonal CorrectionInitialization
+
+def angularDirection (w : SpaceTime) : Space :=
+  (-w.2 1 / radius w) • coordinateVector 0 +
+    (w.2 0 / radius w) • coordinateVector 1
+
+theorem angularField_eq_smul (b : Coefficient) (w : SpaceTime) :
+    angularField b w = b (cylPoint w) • angularDirection w := by
+  simp only [angularField, angularDirection, smul_add, smul_smul]
+  rw [mul_comm (b (cylPoint w)) (-w.2 1 / radius w),
+    mul_comm (b (cylPoint w)) (w.2 0 / radius w)]
+
+theorem angularField_add (b c : Coefficient) :
+    angularField (fun p => b p + c p) = fun w => angularField b w + angularField c w := by
+  funext w
+  simp only [angularField_eq_smul, add_smul]
+
+/-- Convert a smooth coefficient of the Cartesian rotation vector into its
+physical angular magnitude in cylindrical coordinates. -/
+def magnitudeOfProfile (F : AxisymmetricFields.Profile) : Coefficient :=
+  fun p => p.2.1 * F (p.1, (p.2.1 ^ 2 / 2, p.2.2))
+
+theorem angularField_magnitudeOfProfile (F : AxisymmetricFields.Profile) (w : SpaceTime) :
+    angularField (magnitudeOfProfile F) w =
+      F (AxisymmetricFields.profilePoint w.1 w.2) • BaseResidual.angularVector w := by
+  have hrsq : radius w ^ 2 = w.2 0 ^ 2 + w.2 1 ^ 2 :=
+    PolarCharts.radius_sq (PhysicalGraphBounds.radialProjection w)
+  have hval : magnitudeOfProfile F (cylPoint w) =
+      radius w * F (AxisymmetricFields.profilePoint w.1 w.2) := by
+    simp only [magnitudeOfProfile, cylPoint, hrsq, AxisymmetricFields.profilePoint,
+      AxisymmetricFields.radialEnergy]
+  simp only [angularField, hval, BaseResidual.angularVector, smul_add, smul_smul]
+  by_cases hr : radius w = 0
+  · have hx0 : w.2 0 = 0 := by rw [hr] at hrsq; nlinarith [sq_nonneg (w.2 1)]
+    have hx1 : w.2 1 = 0 := by rw [hr] at hrsq; nlinarith [sq_nonneg (w.2 0)]
+    simp only [hx0, hx1, neg_zero, zero_div, zero_mul, mul_zero, zero_smul, add_zero]
+  · have h0 : (-w.2 1 / radius w) *
+        (radius w * F (AxisymmetricFields.profilePoint w.1 w.2)) =
+          F (AxisymmetricFields.profilePoint w.1 w.2) * -w.2 1 := by
+      field_simp [hr]
+    have h1 : (w.2 0 / radius w) *
+        (radius w * F (AxisymmetricFields.profilePoint w.1 w.2)) =
+          F (AxisymmetricFields.profilePoint w.1 w.2) * w.2 0 := by
+      field_simp [hr]
+    rw [h0, h1]
+
+def scalarSum (a : ℕ → ℝ) (q : Coefficient) (b : ℕ → Coefficient) : Coefficient :=
+  fun p => ∑' j : ℕ, SmoothCutoffs.scaledCutoff (a j) (q p) * b j p
+
+/-- Local finiteness of the cutoff series justifies pulling the angular
+direction through the scalar sum, including at the axis. -/
+theorem angularSum_eq_scalarSum {a : ℕ → ℝ} (ha : Tendsto a atTop atTop)
+    (q : Coefficient) (b : ℕ → Coefficient) {w : SpaceTime}
+    (hq : ContinuousAt (fun y : SpaceTime => q (cylPoint y)) w)
+    (hpos : 0 < q (cylPoint w)) :
+    angularSum a (fun y => q (cylPoint y)) b w = angularField (scalarSum a q b) w := by
+  have hs : Summable (fun j : ℕ =>
+      SmoothCutoffs.scaledCutoff (a j) (q (cylPoint w)) * b j (cylPoint w)) := by
+    simpa only [SolenoidalDiagonal.cutStage, smul_eq_mul] using
+      SolenoidalDiagonal.summable_cutStage ha hq hpos
+        (fun j (y : SpaceTime) => b j (cylPoint y))
+  simp only [angularSum, SolenoidalDiagonal.potentialSum, SolenoidalDiagonal.cutStage,
+    angularField_eq_smul, smul_smul]
+  rw [hs.tsum_smul_const]
+  rfl
+
+def selectedScalar (a : ℕ → ℕ) : Coefficient :=
+  scalarSum (fun j => (a j : ℝ)) (qCoefficient ActualPrimary.h)
+    (fun j => (ActualCandidateAssembly.directData ActualCandidateConstruction.selectedBudget
+      ActualCandidateConstruction.selectedThreshold
+      ActualCandidateConstruction.selectedThreshold_geometry j).scalar)
+
+/-- The actual selected direct sum is one axisymmetric scalar times the
+angular unit vector on the entire preterminal domain. -/
+theorem selectedDirect_eq_angularField {a : ℕ → ℕ}
+    (ha : Tendsto (fun j => (a j : ℝ)) atTop atTop) :
+    EqOn (LocalAngularGrowth.selectedDirect a) (angularField (selectedScalar a))
+      PhysicalWaveSum.preterminal := by
+  intro w hw
+  have hq : ContinuousAt (fun y : SpaceTime => qCoefficient ActualPrimary.h (cylPoint y)) w :=
+    (PhysicalWaveSum.physicalQ_smoothAt ActualPrimary.outgoing.data.h_pos
+      ActualPrimary.outgoing.data.h_lt_half hw).continuousAt
+  have hpos : 0 < qCoefficient ActualPrimary.h (cylPoint w) :=
+    PhysicalWaveSum.physicalQ_pos ActualPrimary.outgoing.data.h_pos
+      ActualPrimary.outgoing.data.h_lt_half hw
+  exact angularSum_eq_scalarSum ha (qCoefficient ActualPrimary.h)
+    (fun j => (ActualCandidateAssembly.directData ActualCandidateConstruction.selectedBudget
+      ActualCandidateConstruction.selectedThreshold
+      ActualCandidateConstruction.selectedThreshold_geometry j).scalar) hq hpos
+
+end NavierStokes.LocalAngularScalar
+end
+
 
 noncomputable section
 

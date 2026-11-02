@@ -262,10 +262,11 @@ the modules `scripts/` imports) is never merged away.
 
 | | files before | files after | lines |
 |---|---|---|---|
-| `NavierStokes` | 753 | 664 | 344,369 → 344,879 |
+| `NavierStokes` | 753 | 571 | 344,369 → 344,743 |
 
-89 modules moved; the text grows by 510 lines because each move adds a marker, a
-blank line, the `section` / `end` pair and, where needed, import lines.
+182 modules moved in two rounds (89 at the 100-line threshold, 93 at 250). The text
+grows by roughly one line per move — the marker, plus `section` / `end` where the
+moved body's `open`s are not already open in the parent.
 
 Three properties have to hold for the move to preserve meaning, and each was
 found by a build going red:
@@ -273,9 +274,15 @@ found by a build going red:
 * the moved body goes **before** the parent's body — `import` elaborates the
   imported module first, which is the order the parent's proofs were written
   against (appending at the end produced 79 unknown identifiers);
-* it is wrapped in `section … end`, because `open`, `variable` and `set_option`
-  are *section*-scoped in Lean 4 (checked directly: an `open` inside a section
-  does not survive the `end`, and neither does a `variable`);
+* it is wrapped in `section … end` unless nothing can leak — the wrapper is
+  omitted when the moved body's file-scope `open`s are all already open in the
+  parent and it declares no file-scope `variable`, `set_option`, `local`,
+  `attribute` or `notation`. It is needed in the other case because `open`,
+  `variable` and `set_option` are *section*-scoped in Lean 4 (checked directly);
+* one parent, `PaperAdditionalResults`, is excluded: with 109 modules folded in,
+  `CompleteSpace (RepairData E)` stopped being synthesizable in one proof.
+  Instance search there is at the edge of its budget and the merge pushed it
+  over; excluding the file is cheaper and more honest than a `haveI`;
 * `import C` is replaced **in place** by `C`'s own import lines, duplicates
   dropped keeping the first, so the depth-first import order is unchanged.
   Merging the import lines at the end instead made instance search pick
@@ -293,6 +300,35 @@ Verification, in the form of a before/after dump of every declaration's type
   on them is unchanged;
 * eighteen declarations have a type that differs only in which definitionally
   equal instance term appears. No statement text changed.
+
+## Using the libraries
+
+`scripts/DuplicateProbe.lean` run over the whole `NavierStokes` library (instead of
+the 22-module sample) reports **seven** theorem-duplicate groups involving a
+library theorem: the two deliberate TauCeti bridge aliases, one project-project
+pair (`residual_viscosity_congr` / `residual_congr`), and four project theorems
+that are Mathlib theorems verbatim. Three of the four were removed —
+`Real.image_exp_Iic`, `Real.image_exp_Ioi`, `Real.image_exp_Ioc`, 31 lines and
+eleven repointed uses. `period_pos` is kept: it is stated for the project's
+`period`, not for `2 * π`.
+
+That is the ceiling of statement-level substitution here, and it is small because
+the library does not restate Mathlib. The one case with volume was a duplicated
+*construction*: `R3/SchwartzCompactApproximation.lean` rebuilt density of
+compactly supported smooth functions in Schwartz space from a cutoff family and a
+seminorm estimate, and nothing used the construction. TauCeti proves the statement
+for the same object (`SchwartzMap.dense_hasCompactSupport`), so the file is now
+the import plus two closed-set consequences of density:
+
+| | lines | declarations |
+|---|---|---|
+| before | 235 | 20 |
+| after | 58 | 4 |
+
+TauCeti is cheap to use from here: its modules sit on Mathlib, so the import cone
+of the module used above is 2 TauCeti files and it builds in 8 seconds. Only the
+modules actually imported are compiled, so a new TauCeti import costs seconds, not
+a library build.
 
 **`Euler` is not merged**, and the reason is a finding rather than a preference:
 see below.

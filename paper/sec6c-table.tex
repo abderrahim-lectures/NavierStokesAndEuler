@@ -44,10 +44,10 @@ file & lines & decls & what it builds & library counterpart & verdict \\
 \file{NavierStokes/}\newline\file{SmoothParameterIntegral} & 315 & 20 & all-orders
   differentiation under an integral over an arbitrary measure space & \TauCeti{}
   \file{Calculus/ParametricIntegral} covers the compact-parameter case & partial \\
-\file{NavierStokes/}\newline\file{SchwartzCompactApproximation} & 180 & 20 & quantitative
+\file{NavierStokes/}\newline\file{SchwartzCompactApproximation} & 58 & 4 & quantitative
   density of compactly supported smooth functions in $\mathcal S$, and the consequence that
-  compact tests determine a tempered distribution & \Mathlib{} \lean{BumpFunction/SmoothApprox};
-  \TauCeti{} \file{SchwartzSpace/*} & partial \\
+  compact tests determine a tempered distribution & \TauCeti{} \lean{SchwartzMap.dense\_hasCompactSupport}
+  & \textbf{done} \\
 \file{Euler/}\newline\file{OrdinaryMollifier} & 164 & 26 & $L^2$-valued mollification along
   an isometric action, with rate & \TauCeti{} \file{Sobolev/Mollification} proves the
   weak-derivative identity instead & notion \\
@@ -78,7 +78,7 @@ file & lines & decls & what it builds & library counterpart & verdict \\
   \lean{ascPochhammer}, \lean{Real.Gamma\_add\_one}; \lean{rising} is now
   \lean{(ascPochhammer\ \mathbb{R}\ n).eval\ b} & \textbf{done} \\
 \midrule
-total & 3{,}777 & 382 & & & \\
+total & 3{,}674 & 387 & & & \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -86,7 +86,7 @@ total & 3{,}777 & 382 & & & \\
 means the library covers part of the file; \lean{notion} means the library has a different
 object of the same name; \lean{keep} means no library would want it.
 
-\paragraph{What the table says.} Three substitutions have since been made, each verified by a green build.
+\paragraph{What the table says.} Five substitutions have since been made, each verified by a green build.
 \file{AppendixHeatResults} is done: its rising factorial \emph{is} Mathlib's
 \lean{ascPochhammer} evaluated, with \lean{rising\_succ} and \lean{rising\_pos} now one-line
 applications and only the monotonicity lemmas still by induction. In \file{R3/PairedKernelBound}
@@ -96,13 +96,33 @@ $\|\mathrm{d}f(\lambda y.\,y{:}\mathbb{C})\| = \|\mathrm{d}f\|$ had been proved 
 antisymmetry argument over the operator norm in fifteen lines; it is now six, because
 \Mathlib{} has \lean{LinearIsometry.norm\_toContinuousLinearMap\_comp} and
 \lean{Complex.ofRealCLM} is \lean{Complex.ofRealLI.toContinuousLinearMap} by \lean{rfl}. The
-net line change is $+3$ across the three files: what was removed is a bespoke proof, not a
-statement. That leaves one file free, nine partial, three notion-level and four to keep. (The parametric-integral file was recorded as
+net line change of those three is $+3$: what was removed is a bespoke proof, not a
+statement.
+
+The fifth is the one with volume. \file{R3/SchwartzCompactApproximation} reconstructed
+density of compactly supported smooth functions in Schwartz space from a cutoff family and a
+seminorm estimate---the whole file was 235 lines and 20 declarations---and nothing in the
+library used the construction. \TauCeti{} proves the statement for the same object
+(\lean{SchwartzMap.dense\_hasCompactSupport}, in \file{SchwartzSpace/Cutoff}), so the file
+is now the import plus the two closed-set consequences of density: 235 $\to$ 58 lines,
+20 $\to$ 4 declarations. Two further project theorems, \lean{image\_exp\_Iic} and
+\lean{image\_exp\_Ioi}/\lean{Ioc}, were Mathlib's \lean{Real.image\_exp\_*} verbatim and are
+gone, with their eleven uses repointed.
+
+Finding these was mechanical rather than by reading. The duplicate probe of
+Section~\ref{sec:dup} was run over the whole \file{NavierStokes} library instead of the
+22-module sample, and it reports \emph{seven} theorem-duplicate groups involving a library
+theorem: the two deliberate \TauCeti{} bridge aliases, one project--project pair, and the
+four project theorems replaced above. That is the ceiling of statement-level substitution in
+this library, and it is small because the library genuinely does not restate \Mathlib{}. The
+Schwartz file is the one case where the duplication was of a \emph{construction} rather than
+of a statement, and the probe cannot see those; it took reading the table in this section to
+find it. That leaves two done, one free, eight partial, three notion-level and four to keep. (The parametric-integral file was recorded as
 free in an earlier draft of this table; checking its hypotheses against \TauCeti's showed
 that the library theorem needs bounds uniform in the differentiation variable, which the
 project's joint-smoothness hypothesis does not supply, so it moved to \emph{partial}.) Nothing in the layer is large: the whole of it is
-3{,}777 lines, which is 0.6\% of the development, and the single free replacement is 88 lines. The conclusion is that a library migration of this repository is worth doing for
-the two free files and the nine partial ones, and is \emph{not} worth doing for the
+3{,}674 lines, which is 0.7\% of the development. The conclusion is that a library migration
+of this repository is worth doing for the two free files and the eight partial ones, and is \emph{not} worth doing for the
 word-lattice Sobolev spaces: those exist because the classical object was not available in
 the library at the time, and replacing them now would change the meaning of the estimates
 that the Euler development is made of. The honest intermediate step is the bridge lemma

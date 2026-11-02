@@ -1,10 +1,18 @@
 import NavierStokes.R3.PressureRecoveryHelpers
 import NavierStokes.R3.PressureFunctionals
 import NavierStokes.R3.ComparisonTimeAverages
-import NavierStokes.R3.WeakTimeContinuity
+import NavierStokes.R3.CompactTimeIntegral
+import NavierStokes.R3.ComparisonCutoffs
+import Mathlib.Analysis.Normed.Group.ZeroAtInfty
+import Mathlib.Topology.UniformSpace.UniformApproximation
 import Mathlib.Analysis.Distribution.AEEqOfIntegralContDiff
 import Mathlib.MeasureTheory.Measure.OpenPos
-import NavierStokes.R3.HarmonicTestFunctionals
+import NavierStokes.R3.FourierTestDerivatives
+import NavierStokes.R3.FourierSobolevWeights
+import Mathlib.Analysis.InnerProductSpace.Dual
+import Mathlib.Analysis.Normed.Module.HahnBanach
+import NavierStokes.R3.WeakFourierUniqueness
+import NavierStokes.R3.SchwartzCompactApproximation
 import NavierStokes.R3.RieszTestOperators
 import NavierStokes.R3.RieszLinearityDecay
 
@@ -15,6 +23,341 @@ The physical pressure is tested only against compact smooth functions. Its
 canonical representative is recovered from the conservative equation, time
 averaging, and the vanishing theorem for harmonic Sobolev-bounded functionals.
 -/
+/-! Merged from `NavierStokes.R3.WeakTimeContinuity` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Weak time continuity from uniform spatial `L¹` bounds
+
+A jointly continuous scalar field with uniformly bounded spatial `L¹` norm
+has continuous pairings with every continuous test vanishing at infinity.
+Only the test is approximated by compactly supported functions; no support or
+derivative bound is imposed on the field.
+-/
+
+
+noncomputable section
+
+open Set Filter MeasureTheory
+open scoped Topology ZeroAtInfty
+
+namespace NavierStokesR3.WeakTimeContinuity
+
+open ProblemStatement ComparisonCutoffs
+
+/-- A test function vanishing at infinity is bounded. -/
+theorem exists_test_bound {ψ : Space → ℂ} (hψ : Continuous ψ)
+    (hψzero : Tendsto ψ (cocompact Space) (𝓝 0)) :
+    ∃ C : ℝ, ∀ x : Space, ‖ψ x‖ ≤ C := by
+  let ψ₀ : C₀(Space, ℂ) :=
+    { toFun := ψ, continuous_toFun := hψ, zero_at_infty' := hψzero }
+  obtain ⟨C, hC⟩ := ψ₀.isBounded_range.exists_norm_le
+  exact ⟨C, fun x => hC (ψ x) ⟨x, rfl⟩⟩
+
+/-- Pairing an `L¹` scalar field with a bounded continuous complex test is
+integrable. -/
+theorem integrable_pairing_of_bounded {f : Space → ℝ} (hf : Integrable f volume)
+    {ψ : Space → ℂ} (hψ : Continuous ψ) (hbound : ∃ C : ℝ, ∀ x, ‖ψ x‖ ≤ C) :
+    Integrable (fun x : Space => (f x : ℂ) * ψ x) volume := by
+  have hfC : Integrable (fun x : Space => (f x : ℂ)) volume := hf.ofReal
+  obtain ⟨C, hC⟩ := hbound
+  simpa only [mul_comm] using! hfC.bdd_mul hψ.aestronglyMeasurable (Filter.Eventually.of_forall hC)
+
+/-- The original, untruncated pairing is a genuine Bochner integral. -/
+theorem integrable_pairing {f : Space → ℝ} (hf : Integrable f volume)
+    {ψ : Space → ℂ} (hψ : Continuous ψ)
+    (hψzero : Tendsto ψ (cocompact Space) (𝓝 0)) :
+    Integrable (fun x : Space => (f x : ℂ) * ψ x) volume :=
+  integrable_pairing_of_bounded hf hψ (exists_test_bound hψ hψzero)
+
+/-- The compact approximation to the spatial test. -/
+def cutoffTest (R : ℝ) (ψ : Space → ℂ) (x : Space) : ℂ :=
+  (cutoff R x : ℂ) * ψ x
+
+theorem cutoffTest_continuous {ψ : Space → ℂ} (hψ : Continuous ψ) (R : ℝ) :
+    Continuous (cutoffTest R ψ) :=
+  (Complex.continuous_ofReal.comp (cutoff_smooth R).continuous).mul hψ
+
+theorem norm_cutoffTest_le (R : ℝ) (ψ : Space → ℂ) (x : Space) :
+    ‖cutoffTest R ψ x‖ ≤ ‖ψ x‖ := by
+  simp only [cutoffTest, norm_mul, Complex.norm_real, Real.norm_eq_abs,
+    abs_of_nonneg (cutoff_nonneg R x)]
+  exact mul_le_of_le_one_left (norm_nonneg _) (cutoff_le_one R x)
+
+theorem integrable_cutoff_pairing {f : Space → ℝ} (hf : Integrable f volume)
+    {ψ : Space → ℂ} (hψ : Continuous ψ)
+    (hψzero : Tendsto ψ (cocompact Space) (𝓝 0)) (R : ℝ) :
+    Integrable (fun x : Space => (f x : ℂ) * cutoffTest R ψ x) volume := by
+  obtain ⟨C, hC⟩ := exists_test_bound hψ hψzero
+  exact integrable_pairing_of_bounded hf (cutoffTest_continuous hψ R)
+    ⟨C, fun x => (norm_cutoffTest_le R ψ x).trans (hC x)⟩
+
+/-- Cutting off the test cannot enlarge its pointwise error beyond its norm. -/
+theorem norm_sub_cutoffTest_le (R : ℝ) (ψ : Space → ℂ) (x : Space) :
+    ‖ψ x - cutoffTest R ψ x‖ ≤ ‖ψ x‖ := by
+  have heq : ψ x - cutoffTest R ψ x = ((1 - cutoff R x : ℝ) : ℂ) * ψ x := by
+    simp only [cutoffTest, Complex.ofReal_sub, Complex.ofReal_one]
+    ring
+  rw [heq, norm_mul, Complex.norm_real, Real.norm_eq_abs,
+    abs_of_nonneg (sub_nonneg.mpr (cutoff_le_one R x))]
+  exact mul_le_of_le_one_left (norm_nonneg _) (by linarith [cutoff_nonneg R x])
+
+/-- The compact approximations converge uniformly on all of space. -/
+theorem tendstoUniformly_cutoffTest {ψ : Space → ℂ} (hψ : Continuous ψ)
+    (hψzero : Tendsto ψ (cocompact Space) (𝓝 0)) :
+    TendstoUniformly (fun R : ℝ => cutoffTest R ψ) ψ atTop := by
+  let ψ₀ : C₀(Space, ℂ) :=
+    { toFun := ψ, continuous_toFun := hψ, zero_at_infty' := hψzero }
+  apply Metric.tendstoUniformly_iff.2
+  intro ε hε
+  obtain ⟨A, hA⟩ := ZeroAtInftyContinuousMapClass.norm_le ψ₀ ε hε
+  filter_upwards [eventually_gt_atTop (0 : ℝ), eventually_ge_atTop A] with R hR hAR
+  intro x
+  rw [dist_eq_norm]
+  by_cases hx : ‖x‖ ≤ R
+  · simp only [cutoffTest, cutoff_eq_one hR hx, Complex.ofReal_one, one_mul,
+      sub_self, norm_zero]
+    exact hε
+  · exact (norm_sub_cutoffTest_le R ψ x).trans_lt
+      (hA x (lt_of_le_of_lt hAR (lt_of_not_ge hx)))
+
+/-- Uniform error in the test controls error in its pairing by the `L¹`
+norm of the scalar field. -/
+theorem norm_pairing_sub_le {f : Space → ℝ} (hf : Integrable f volume)
+    {ψ φ : Space → ℂ}
+    (hψ : Integrable (fun x : Space => (f x : ℂ) * ψ x) volume)
+    (hφ : Integrable (fun x : Space => (f x : ℂ) * φ x) volume)
+    {ε : ℝ} (herror : ∀ x : Space, ‖ψ x - φ x‖ ≤ ε) :
+    ‖(∫ x : Space, (f x : ℂ) * ψ x) - (∫ x : Space, (f x : ℂ) * φ x)‖ ≤
+      ε * ∫ x : Space, ‖f x‖ := by
+  rw [← integral_sub hψ hφ]
+  calc
+    ‖∫ x : Space, (f x : ℂ) * ψ x - (f x : ℂ) * φ x‖
+        ≤ ∫ x : Space, ε * ‖f x‖ := by
+      apply norm_integral_le_of_norm_le (hf.norm.const_mul ε)
+      apply ae_of_all
+      intro x
+      rw [← mul_sub, norm_mul, Complex.norm_real]
+      exact (mul_le_mul_of_nonneg_left (herror x) (norm_nonneg _)).trans_eq (mul_comm _ _)
+    _ = ε * ∫ x : Space, ‖f x‖ := integral_const_mul _ _
+
+/-- Compactly truncated pairings are continuous on an arbitrary time set. -/
+theorem continuousOn_cutoff_pairing {s : Set ℝ} {g : SpaceTime → ℝ}
+    (hg : ContinuousOn g (s ×ˢ univ)) {ψ : Space → ℂ} (hψ : Continuous ψ)
+    {R : ℝ} (hR : 0 < R) :
+    ContinuousOn (fun t => ∫ x : Space, (g (t, x) : ℂ) * cutoffTest R ψ x) s := by
+  apply CompactTimeIntegral.continuousOn_integral
+    (F := fun z : SpaceTime => (g z : ℂ) * cutoffTest R ψ z.2)
+    (isCompact_closedBall (0 : Space) (2 * R))
+  · exact (Complex.continuous_ofReal.comp_continuousOn hg).mul
+      ((cutoffTest_continuous hψ R).comp continuous_snd).continuousOn
+  · intro t _ x hx
+    have hxnorm : 2 * R ≤ ‖x‖ := by
+      have : ¬ ‖x‖ ≤ 2 * R := by simpa only [Metric.mem_closedBall, dist_zero_right] using hx
+      exact (lt_of_not_ge this).le
+    simp only [cutoffTest, cutoff_eq_zero hR hxnorm, Complex.ofReal_zero, zero_mul, mul_zero]
+
+/-- Uniform spatial `L¹` bounds upgrade compact-test continuity to continuity
+for every continuous test vanishing at infinity. -/
+theorem continuousOn_pairing {s : Set ℝ} {g : SpaceTime → ℝ} {M : ℝ}
+    (hg : ContinuousOn g (s ×ˢ univ))
+    (hints : ∀ t ∈ s, Integrable (fun x : Space => g (t, x)) volume)
+    (hbound : ∀ t ∈ s, (∫ x : Space, ‖g (t, x)‖) ≤ M)
+    {ψ : Space → ℂ} (hψ : Continuous ψ)
+    (hψzero : Tendsto ψ (cocompact Space) (𝓝 0)) :
+    ContinuousOn (fun t => ∫ x : Space, (g (t, x) : ℂ) * ψ x) s := by
+  have happrox := tendstoUniformly_cutoffTest hψ hψzero
+  have hpair : TendstoUniformlyOn
+      (fun R : ℝ => fun t => ∫ x : Space, (g (t, x) : ℂ) * cutoffTest R ψ x)
+      (fun t => ∫ x : Space, (g (t, x) : ℂ) * ψ x) atTop s := by
+    apply Metric.tendstoUniformlyOn_iff.2
+    intro ε hε
+    have hden : 0 < max M 0 + 1 := by positivity
+    have hδ : 0 < ε / (max M 0 + 1) := div_pos hε hden
+    filter_upwards [Metric.tendstoUniformly_iff.1 happrox (ε / (max M 0 + 1)) hδ]
+      with R hR
+    intro t ht
+    have herror := norm_pairing_sub_le (hints t ht)
+      (integrable_pairing (hints t ht) hψ hψzero)
+      (integrable_cutoff_pairing (hints t ht) hψ hψzero R)
+      (fun x => (show ‖ψ x - cutoffTest R ψ x‖ < ε / (max M 0 + 1) by
+        simpa only [dist_eq_norm] using hR x).le)
+    calc
+      dist (∫ x : Space, (g (t, x) : ℂ) * ψ x)
+          (∫ x : Space, (g (t, x) : ℂ) * cutoffTest R ψ x)
+          ≤ ε / (max M 0 + 1) * ∫ x : Space, ‖g (t, x)‖ := by
+        simpa only [dist_eq_norm] using herror
+      _ ≤ ε / (max M 0 + 1) * max M 0 :=
+        mul_le_mul_of_nonneg_left ((hbound t ht).trans (le_max_left _ _)) hδ.le
+      _ < ε / (max M 0 + 1) * (max M 0 + 1) :=
+        mul_lt_mul_of_pos_left (lt_add_one _) hδ
+      _ = ε := div_mul_cancel₀ ε hden.ne'
+  exact hpair.continuousOn ((eventually_gt_atTop (0 : ℝ)).mono
+    (fun _ hR => continuousOn_cutoff_pairing hg hψ hR)).frequently
+
+end NavierStokesR3.WeakTimeContinuity
+end
+
+/-! Merged from `NavierStokes.R3.HarmonicTestFunctionals` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Harmonic functionals bounded in an inhomogeneous Fourier Sobolev norm
+
+A complex-linear Schwartz functional bounded by the Fourier `H³` norm is
+represented in polynomially weighted `L²`. If it annihilates Laplacians, its
+representing function vanishes away from the origin. Since volume has no atom
+at the origin, the whole functional vanishes.
+-/
+
+/-! Merged from `NavierStokes.R3.HilbertFunctionalExtension`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# Hilbert-space representation of a functional bounded through an embedding
+
+A linear functional on a complex vector space that is bounded in the norm of an
+injective linear map into a Hilbert space is represented by an inner product in
+that Hilbert space. No topology on the source vector space is needed.
+-/
+
+namespace NavierStokesR3.HilbertFunctionalExtension
+
+universe u v
+
+variable {E : Type u} [AddCommGroup E] [Module ℂ E]
+variable {H : Type v} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
+  [CompleteSpace H]
+
+/-- Transfer a functional to the range of an injective linear map, extend it by
+Hahn–Banach, and represent the extension by the Hilbert-space inner product. -/
+theorem exists_inner_representation (B : E →ₗ[ℂ] H)
+    (hB : Function.Injective B) (F : E →ₗ[ℂ] ℂ) {C : ℝ}
+    (hbound : ∀ x : E, ‖F x‖ ≤ C * ‖B x‖) :
+    ∃ q : H, ∀ x : E, F x = @inner ℂ H _ q (B x) := by
+  classical
+  let e : E ≃ₗ[ℂ] LinearMap.range B := LinearEquiv.ofInjective B hB
+  let f : LinearMap.range B →ₗ[ℂ] ℂ := F.comp e.symm.toLinearMap
+  have he (z : LinearMap.range B) : B (e.symm z) = (z : H) := by
+    change ((e (e.symm z) : LinearMap.range B) : H) = (z : H)
+    rw [e.apply_symm_apply]
+  have hf : ∀ z : LinearMap.range B, ‖f z‖ ≤ C * ‖z‖ := by
+    intro z
+    change ‖F (e.symm z)‖ ≤ C * ‖(z : H)‖
+    simpa only [he] using hbound (e.symm z)
+  let fc : LinearMap.range B →L[ℂ] ℂ := f.mkContinuous C hf
+  obtain ⟨G, hG, _⟩ := exists_extension_norm_eq (LinearMap.range B) fc
+  refine ⟨(InnerProductSpace.toDual ℂ H).symm G, ?_⟩
+  intro x
+  rw [InnerProductSpace.toDual_symm_apply]
+  calc
+    F x = fc (e x) := by simp [fc, f]
+    _ = G ((e x : LinearMap.range B) : H) := (hG (e x)).symm
+    _ = G (B x) := rfl
+
+end NavierStokesR3.HilbertFunctionalExtension
+
+
+end
+
+
+
+noncomputable section
+
+open MeasureTheory
+
+namespace NavierStokesR3.HarmonicTestFunctionals
+
+open ProblemStatement Comparison
+
+abbrev FrequencyL2 := Lp ℂ 2 (volume : Measure Space)
+
+/-- The `H³` bound supplies a Hilbert-space representative after a polynomial
+Fourier embedding. No Fourier transform of arbitrary `L²` functions is needed. -/
+theorem exists_inner_representation_of_fourierHNormSq_bound
+    (F : ComplexTest →ₗ[ℂ] ℂ) {C : ℝ} (hC : 0 ≤ C)
+    (hbound : ∀ ψ : ComplexTest, ‖F ψ‖ ≤ C * Real.sqrt (fourierHNormSq 3 ψ)) :
+    ∃ q : FrequencyL2, ∀ ψ : ComplexTest,
+      F ψ = @inner ℂ FrequencyL2 _ q (FourierSobolevWeights.B ψ) := by
+  apply HilbertFunctionalExtension.exists_inner_representation
+    FourierSobolevWeights.B FourierSobolevWeights.B_injective F
+  intro ψ
+  exact (hbound ψ).trans (mul_le_mul_of_nonneg_left
+    (FourierSobolevWeights.sqrt_fourierHNormSq_three_le_norm_B ψ) hC)
+
+/-- In particular, a functional with the stated Fourier bound is continuous
+for the Schwartz topology. -/
+theorem continuous_of_fourierHNormSq_bound
+    (F : ComplexTest →ₗ[ℂ] ℂ) {C : ℝ} (hC : 0 ≤ C)
+    (hbound : ∀ ψ : ComplexTest, ‖F ψ‖ ≤ C * Real.sqrt (fourierHNormSq 3 ψ)) :
+    Continuous F := by
+  obtain ⟨q, hq⟩ := exists_inner_representation_of_fourierHNormSq_bound F hC hbound
+  have hc : Continuous (fun ψ : ComplexTest =>
+      @inner ℂ FrequencyL2 _ q (FourierSobolevWeights.B ψ)) :=
+    continuous_const.inner FourierSobolevWeights.continuous_B
+  exact hc.congr fun ψ => (hq ψ).symm
+
+/-- A weighted `L²` representative that annihilates ordinary Laplacians is zero. -/
+theorem representative_eq_zero_of_harmonic
+    (q : FrequencyL2)
+    (hq : ∀ ψ : ComplexTest,
+      @inner ℂ FrequencyL2 _ q (FourierSobolevWeights.B (laplacianCLM ψ)) = 0) :
+    q = 0 := by
+  apply WeakFourierUniqueness.eq_zero_of_integral_weight_normSq_test_eq_zero q
+  intro φ
+  let ψ : ComplexTest := (FourierTransform.fourierCLE ℂ ComplexTest).symm φ
+  have hzero := hq ψ
+  rw [FourierSobolevWeights.inner_B_eq_integral] at hzero
+  let c : ℂ := -(4 * (Real.pi : ℂ) ^ 2)
+  have hc : c ≠ 0 := by
+    dsimp [c]
+    apply neg_ne_zero.mpr
+    apply mul_ne_zero (by norm_num)
+    exact pow_ne_zero 2 (by exact_mod_cast Real.pi_ne_zero)
+  have hi : (fun ξ : Space => star (q ξ) *
+      (((1 + ‖ξ‖ ^ 2) ^ 2 : ℝ) : ℂ) *
+        FourierTransform.fourierCLE ℂ ComplexTest (laplacianCLM ψ) ξ) =
+      (fun ξ : Space => c • (star (q ξ) *
+        (((1 + ‖ξ‖ ^ 2) ^ 2 : ℝ) : ℂ) * ((‖ξ‖ ^ 2 : ℝ) : ℂ) * φ ξ)) := by
+    funext ξ
+    rw [fourier_laplacianCLM_apply]
+    simp only [ψ, ContinuousLinearEquiv.apply_symm_apply, smul_eq_mul, c]
+    ring
+  rw [hi, integral_smul] at hzero
+  change c * (∫ ξ : Space, star (q ξ) *
+    (((1 + ‖ξ‖ ^ 2) ^ 2 : ℝ) : ℂ) * ((‖ξ‖ ^ 2 : ℝ) : ℂ) * φ ξ) = 0 at hzero
+  exact (mul_eq_zero.mp hzero).resolve_left hc
+
+/-- A harmonic Schwartz functional bounded in Fourier `H⁻³` vanishes. -/
+theorem eq_zero_of_harmonic
+    (F : ComplexTest →ₗ[ℂ] ℂ) {C : ℝ} (hC : 0 ≤ C)
+    (hbound : ∀ ψ : ComplexTest, ‖F ψ‖ ≤ C * Real.sqrt (fourierHNormSq 3 ψ))
+    (hharmonic : ∀ ψ : ComplexTest, F (laplacianCLM ψ) = 0) : F = 0 := by
+  obtain ⟨q, hq⟩ := exists_inner_representation_of_fourierHNormSq_bound F hC hbound
+  have hqzero : q = 0 := representative_eq_zero_of_harmonic q (fun ψ => by
+    rw [← hq]
+    exact hharmonic ψ)
+  ext ψ
+  change F ψ = 0
+  rw [hq, hqzero]
+  simp
+
+/-- The pressure-recovery form: harmonicity need only be known against compactly
+supported tests. The Fourier bound supplies the continuity needed to pass to
+all Schwartz tests. No pressure pairing outside compact support is assumed. -/
+theorem eq_zero_of_compact_harmonic
+    (F : ComplexTest →ₗ[ℂ] ℂ) {C : ℝ} (hC : 0 ≤ C)
+    (hbound : ∀ ψ : ComplexTest, ‖F ψ‖ ≤ C * Real.sqrt (fourierHNormSq 3 ψ))
+    (hharmonic : ∀ ψ : ComplexTest, HasCompactSupport (ψ : Space → ℂ) →
+      F (laplacianCLM ψ) = 0) : F = 0 := by
+  apply eq_zero_of_harmonic F hC hbound
+  intro ψ
+  exact SchwartzCompactApproximation.continuous_zero_of_compactSupport
+    (fun φ : ComplexTest => F (laplacianCLM φ))
+    ((continuous_of_fourierHNormSq_bound F hC hbound).comp laplacianCLM.continuous)
+    hharmonic ψ
+
+end NavierStokesR3.HarmonicTestFunctionals
+end
+
 
 /-! Merged from `NavierStokes.R3.TemporalTestUniqueness`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
 section
