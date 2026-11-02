@@ -1417,13 +1417,6 @@ noncomputable def chartCovariance
     (lam u L : Fin 2 → ℕ → ℝ) (χ : ℕ → E → Q × ℝ) :
     ℕ → E → SmoothCovariance.Mat2 := fun n x => primaryCovariance pref d lam u L n (χ n x).1
 
-noncomputable def primaryWave (s : StripData E)
-    (pref : Fin 2 → ℕ → ℝ) (d : Fin 2 → ℕ → PrimaryODE.FrameData Q)
-    (lam u L : Fin 2 → ℕ → ℝ) (χ : ℕ → E → Q × ℝ)
-    (T : ℕ → E → SmoothCovariance.Vec2) (mask : ℕ → E → ℝ) (c : Fin 2) :
-    ℕ → E → HarmonicCalculus.ComplexVector :=
-  primaryCoefficient s (chartCovariance pref d lam u L χ) T mask
-    (fun n x => cutoffPulse (d c n) (lam c n) (u c n) (L c n) (χ n x)) c
 
 
 end ChartAssembly
@@ -1525,12 +1518,6 @@ noncomputable def phaseCovariance {D : Domain ℕ Slow} (F : Fin 2 → PhaseCons
   primaryCovariance pref (fun c => (F c).frame) (fun c => (F c).lam)
     (fun c => (F c).u) (fun c => (F c).L)
 
-noncomputable def phaseWave (s : StripData E) {D : Domain ℕ Slow}
-    (F : Fin 2 → PhaseConstruction D) (pref : Fin 2 → ℕ → ℝ)
-    (χ : ℕ → E → Slow × ℝ) (T : ℕ → E → SmoothCovariance.Vec2)
-    (mask : ℕ → E → ℝ) (c : Fin 2) : ℕ → E → HarmonicCalculus.ComplexVector :=
-  primaryWave s pref (fun c => (F c).frame) (fun c => (F c).lam)
-    (fun c => (F c).u) (fun c => (F c).L) χ T mask c
 
 
 end PhaseConstruction
@@ -1845,13 +1832,6 @@ open WeightedClasses
 variable {Q E : Type} [NormedAddCommGroup Q] [NormedSpace ℝ Q]
   [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-noncomputable def uncutPrimaryWave (s : StripData E)
-    (pref : Fin 2 → ℕ → ℝ) (d : Fin 2 → ℕ → PrimaryODE.FrameData Q)
-    (lam u L : Fin 2 → ℕ → ℝ) (χ : ℕ → E → Q × ℝ)
-    (T : ℕ → E → SmoothCovariance.Vec2) (mask : ℕ → E → ℝ) (c : Fin 2) :
-    ℕ → E → HarmonicCalculus.ComplexVector :=
-  primaryCoefficient s (chartCovariance pref d lam u L χ) T mask
-    (fun n x => normalizedPulse (d c n) (lam c n) (u c n) (L c n) (χ n x)) c
 
 
 

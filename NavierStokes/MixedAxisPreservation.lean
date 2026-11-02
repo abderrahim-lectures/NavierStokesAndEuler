@@ -124,12 +124,6 @@ theorem physicalQ_origin_tendsto {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2) :
   filter_upwards [self_mem_nhdsWithin (a := (1 : ℝ)) (s := Iio 1)] with t ht
   exact (physicalQ_origin hh hh1 ht).symm
 
-/-- The zeroth potential is kept separate from the annular wave increments.
-Each increment may have its own finite harmonic band. -/
-noncomputable def waveSeries (base : VelocityField) (H : ℕ → ℕ)
-    (f : (j : ℕ) → Fin 3 → WaveFamily (H j)) (a h r0 : ℝ) : ℕ → VelocityField
-  | 0 => base
-  | j + 1 => vectorSum (f j) a h r0
 
 
 end
@@ -578,8 +572,6 @@ theorem local_initialized_final_origin_blowup (upper : ℝ) (B : ℕ)
 
 end FinalBase
 
-/-- The exponent belongs to the already selected, constructed profile. -/
-noncomputable def constructedExponent : ℝ := FinalSlowBase.actualProfile.outgoing.data.h
 
 
 

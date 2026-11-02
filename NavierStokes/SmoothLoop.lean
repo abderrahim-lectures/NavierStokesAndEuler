@@ -216,19 +216,10 @@ def TwoPoint.centeredSecond (q : TwoPoint) (m : ℝ) : ℝ :=
 def TwoPoint.IsProbability (q : TwoPoint) : Prop :=
   0 ≤ q.leftWeight ∧ 0 ≤ q.rightWeight ∧ q.leftWeight + q.rightWeight = 1
 
-/-- For any nonnegative variance, equal masses at `m ± √V` realize it. -/
-def symmetricPair (m V : ℝ) : TwoPoint :=
-  ⟨1 / 2, 1 / 2, m - Real.sqrt V, m + Real.sqrt V⟩
 
 
 
 
-/-- An asymmetric law preserves a lower bound on the projection `p*t`,
-while allowing any nonnegative variance. For `p = 0`, use `symmetricPair`.
-The lower projected deviation is `-d`, and the upper one is `V*p²/d`. -/
-def oneSidedPair (m p d V : ℝ) : TwoPoint :=
-  ⟨V * p ^ 2 / (d ^ 2 + V * p ^ 2), d ^ 2 / (d ^ 2 + V * p ^ 2),
-    m - d / p, m + V * p / d⟩
 
 
 

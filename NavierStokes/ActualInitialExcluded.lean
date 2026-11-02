@@ -973,9 +973,6 @@ variable {B N0 : ℕ}
 noncomputable abbrev gaussianStrip : StripData ActualPrimary.FullPoint :=
   HarmonicWaveInteraction.productStrip strip
 
-noncomputable def chartCarrier (l : SignedLabel B N0) (n : ℕ) : ActualPrimary.FullPoint → ℂ :=
-  HarmonicCalculus.carrier ((ActualPrimary.chartCoefficients l.1 l.2).frequency n)
-    ((ActualPrimary.chartCoefficients l.1 l.2).phase n)
 
 
 noncomputable def gaussianField (l : SignedLabel B N0) :
@@ -1007,9 +1004,6 @@ theorem chartGaussian_cut_support (l : SignedLabel B N0) (n : ℕ) {x : ActualPr
 
 
 
-noncomputable def initialGaussian (B N0 : ℕ) : ℕ → ActualPrimary.FullPoint → Fin 3 → ℝ :=
-  LabelSumBounds.fieldSum (ActualPrimary.activeLabels ActualPrimary.standardRegion B N0)
-    (fun l => (ActualPrimary.piece ActualPrimary.standardRegion l.2 l.1).excluded)
 
 
 

@@ -210,15 +210,7 @@ section ParameterFamilies
 
 variable {E : Type*}
 
-/-- Evaluation of the actual inverse amplitude at a smooth signed edge
-coordinate, with independent smooth parameters in the normalized data. -/
-def parameterPrimary (σ : ℝ) (κ : Vec2) (d : E → ℝ)
-    (G : E → Mat2) (T : E → Vec2) (z : E) : Vec2 :=
-  primaryAmplitude σ κ (fun _ => G z) (fun _ => T z) (d z)
 
-def parameterSigned (σ τ : ℝ) (κ : Vec2) (d : E → ℝ)
-    (G : E → Mat2) (T R : E → Vec2) (z : E) : Vec2 :=
-  signedAmplitude σ τ κ (fun _ => G z) (fun _ => T z) (fun _ => R z) (d z)
 
 
 

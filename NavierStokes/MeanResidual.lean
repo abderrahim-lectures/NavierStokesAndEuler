@@ -226,22 +226,8 @@ noncomputable def residualAxial (w : Components) (p : Scalar) (q : SpaceTime) : 
 
 
 
-noncomputable def conservativeRadial (w : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (w 0) q + radialDivergence 1 (fun y => w 0 y * w 0 y) q +
-    dtheta (fun y => w 1 y * w 0 y) q / radius q +
-    dz (fun y => w 2 y * w 0 y) q - (w 1 q * w 1 q) / radius q - laplacian (w 0) q +
-    w 0 q / radius q ^ 2 + 2 * dtheta (w 1) q / radius q ^ 2 + dr p q
 
-noncomputable def conservativeAngular (w : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (w 1) q + radialDivergence 2 (fun y => w 0 y * w 1 y) q +
-    dtheta (fun y => w 1 y * w 1 y) q / radius q +
-    dz (fun y => w 2 y * w 1 y) q - laplacian (w 1) q +
-    w 1 q / radius q ^ 2 - 2 * dtheta (w 0) q / radius q ^ 2 + dtheta p q / radius q
 
-noncomputable def conservativeAxial (w : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (w 2) q + radialDivergence 1 (fun y => w 0 y * w 2 y) q +
-    dtheta (fun y => w 1 y * w 2 y) q / radius q +
-    dz (fun y => w 2 y * w 2 y) q - laplacian (w 2) q + dz p q
 
 
 
@@ -263,20 +249,8 @@ theorem AngularContinuous.div_r {f : Scalar} (hf : AngularContinuous f) :
 
 
 
-noncomputable def reynoldsRadial (w : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (average (w 0)) q + radialDivergence 1 (average (fun y => w 0 y * w 0 y)) q +
-    dz (average (fun y => w 2 y * w 0 y)) q - average (fun y => w 1 y * w 1 y) q / radius q -
-    meanLaplacian (average (w 0)) q + average (w 0) q / radius q ^ 2 + dr (average p) q
 
-noncomputable def reynoldsAngular (w : Components) (q : SpaceTime) : ℝ :=
-  dt (average (w 1)) q + radialDivergence 2 (average (fun y => w 0 y * w 1 y)) q +
-    dz (average (fun y => w 2 y * w 1 y)) q - meanLaplacian (average (w 1)) q +
-    average (w 1) q / radius q ^ 2
 
-noncomputable def reynoldsAxial (w : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (average (w 2)) q + radialDivergence 1 (average (fun y => w 0 y * w 2 y)) q +
-    dz (average (fun y => w 2 y * w 2 y)) q - meanLaplacian (average (w 2)) q +
-    dz (average p) q
 
 
 
@@ -332,30 +306,13 @@ theorem covariance_symm (osc : Components) (i j : Fin 3) : covariance osc i j = 
 
 
 
-noncomputable def baseRadial (b : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (b 0) q + radialDivergence 1 (fun y => b 0 y * b 0 y) q +
-    dz (fun y => b 2 y * b 0 y) q - b 1 q * b 1 q / radius q -
-    meanLaplacian (b 0) q + b 0 q / radius q ^ 2 + dr p q
 
 noncomputable def baseAngular (b : Components) (q : SpaceTime) : ℝ :=
   dt (b 1) q + radialDivergence 2 (fun y => b 0 y * b 1 y) q +
     dz (fun y => b 2 y * b 1 y) q - meanLaplacian (b 1) q + b 1 q / radius q ^ 2
 
-noncomputable def baseAxial (b : Components) (p : Scalar) (q : SpaceTime) : ℝ :=
-  dt (b 2) q + radialDivergence 1 (fun y => b 0 y * b 2 y) q +
-    dz (fun y => b 2 y * b 2 y) q - meanLaplacian (b 2) q + dz p q
 
-/-- Physical version of `E_theta` in (32), with viscosity one. -/
-noncomputable def Etheta (b m o : Components) (Ttheta : Scalar) (q : SpaceTime) : ℝ :=
-  dt (m 1) q + radialDivergence 2 (fluxDifference b m o 0 1) q +
-    dz (fluxDifference b m o 2 1) q - meanLaplacian (m 1) q + m 1 q / radius q ^ 2 -
-    radialDivergence 2 Ttheta q
 
-/-- Physical version of `E_z` in (32), with viscosity one. -/
-noncomputable def Ez (b m o : Components) (pm Tz : Scalar) (q : SpaceTime) : ℝ :=
-  dt (m 2) q + radialDivergence 1 (fluxDifference b m o 0 2) q +
-    dz (fun y => fluxDifference b m o 2 2 y + pm y) q - meanLaplacian (m 2) q -
-    radialDivergence 1 Tz q
 
 /-- Required physical radial pressure derivative in (32). -/
 noncomputable def gr (b m o : Components) (q : SpaceTime) : ℝ :=
@@ -393,11 +350,6 @@ theorem Represents.components {u : VelocityField} {w : Components} (h : Represen
   change CylindricalResidual.frame (-(q.2 1)) (u (q.1, CylindricalResidual.chart q.2)) = velocity w q
   rw [h q, CylindricalResidual.frame_inverse]
 
-/-- Exact physical Cartesian residual resolved in the cylindrical frame. -/
-noncomputable def cartesianResidual (u : VelocityField) (p : PressureField)
-    (i : Fin 3) (q : SpaceTime) : ℝ :=
-  (CylindricalResidual.frame (-(q.2 1))
-    (navierStokesResidual u p q.1 (CylindricalResidual.chart q.2))) i
 
 
 

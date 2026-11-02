@@ -14,11 +14,11 @@ cannot depend on the Navier--Stokes material or conversely.
 \toprule
 library & \Lean{} files & lines & \lean{theorem}/\lean{lemma} \\
 \midrule
-\file{NavierStokes} & 571 & 344{,}743 & 20{,}636 \\
+\file{NavierStokes} & 504 & 341{,}110 & 20{,}554 \\
 \file{Euler} & 1{,}829 & 196{,}721 & 9{,}970 \\
 \file{ComparatorChallenges} & 2 & 472 & 9 \\
 \midrule
-total & 2{,}402 & 541{,}936 & 30{,}615 \\
+total & 2{,}335 & 538{,}303 & 30{,}533 \\
 \bottomrule
 \end{tabular}
 \caption{Size of the development after the dead-code removal of
@@ -31,14 +31,14 @@ any indentation, with or without an attribute. Both numbers are reproduced by
 \label{tab:scale}
 \end{table}
 
-The import graph is unusually \emph{flat}. On average a file imports 2.84 modules, of
-which 2.37 are project-local; 61 files import no project-local module at all (they sit
+The import graph is unusually \emph{flat}. On average a file imports 2.88 modules, of
+which 2.39 are project-local; 59 files import no project-local module at all (they sit
 directly on \Mathlib); the longest chain of project-local imports is 96 modules; and only
-49 modules are imported by eight or more others. The largest single files are
+48 modules are imported by eight or more others. The largest single files are
 \file{Euler/EulerProof.lean} (20{,}751 lines), \file{NavierStokes/CorrectionStep.lean}
-(7{,}812), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
-\file{NavierStokes/InitialPhysicalData.lean} (2{,}896); everything else is under 2{,}900
-lines, ninety-one per cent of them are under 600 lines, and the median file is 105
+(8{,}339), \file{NavierStokes/CorrectionInitialization.lean} (4{,}934) and
+\file{NavierStokes/BaseResidual.lean} (3{,}009); everything else is under 3{,}000
+lines, ninety per cent of them are under 600 lines, and the median file is 103
 lines long.
 
 This shape is a consequence of how the development was produced and is worth commenting
@@ -304,3 +304,49 @@ member of the same class. No statement text changed.
 Section~\ref{sec:obstacles} explains why it was not attempted: with two modules failing and
 1{,}795 never attempted, there is nothing to check a moved Euler module against. A
 refactoring that cannot be type-checked is not a refactoring.
+
+\subsection{Where the reduction stops, and why}
+\label{sec:floor}
+
+The pruning of Section~\ref{sec:unused} was extended from theorems to
+\lean{def}/\lean{abbrev}: 547 more declarations, 3{,}693 lines, again with the build as
+the gate. It went further than the theorem pass because a definition is often the only
+thing that keeps another definition alive, so the fixed point is deeper. \lean{instance}
+is deliberately excluded --- an instance is found by typeclass search, not by its name, so
+a name count cannot see its uses --- and so are \lean{structure}, \lean{class} and
+\lean{inductive}, for the same reason about their projections and recursors.
+
+What remained after that is worth stating as a measurement, because it is the answer to
+``can this be reduced further by mechanical means''.
+
+\emph{There is no repeated proof text.} Scanning every \file{NavierStokes} file for runs of
+five or more identical proof lines (indentation stripped, comment and blank lines skipped)
+that occur three times or more gives, in \file{CorrectionStep.lean} --- 8{,}339 lines ---
+\emph{ten} such lines, and in \file{CorrectionInitialization.lean} fifty. The 19{,}000 lines
+that a naive repeated-window scan reports are repeated \emph{hypothesis blocks}, not repeated
+proofs: the same six lines of binders open hundreds of theorems. Factoring those is a
+redesign of each file's interface (a structure in place of a binder list), not an edit, and
+it would change every statement it touches.
+
+\emph{There is no expendable module.} A module whose every declaration is referenced only
+inside that module can be deleted together with the import that names it; iterating that
+criterion over \file{NavierStokes} leaves \emph{zero} modules. Every file exports something
+another file uses.
+
+\emph{There is no library material left.} Section~\ref{sec:replace} records the four
+statement-level duplicates with \Mathlib{} and \TauCeti{} that the whole-library probe finds,
+and all four are now either replaced or deliberately kept. Near-duplicate files were searched
+for too --- identical text after dropping comments, and declaration-name overlap above 50\%.
+The one pair that overlaps (68 shared names between \file{HeatedOutgoing} and
+\file{ExtendedHeatedOutgoing}) is not a copy: the second imports the first and solves the
+same coefficients for the extended debts.
+
+So the remaining 341{,}110 lines are proof. That is not a claim that they are \emph{good}
+lines --- the largest file is 8{,}339 lines and a reader would be better served if the
+repeated hypothesis blocks were structures --- but it is a claim that no mechanical
+deletion, merge or substitution finds anything more. For the record, \file{NavierStokes}
+went from 404{,}716 lines in 753 files to 341{,}110 in 504 by four means: 74 unreachable
+modules (26{,}089 lines, in the migration commit), 6{,}330 unreachable
+\lean{theorem}/\lean{lemma} declarations, 547 further declarations of which most are
+definitions (3{,}693 lines), 208 lines of library substitution, and 249 modules folded into
+the single file that imported them.

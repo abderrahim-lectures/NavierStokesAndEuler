@@ -502,14 +502,6 @@ theorem nonlinearCoefficients_wave_class {s : StripData D} {κ α β : ℝ} {P :
     (min_le_left _ _)).add ((square_wave_class c ho hR a hb hb0 hN hΦ hk hdb hP0 hP1 j i).mono_exponent
       (min_le_right _ _))
 
-noncomputable def nonlinearErrorBlock (c : CorrectionState.Context D)
-    (a b : CorrectionState.HarmonicBlock D) : CorrectionState.HarmonicBlock D where
-  velocity := fun n i => HarmonicResidual.nonconstant
-    (HarmonicResidual.realCoefficients (nonlinearCoefficients c a b n i))
-  pressure := fun _ => 0
-  frequency := a.frequency
-  phase := a.phase
-  angularFrequency := a.angularFrequency
 
 
 

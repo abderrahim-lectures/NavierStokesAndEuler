@@ -1,10 +1,12 @@
 import NavierStokes.R3.ComparisonCutoffs
 import NavierStokes.R3.ComparisonFiniteEnergy
 import NavierStokes.R3.ComparisonGronwall
-import NavierStokes.R3.LocalizedDifferenceEnergy
+import NavierStokes.R3.CompactEnergy
+import NavierStokes.R3.ComparisonSetup
+import NavierStokes.R3.LocalizedTransport
 import Mathlib.MeasureTheory.Integral.DominatedConvergence
 import Mathlib.MeasureTheory.Measure.OpenPos
-import NavierStokes.R3.LocalizedFluxEstimates
+import NavierStokes.R3.WeightedSobolev
 import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
@@ -17,6 +19,562 @@ This module isolates the final PDE energy calculation. Its explicit pressure
 flux hypothesis is discharged by the pressure reconstruction modules in the
 whole-space uniqueness theorem; it is not a competitor hypothesis.
 -/
+/-! Merged from `NavierStokes.R3.LocalizedDifferenceEnergy` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# The compactly weighted difference-energy identity on R³
+
+The cutoff alone has compact support. Both velocities and both pressures may
+be arbitrary smooth fields on the time slab. Every integral below is an
+ordinary Lebesgue volume integral on Euclidean three-space.
+-/
+/-! Merged from `NavierStokes.R3.LocalizedLaplacian`. -/
+/-!
+# The Laplacian in a compactly weighted energy identity
+
+All integrals are ordinary volume integrals on Euclidean three-space. The
+weight is smooth and compactly supported; the vector field is smooth but is
+not required to have compact support or globally integrable derivatives.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped BigOperators ContDiff InnerProductSpace
+
+namespace NavierStokesR3.LocalizedDifferenceEnergy
+
+open NavierStokes.ProblemStatement
+open NavierStokes.PeriodicIntegration (spatialPartial)
+open NavierStokes.PeriodicUniqueness
+
+
+private theorem laplacian_partial_smul {χ : Space → ℝ} {w : Space → Space}
+    (hχ : ContDiff ℝ ∞ χ) (hw : ContDiff ℝ ∞ w) (i : Fin 3) (x : Space) :
+    spatialPartial i (fun y => χ y • w y) x =
+      χ x • spatialPartial i w x + spatialPartial i χ x • w x := by
+  unfold spatialPartial
+  rw [fderiv_fun_smul (hχ.differentiable (by simp) x)
+    (hw.differentiable (by simp) x)]
+  rfl
+
+theorem laplacian_integrable_weighted_partial_sq {χ : Space → ℝ} {w : Space → Space}
+    (hχ : Continuous χ) (hw : ContDiff ℝ ∞ w) (hcχ : HasCompactSupport χ)
+    (i : Fin 3) :
+    Integrable (fun x => χ x * ‖spatialPartial i w x‖ ^ 2) :=
+  (hχ.mul ((spatial_partial_contDiff hw i).continuous.norm.pow 2)).integrable_of_hasCompactSupport
+    hcχ.mul_right
+
+
+theorem laplacian_integrable_cutoff_second_partial {χ : Space → ℝ} {w : Space → Space}
+    (hχ : ContDiff ℝ ∞ χ) (hw : Continuous w) (hcχ : HasCompactSupport χ)
+    (i : Fin 3) :
+    Integrable (fun x => ‖w x‖ ^ 2 * spatialPartial i (spatialPartial i χ) x) :=
+  ((hw.norm.pow 2).mul
+    (spatial_partial_contDiff (spatial_partial_contDiff hχ i) i).continuous).integrable_of_hasCompactSupport
+    (CompactEnergy.compact_partial (CompactEnergy.compact_partial hcχ i) i).mul_left
+
+
+
+/-- The one-coordinate weighted integration-by-parts identity. -/
+theorem integral_weighted_second_partial {χ : Space → ℝ} {w : Space → Space}
+    (hχ : ContDiff ℝ ∞ χ) (hw : ContDiff ℝ ∞ w) (hcχ : HasCompactSupport χ)
+    (i : Fin 3) :
+    (∫ x, χ x * ⟪w x, spatialPartial i (spatialPartial i w) x⟫_ℝ) =
+      -(∫ x, χ x * ‖spatialPartial i w x‖ ^ 2) +
+        (1 / 2 : ℝ) * ∫ x, ‖w x‖ ^ 2 * spatialPartial i (spatialPartial i χ) x := by
+  have hdw : ContDiff ℝ ∞ (spatialPartial i w) := spatial_partial_contDiff hw i
+  have hdχ : ContDiff ℝ ∞ (spatialPartial i χ) := spatial_partial_contDiff hχ i
+  have hi_cross : Integrable (fun x =>
+      spatialPartial i χ x * ⟪w x, spatialPartial i w x⟫_ℝ) :=
+    (hdχ.continuous.mul (hw.continuous.inner hdw.continuous)).integrable_of_hasCompactSupport
+      (CompactEnergy.compact_partial hcχ i).mul_right
+  have hi_grad := laplacian_integrable_weighted_partial_sq hχ.continuous hw hcχ i
+  have hfirst := CompactEnergy.integral_inner_partial (hχ.smul hw) hdw hcχ.smul_right i
+  have hfirst_rhs : (fun x =>
+      ⟪spatialPartial i (fun y => χ y • w y) x, spatialPartial i w x⟫_ℝ) =
+      (fun x => χ x * ‖spatialPartial i w x‖ ^ 2 +
+        spatialPartial i χ x * ⟪w x, spatialPartial i w x⟫_ℝ) := by
+    funext x
+    rw [laplacian_partial_smul hχ hw i x, inner_add_left]
+    simp only [real_inner_smul_left, real_inner_self_eq_norm_sq]
+  change (∫ x, ⟪χ x • w x, spatialPartial i (spatialPartial i w) x⟫_ℝ) = -(∫ x, ⟪spatialPartial i (fun y => χ y • w y) x, spatialPartial i w x⟫_ℝ) at hfirst
+  simp only [real_inner_smul_left] at hfirst
+  rw [hfirst_rhs, integral_add hi_grad hi_cross] at hfirst
+  have hsecond := CompactEnergy.integral_mul_partial hdχ (hw.norm_sq ℝ)
+    (CompactEnergy.compact_partial hcχ i) i
+  have hsecond_lhs : (fun x =>
+      spatialPartial i χ x * spatialPartial i (fun y => ‖w y‖ ^ 2) x) =
+      (fun x => 2 * (spatialPartial i χ x * ⟪w x, spatialPartial i w x⟫_ℝ)) := by
+    funext x
+    change spatialPartial i χ x * fderiv ℝ (fun y => ‖w y‖ ^ 2) x (coordinateVector i) = _
+    rw [fderiv_normsq hw]
+    dsimp only [spatialPartial]
+    ring
+  rw [hsecond_lhs, integral_const_mul] at hsecond
+  linarith
+
+/-- Compactly weighted Laplacian energy identity for an arbitrary smooth
+spatial vector field. No global integrability assumption on the vector field
+or its derivatives is needed. -/
+theorem integral_weighted_laplacian {χ : Space → ℝ} {w : Space → Space}
+    (hχ : ContDiff ℝ ∞ χ) (hw : ContDiff ℝ ∞ w) (hcχ : HasCompactSupport χ) :
+    (∫ x, χ x * ⟪w x, ∑ i : Fin 3, spatialPartial i (spatialPartial i w) x⟫_ℝ) =
+      -(∫ x, χ x * ∑ i : Fin 3, ‖spatialPartial i w x‖ ^ 2) +
+        (1 / 2 : ℝ) * ∫ x, ‖w x‖ ^ 2 *
+          ∑ i : Fin 3, spatialPartial i (spatialPartial i χ) x := by
+  have hi_left (i : Fin 3) : Integrable (fun x =>
+      χ x * ⟪w x, spatialPartial i (spatialPartial i w) x⟫_ℝ) :=
+    (hχ.continuous.mul (hw.continuous.inner
+      (spatial_partial_contDiff (spatial_partial_contDiff hw i) i).continuous)).integrable_of_hasCompactSupport
+      hcχ.mul_right
+  simp only [inner_sum, Finset.mul_sum]
+  rw [integral_finsetSum _ (fun i _ => hi_left i),
+    integral_finsetSum _ (fun i _ => laplacian_integrable_weighted_partial_sq hχ.continuous hw hcχ i),
+    integral_finsetSum _ (fun i _ => laplacian_integrable_cutoff_second_partial hχ hw.continuous hcχ i)]
+  simp_rw [integral_weighted_second_partial hχ hw hcχ]
+  rw [Finset.sum_add_distrib, Finset.sum_neg_distrib, ← Finset.mul_sum]
+
+/-- The same identity in the velocity-field notation used by Navier--Stokes. -/
+theorem integral_weighted_spatialLaplacian {χ : Space → ℝ} {w : VelocityField} {t : ℝ}
+    (hχ : ContDiff ℝ ∞ χ) (hw : ContDiff ℝ ∞ (fun x => w (t, x)))
+    (hcχ : HasCompactSupport χ) :
+    (∫ x, χ x * ⟪w (t, x), spatialLaplacian w t x⟫_ℝ) =
+      -(∫ x, χ x * ∑ i : Fin 3, ‖spatialPartial i (fun y => w (t, y)) x‖ ^ 2) +
+        (1 / 2 : ℝ) * ∫ x, ‖w (t, x)‖ ^ 2 *
+          ∑ i : Fin 3, spatialPartial i (spatialPartial i χ) x := by
+  exact integral_weighted_laplacian hχ hw hcχ
+
+end NavierStokesR3.LocalizedDifferenceEnergy
+
+
+
+noncomputable section
+
+open Set Filter MeasureTheory
+open scoped Topology BigOperators ContDiff InnerProductSpace
+
+namespace NavierStokesR3.LocalizedDifferenceEnergy
+
+open NavierStokes.ProblemStatement
+open NavierStokes.PeriodicIntegration (spatialPartial)
+open NavierStokes.PeriodicUniqueness
+open Comparison (weightedEnergy weightedEnergyRate weightedDissipation gradientSq)
+
+private theorem nat_le_infty (n : ℕ) : (n : WithTop ℕ∞) ≤ ∞ :=
+  (ENat.natCast_lt_of_coe_top_le_withTop le_rfl n).le
+
+private theorem infty_add_one_le : (∞ : WithTop ℕ∞) + 1 ≤ ∞ := by
+  simpa only [ENat.coe_top_add_one] using (le_rfl : (∞ : WithTop ℕ∞) ≤ ∞)
+
+/-- A continuous factor needs no decay when multiplied by the compact cutoff. -/
+theorem integrable_cutoff_mul {χ f : Space → ℝ}
+    (hχ : Continuous χ) (hcχ : HasCompactSupport χ) (hf : Continuous f) :
+    Integrable (fun x => χ x * f x) :=
+  (hχ.mul hf).integrable_of_hasCompactSupport hcχ.mul_right
+
+theorem integrable_weighted_energy {χ : Space → ℝ} {w : VelocityField} {t : ℝ}
+    (hχ : Continuous χ) (hcχ : HasCompactSupport χ)
+    (hw : Continuous (fun x : Space => w (t, x))) :
+    Integrable (fun x : Space => χ x * ‖w (t, x)‖ ^ 2) :=
+  integrable_cutoff_mul hχ hcχ (hw.norm.pow 2)
+
+
+
+theorem weightedDissipation_nonneg {χ : Space → ℝ} (hχ : ∀ x, 0 ≤ χ x)
+    (w : VelocityField) (t : ℝ) : 0 ≤ weightedDissipation χ w t :=
+  integral_nonneg (fun x => mul_nonneg (hχ x)
+    (Finset.sum_nonneg (fun _ _ => sq_nonneg _)))
+
+/-- Energy is continuous on the closed slab, including its initial time. -/
+theorem weightedEnergy_continuousOn {a b : ℝ} {χ : Space → ℝ} {w : VelocityField}
+    (hχ : Continuous χ) (hcχ : HasCompactSupport χ)
+    (hw : ContDiffOn ℝ ∞ w (Comparison.slab a b)) :
+    ContinuousOn (weightedEnergy χ w) (Icc a b) := by
+  have hF : ContinuousOn (fun z : SpaceTime => χ z.2 * ‖w z‖ ^ 2)
+      (Icc a b ×ˢ univ) :=
+    (hχ.comp continuous_snd).continuousOn.mul (hw.continuousOn.norm.pow 2)
+  apply CompactTimeIntegral.continuousOn_integral hcχ hF
+  intro t ht x hx
+  rw [image_eq_zero_of_notMem_tsupport hx, zero_mul]
+
+/-- Joint smoothness and the cutoff justify differentiation under the integral. -/
+theorem weightedEnergy_hasDerivAt {a b t : ℝ} {χ : Space → ℝ} {w : VelocityField}
+    (hχ : ContDiff ℝ ∞ χ) (hcχ : HasCompactSupport χ)
+    (hw : ContDiffOn ℝ ∞ w (Comparison.slab a b)) (ht : t ∈ Ioo a b) :
+    HasDerivAt (weightedEnergy χ w) (weightedEnergyRate χ w t) t := by
+  have hF : ContDiffOn ℝ 1 (fun z : SpaceTime => χ z.2 * ‖w z‖ ^ 2)
+      (Icc a b ×ˢ univ) :=
+    (((hχ.comp contDiff_snd).contDiffOn).mul (hw.norm_sq ℝ)).of_le (nat_le_infty 1)
+  refine CompactTimeIntegral.hasDerivAt_integral_of_contDiffOn_of_hasDerivAt hcχ hF ?_ ht ?_
+  · intro r hr x hx
+    rw [image_eq_zero_of_notMem_tsupport hx, zero_mul]
+  · intro x
+    exact (energy_density_derivative (time_differentiable_at_interior hw ht x)).const_mul (χ x)
+
+
+/-- The localized balance follows from equality of the actual Navier--Stokes
+residuals. No integrability or support condition is imposed on either velocity. -/
+theorem difference_energy_balance {χ : Space → ℝ} {u v : VelocityField}
+    {p q : PressureField} {t : ℝ}
+    (hχ : ContDiff ℝ ∞ χ) (hcχ : HasCompactSupport χ)
+    (hu : ContDiff ℝ ∞ (fun x : Space => u (t, x)))
+    (hv : ContDiff ℝ ∞ (fun x : Space => v (t, x)))
+    (hp : ContDiff ℝ ∞ (fun x : Space => p (t, x)))
+    (hq : ContDiff ℝ ∞ (fun x : Space => q (t, x)))
+    (htu : ∀ x : Space, DifferentiableAt ℝ (fun r => u (r, x)) t)
+    (htv : ∀ x : Space, DifferentiableAt ℝ (fun r => v (r, x)) t)
+    (hdivu : ∀ x : Space, spatialDivergence u t x = 0)
+    (hdivv : ∀ x : Space, spatialDivergence v t x = 0)
+    (hNS : ∀ x : Space, ProblemStatement.navierStokesResidual 1 u p t x =
+      ProblemStatement.navierStokesResidual 1 v q t x) :
+    (1 / 2 : ℝ) * weightedEnergyRate χ (u - v) t + weightedDissipation χ (u - v) t =
+      -(∫ x : Space, χ x * ⟪(u - v) (t, x), spatialDerivative u t x ((u - v) (t, x))⟫_ℝ) +
+      (1 / 2 : ℝ) * (∫ x : Space, ‖(u - v) (t, x)‖ ^ 2 *
+        ∑ i : Fin 3, spatialPartial i (spatialPartial i χ) x) +
+      (1 / 2 : ℝ) * (∫ x : Space, ‖(u - v) (t, x)‖ ^ 2 *
+        fderiv ℝ χ x (v (t, x))) +
+      ∫ x : Space, (p - q) (t, x) * fderiv ℝ χ x ((u - v) (t, x)) := by
+  have hw : ContDiff ℝ ∞ (fun x : Space => (u - v) (t, x)) := hu.sub hv
+  have hπ : ContDiff ℝ ∞ (fun x : Space => (p - q) (t, x)) := hp.sub hq
+  have hdivw : ∀ x : Space, spatialDivergence (u - v) t x = 0 := by
+    intro x
+    rw [spatialDivergence_sub hu hv, hdivu x, hdivv x, sub_self]
+  have hiL : Integrable (fun x : Space =>
+      χ x * ⟪(u - v) (t, x), spatialLaplacian (u - v) t x⟫_ℝ) :=
+    integrable_cutoff_mul hχ.continuous hcχ (hw.inner ℝ (spatialLaplacian_contDiff hw)).continuous
+  have hiC : Integrable (fun x : Space =>
+      χ x * ⟪(u - v) (t, x), spatialDerivative u t x ((u - v) (t, x))⟫_ℝ) :=
+    integrable_cutoff_mul hχ.continuous hcχ
+      (hw.inner ℝ ((hu.fderiv_right infty_add_one_le).clm_apply hw)).continuous
+  have hiT : Integrable (fun x : Space =>
+      χ x * ⟪(u - v) (t, x), spatialDerivative (u - v) t x (v (t, x))⟫_ℝ) :=
+    integrable_cutoff_mul hχ.continuous hcχ
+      (hw.inner ℝ ((hw.fderiv_right infty_add_one_le).clm_apply hv)).continuous
+  have hiP : Integrable (fun x : Space =>
+      χ x * ⟪(u - v) (t, x), pressureGradient (p - q) t x⟫_ℝ) :=
+    integrable_cutoff_mul hχ.continuous hcχ (hw.inner ℝ (pressureGradient_contDiff hπ)).continuous
+  have hiLC : Integrable (fun x : Space =>
+      χ x * ⟪(u - v) (t, x), spatialLaplacian (u - v) t x⟫_ℝ -
+      χ x * ⟪(u - v) (t, x), spatialDerivative u t x ((u - v) (t, x))⟫_ℝ) :=
+    hiL.sub hiC
+  have hiLCT : Integrable (fun x : Space =>
+      χ x * ⟪(u - v) (t, x), spatialLaplacian (u - v) t x⟫_ℝ -
+      χ x * ⟪(u - v) (t, x), spatialDerivative u t x ((u - v) (t, x))⟫_ℝ -
+      χ x * ⟪(u - v) (t, x), spatialDerivative (u - v) t x (v (t, x))⟫_ℝ) :=
+    hiLC.sub hiT
+  have hEq : (fun x : Space => χ x *
+      (2 * ⟪(u - v) (t, x), temporalDerivative (u - v) t x⟫_ℝ)) =
+      (fun x : Space => 2 * (
+        χ x * ⟪(u - v) (t, x), spatialLaplacian (u - v) t x⟫_ℝ -
+        χ x * ⟪(u - v) (t, x), spatialDerivative u t x ((u - v) (t, x))⟫_ℝ -
+        χ x * ⟪(u - v) (t, x), spatialDerivative (u - v) t x (v (t, x))⟫_ℝ -
+        χ x * ⟪(u - v) (t, x), pressureGradient (p - q) t x⟫_ℝ)) := by
+    funext x
+    rw [difference_equation hu hv hp hq (htu x) (htv x) (by simpa using hNS x)]
+    simp only [inner_sub_right]
+    ring
+  have hRate : weightedEnergyRate χ (u - v) t = 2 * (
+      (∫ x : Space, χ x * ⟪(u - v) (t, x), spatialLaplacian (u - v) t x⟫_ℝ) -
+      (∫ x : Space, χ x * ⟪(u - v) (t, x), spatialDerivative u t x ((u - v) (t, x))⟫_ℝ) -
+      (∫ x : Space, χ x * ⟪(u - v) (t, x), spatialDerivative (u - v) t x (v (t, x))⟫_ℝ) -
+      ∫ x : Space, χ x * ⟪(u - v) (t, x), pressureGradient (p - q) t x⟫_ℝ) := by
+    unfold weightedEnergyRate
+    rw [hEq, integral_const_mul, integral_sub hiLCT hiP,
+      integral_sub hiLC hiT, integral_sub hiL hiC]
+  have hL := integral_weighted_spatialLaplacian hχ hw hcχ
+  have hT := integral_weighted_transport hχ hw hv hcχ hdivv
+  have hP : (∫ x : Space, χ x *
+      ⟪(u - v) (t, x), pressureGradient (p - q) t x⟫_ℝ) =
+      -(∫ x : Space, (p - q) (t, x) * fderiv ℝ χ x ((u - v) (t, x))) := by
+    simp_rw [inner_pressureGradient]
+    exact integral_weighted_pressure hχ hπ hw hcχ hdivw
+  change (∫ x : Space, χ x *
+    ⟪(u - v) (t, x), spatialLaplacian (u - v) t x⟫_ℝ) =
+      -weightedDissipation χ (u - v) t +
+      (1 / 2 : ℝ) * (∫ x : Space, ‖(u - v) (t, x)‖ ^ 2 *
+        ∑ i : Fin 3, spatialPartial i (spatialPartial i χ) x) at hL
+  change (∫ x : Space, χ x *
+    ⟪(u - v) (t, x), spatialDerivative (u - v) t x (v (t, x))⟫_ℝ) =
+      -(1 / 2 : ℝ) * (∫ x : Space, ‖(u - v) (t, x)‖ ^ 2 *
+        fderiv ℝ χ x (v (t, x))) at hT
+  rw [hL, hT, hP] at hRate
+  rw [hRate]
+  ring
+
+
+end NavierStokesR3.LocalizedDifferenceEnergy
+end
+
+/-! Merged from `NavierStokes.R3.LocalizedFluxEstimates` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Non-pressure terms in the localized difference energy balance
+
+The velocity difference need not have compact support or globally integrable
+derivatives. The compact cutoff supplies local integrability; the estimates
+use its weighted `L⁶` norm and the unweighted `L²` norm of the difference.
+-/
+
+
+noncomputable section
+
+open Set Filter MeasureTheory
+open scoped ContDiff BigOperators InnerProductSpace
+
+namespace NavierStokesR3.LocalizedFluxEstimates
+
+open ProblemStatement Comparison
+open NavierStokes.ProblemStatement (spatialDerivative coordinateVector)
+open NavierStokes.PeriodicIntegration (spatialPartial)
+
+/-- The cutoff makes the coupling integral finite. -/
+theorem coupling_integrable {χ : Space → ℝ} {u w : VelocityField} {t : ℝ}
+    (hχ : Continuous χ) (hs : HasCompactSupport χ)
+    (hu : ContDiff ℝ 1 (fun x => u (t, x)))
+    (hw : Continuous (fun x => w (t, x))) :
+    Integrable (fun x => χ x *
+      ⟪w (t, x), spatialDerivative u t x (w (t, x))⟫_ℝ) volume := by
+  apply LocalizedDifferenceEnergy.integrable_cutoff_mul hχ hs
+  exact hw.inner ((hu.continuous_fderiv (by simp)).clm_apply hw)
+
+/-- The indefinite coupling is controlled by the gradient of the reference
+velocity and the actual compactly weighted energy. -/
+theorem neg_coupling_le_weightedEnergy {χ : Space → ℝ} {u w : VelocityField} {t G : ℝ}
+    (hχ : Continuous χ) (hs : HasCompactSupport χ) (hχ0 : ∀ x, 0 ≤ χ x)
+    (hu : ContDiff ℝ 1 (fun x => u (t, x)))
+    (hw : Continuous (fun x => w (t, x)))
+    (hG : ∀ x, ‖spatialDerivative u t x‖ ≤ G) :
+    -(∫ x, χ x * ⟪w (t, x), spatialDerivative u t x (w (t, x))⟫_ℝ) ≤
+      G * weightedEnergy χ w t := by
+  have hi := coupling_integrable hχ hs hu hw
+  have he := LocalizedDifferenceEnergy.integrable_weighted_energy hχ hs hw
+  rw [← integral_neg]
+  change (∫ x, -(χ x * ⟪w (t, x), spatialDerivative u t x (w (t, x))⟫_ℝ)) ≤
+    G * (∫ x, χ x * ‖w (t, x)‖ ^ 2)
+  rw [← integral_const_mul]
+  apply integral_mono hi.neg (he.const_mul G)
+  intro x
+  change -(χ x * ⟪w (t, x), spatialDerivative u t x (w (t, x))⟫_ℝ) ≤
+    G * (χ x * ‖w (t, x)‖ ^ 2)
+  have h := NavierStokes.PeriodicUniqueness.nonlinear_energy_bound
+    (spatialDerivative u t x) (w (t, x)) (hG x)
+  nlinarith [mul_le_mul_of_nonneg_left h (hχ0 x)]
+
+/-- Derivative of the energy weight. -/
+theorem fderiv_cutoff_eight {φ : Space → ℝ} {x : Space}
+    (hφ : DifferentiableAt ℝ φ x) :
+    fderiv ℝ (fun y => φ y ^ 8) x = (8 * φ x ^ 7) • fderiv ℝ φ x := by
+  simpa only [Function.comp_def, Nat.cast_ofNat, Nat.reduceSub] using
+    ((hasDerivAt_pow 8 (φ x)).comp_hasFDerivAt x hφ.hasFDerivAt).fderiv
+
+/-- One power of the cutoff is harmless because it lies in `[0,1]`. -/
+theorem norm_fderiv_cutoff_eight_apply_le {φ : Space → ℝ} {x : Space}
+    (hφ : DifferentiableAt ℝ φ x) (hφ0 : 0 ≤ φ x) (hφ1 : φ x ≤ 1)
+    {L : ℝ} (hL0 : 0 ≤ L) (hL : ‖fderiv ℝ φ x‖ ≤ L) (z : Space) :
+    ‖fderiv ℝ (fun y => φ y ^ 8) x z‖ ≤ (8 * L) * φ x ^ 6 * ‖z‖ := by
+  have h76 : φ x ^ 7 ≤ φ x ^ 6 := by
+    calc
+      φ x ^ 7 = φ x ^ 6 * φ x := by ring
+      _ ≤ φ x ^ 6 * 1 := mul_le_mul_of_nonneg_left hφ1 (pow_nonneg hφ0 6)
+      _ = φ x ^ 6 := mul_one _
+  have hd : ‖fderiv ℝ φ x z‖ ≤ L * ‖z‖ :=
+    ((fderiv ℝ φ x).le_opNorm z).trans
+      (mul_le_mul_of_nonneg_right hL (norm_nonneg z))
+  rw [fderiv_cutoff_eight hφ, _root_.smul_apply, smul_eq_mul,
+    norm_mul, Real.norm_eq_abs, abs_of_nonneg (by positivity : 0 ≤ 8 * φ x ^ 7)]
+  calc
+    (8 * φ x ^ 7) * ‖fderiv ℝ φ x z‖ ≤ (8 * φ x ^ 7) * (L * ‖z‖) :=
+      mul_le_mul_of_nonneg_left hd (by positivity)
+    _ = φ x ^ 7 * ((8 * L) * ‖z‖) := by ring
+    _ ≤ φ x ^ 6 * ((8 * L) * ‖z‖) :=
+      mul_le_mul_of_nonneg_right h76 (by positivity)
+    _ = (8 * L) * φ x ^ 6 * ‖z‖ := by ring
+
+/-- The reference velocity vanishes in the cutoff derivative, leaving only
+the difference velocity in the transport flux. -/
+theorem transport_flux_bound {φ : Space → ℝ} {u v : VelocityField} {t : ℝ}
+    (hφ : ContDiff ℝ 1 φ) (hs : HasCompactSupport φ)
+    (hu : Continuous (fun x => u (t, x))) (hv : Continuous (fun x => v (t, x)))
+    (hw2 : MemLp (fun x => (u - v) (t, x)) 2 volume)
+    (hφ0 : ∀ x, 0 ≤ φ x) (hφ1 : ∀ x, φ x ≤ 1)
+    {L : ℝ} (hL0 : 0 ≤ L) (hL : ∀ x, ‖fderiv ℝ φ x‖ ≤ L)
+    (hvanish : ∀ x, fderiv ℝ (fun y => φ y ^ 8) x (u (t, x)) = 0) :
+    Integrable (fun x => ‖(u - v) (t, x)‖ ^ 2 *
+      fderiv ℝ (fun y => φ y ^ 8) x (v (t, x))) volume ∧
+    |∫ x, ‖(u - v) (t, x)‖ ^ 2 * fderiv ℝ (fun y => φ y ^ 8) x (v (t, x))| ≤
+      (8 * L) * comparisonLpNorm 2 (fun x => (u - v) (t, x)) ^ (3 / 2 : ℝ) *
+        cutoffL6 φ (u - v) t ^ (3 / 2 : ℝ) := by
+  have hw : Continuous (fun x => (u - v) (t, x)) := hu.sub hv
+  have hweighted := WeightedSobolev.memLp_cutoff_pow_smul hφ.continuous hs hw
+    (by norm_num : (4 : ℕ) ≠ 0) 6
+  obtain ⟨hT, hTb⟩ := WeightedInterpolation.cutoff_transport_bound
+    hφ.continuous.aestronglyMeasurable hφ0 hw2 hweighted
+  have hswitch (x : Space) : fderiv ℝ (fun y => φ y ^ 8) x (v (t, x)) =
+      -fderiv ℝ (fun y => φ y ^ 8) x ((u - v) (t, x)) := by
+    simp only [Pi.sub_apply, map_sub, hvanish x, zero_sub, neg_neg]
+  have hbound (x : Space) :
+      ‖‖(u - v) (t, x)‖ ^ 2 * fderiv ℝ (fun y => φ y ^ 8) x (v (t, x))‖ ≤
+        (8 * L) * (φ x ^ 6 * ‖(u - v) (t, x)‖ ^ 3) := by
+    rw [norm_mul, norm_pow, norm_norm, hswitch, norm_neg]
+    calc
+      ‖(u - v) (t, x)‖ ^ 2 *
+          ‖fderiv ℝ (fun y => φ y ^ 8) x ((u - v) (t, x))‖ ≤
+          ‖(u - v) (t, x)‖ ^ 2 * ((8 * L) * φ x ^ 6 * ‖(u - v) (t, x)‖) :=
+        mul_le_mul_of_nonneg_left
+          (norm_fderiv_cutoff_eight_apply_le (hφ.differentiable (by simp) x)
+            (hφ0 x) (hφ1 x) hL0 (hL x) _) (sq_nonneg _)
+      _ = _ := by ring
+  have hmajor := hT.const_mul (8 * L)
+  have hflux : Continuous (fun x => ‖(u - v) (t, x)‖ ^ 2 *
+      fderiv ℝ (fun y => φ y ^ 8) x (v (t, x))) :=
+    (hw.norm.pow 2).mul (((hφ.pow 8).continuous_fderiv (by simp)).clm_apply hv)
+  refine ⟨hmajor.mono' hflux.aestronglyMeasurable (Eventually.of_forall hbound), ?_⟩
+  calc
+    |∫ x, ‖(u - v) (t, x)‖ ^ 2 * fderiv ℝ (fun y => φ y ^ 8) x (v (t, x))| ≤
+        ∫ x, (8 * L) * (φ x ^ 6 * ‖(u - v) (t, x)‖ ^ 3) :=
+      norm_integral_le_of_norm_le hmajor (Eventually.of_forall hbound)
+    _ = (8 * L) * (∫ x, φ x ^ 6 * ‖(u - v) (t, x)‖ ^ 3) := integral_const_mul _ _
+    _ ≤ (8 * L) * (comparisonLpNorm 2 (fun x => (u - v) (t, x)) ^ (3 / 2 : ℝ) *
+        cutoffL6 φ (u - v) t ^ (3 / 2 : ℝ)) :=
+      mul_le_mul_of_nonneg_left hTb (by positivity)
+    _ = _ := by ring
+
+theorem continuous_laplacian {χ : Space → ℝ} (hχ : ContDiff ℝ ∞ χ) :
+    Continuous (ComparisonCutoffs.laplacian χ) := by
+  unfold ComparisonCutoffs.laplacian
+  exact continuous_finsetSum _ fun i _ =>
+    (NavierStokes.PeriodicUniqueness.spatial_partial_contDiff
+      (NavierStokes.PeriodicUniqueness.spatial_partial_contDiff hχ i) i).continuous
+
+/-- A bounded Laplacian can be paired with any square-integrable field. -/
+theorem laplacian_flux_bound {χ : Space → ℝ} {w : Space → Space}
+    (hχ : ContDiff ℝ ∞ χ) (hw2 : MemLp w 2 volume) {K : ℝ}
+    (hK : ∀ x, ‖ComparisonCutoffs.laplacian χ x‖ ≤ K) :
+    Integrable (fun x => ‖w x‖ ^ 2 * ComparisonCutoffs.laplacian χ x) volume ∧
+      |∫ x, ‖w x‖ ^ 2 * ComparisonCutoffs.laplacian χ x| ≤ K * comparisonLpNorm 2 w ^ 2 := by
+  have hsquare : Integrable (fun x => ‖w x‖ ^ 2) volume :=
+    (memLp_two_iff_integrable_sq_norm hw2.aestronglyMeasurable).mp hw2
+  have hmajor := hsquare.const_mul K
+  have hbound (x : Space) : ‖‖w x‖ ^ 2 * ComparisonCutoffs.laplacian χ x‖ ≤
+      K * ‖w x‖ ^ 2 := by
+    rw [norm_mul, norm_pow, norm_norm]
+    exact (mul_le_mul_of_nonneg_left (hK x) (sq_nonneg _)).trans_eq (mul_comm _ _)
+  have hmeas : AEStronglyMeasurable
+      (fun x => ‖w x‖ ^ 2 * ComparisonCutoffs.laplacian χ x) volume :=
+    (hw2.aestronglyMeasurable.norm.pow 2).mul (continuous_laplacian hχ).aestronglyMeasurable
+  refine ⟨hmajor.mono' hmeas (Eventually.of_forall hbound), ?_⟩
+  calc
+    |∫ x, ‖w x‖ ^ 2 * ComparisonCutoffs.laplacian χ x| ≤ ∫ x, K * ‖w x‖ ^ 2 :=
+      norm_integral_le_of_norm_le hmajor (Eventually.of_forall hbound)
+    _ = K * l2Sq w := integral_const_mul _ _
+    _ = K * comparisonLpNorm 2 w ^ 2 := by rw [← LpNormTools.lpNorm_two_sq_eq_l2Sq hw2]
+
+private def baseWeight (x : Space) : ℝ := ComparisonCutoffs.baseCutoff x ^ 8
+
+private theorem baseWeight_smooth : ContDiff ℝ ∞ baseWeight :=
+  ComparisonCutoffs.baseCutoff_smooth.pow 8
+
+private theorem baseWeight_hasCompactSupport : HasCompactSupport baseWeight :=
+  ComparisonCutoffs.baseCutoff_hasCompactSupport.comp_left
+    (g := fun r : ℝ => r ^ 8) (by norm_num)
+
+private theorem exists_weight_second_derivative_bound :
+    ∃ C : ℝ, 0 < C ∧ ∀ x : Space, ‖iteratedFDeriv ℝ 2 baseWeight x‖ ≤ C := by
+  obtain ⟨C, hC⟩ := (baseWeight_hasCompactSupport.iteratedFDeriv 2).exists_bound_of_continuous
+    (ContDiff.continuous_iteratedFDeriv le_rfl (contDiff_infty.1 baseWeight_smooth 2))
+  exact ⟨max 1 C, lt_of_lt_of_le zero_lt_one (le_max_left _ _),
+    fun x => (hC x).trans (le_max_right _ _)⟩
+
+/-- A fixed derivative bound for the unscaled energy weight. -/
+def weightSecondDerivativeConstant : ℝ := Classical.choose exists_weight_second_derivative_bound
+
+theorem weightSecondDerivativeConstant_pos : 0 < weightSecondDerivativeConstant :=
+  (Classical.choose_spec exists_weight_second_derivative_bound).1
+
+private theorem baseWeight_iteratedFDeriv_two_le (x : Space) :
+    ‖iteratedFDeriv ℝ 2 baseWeight x‖ ≤ weightSecondDerivativeConstant :=
+  (Classical.choose_spec exists_weight_second_derivative_bound).2 x
+
+private def weightDilation (R : ℝ) : Space →L[ℝ] Space :=
+  R⁻¹ • ContinuousLinearMap.id ℝ Space
+
+private theorem norm_weightDilation_le {R : ℝ} (hR : 0 < R) :
+    ‖weightDilation R‖ ≤ R⁻¹ := by
+  apply ContinuousLinearMap.opNorm_le_bound _ (inv_nonneg.mpr hR.le)
+  intro x
+  change ‖R⁻¹ • x‖ ≤ R⁻¹ * ‖x‖
+  rw [ComparisonCutoffs.norm_scaled hR, div_eq_inv_mul]
+
+/-- Apply scaling to the fixed eighth-power weight before estimating its
+derivatives. The second derivative has the same inverse-square scaling. -/
+theorem weight_iteratedFDeriv_two_le {R : ℝ} (hR : 0 < R) (x : Space) :
+    ‖iteratedFDeriv ℝ 2 (ComparisonCutoffs.weight R) x‖ ≤
+      weightSecondDerivativeConstant / R ^ 2 := by
+  change ‖iteratedFDeriv ℝ 2 (baseWeight ∘ weightDilation R) x‖ ≤ _
+  rw [(weightDilation R).iteratedFDeriv_comp_right
+    (contDiff_infty.1 baseWeight_smooth 2) x le_rfl]
+  calc
+    ‖(iteratedFDeriv ℝ 2 baseWeight (weightDilation R x)).compContinuousLinearMap
+        (fun _ => weightDilation R)‖ ≤
+        ‖iteratedFDeriv ℝ 2 baseWeight (weightDilation R x)‖ *
+          ∏ _ : Fin 2, ‖weightDilation R‖ :=
+      ContinuousMultilinearMap.norm_compContinuousLinearMap_le _ _
+    _ ≤ ‖iteratedFDeriv ℝ 2 baseWeight (weightDilation R x)‖ * (R⁻¹) ^ 2 := by
+      apply mul_le_mul_of_nonneg_left _ (norm_nonneg _)
+      calc
+        ∏ _ : Fin 2, ‖weightDilation R‖ ≤ ∏ _ : Fin 2, R⁻¹ := by
+          gcongr with i _
+          exact norm_weightDilation_le hR
+        _ = (R⁻¹) ^ 2 := by simp
+    _ ≤ weightSecondDerivativeConstant * (R⁻¹) ^ 2 :=
+      mul_le_mul_of_nonneg_right (baseWeight_iteratedFDeriv_two_le _) (by positivity)
+    _ = weightSecondDerivativeConstant / R ^ 2 := by simp [div_eq_mul_inv]
+
+theorem weight_second_fderiv_le {R : ℝ} (hR : 0 < R) (x : Space) :
+    ‖fderiv ℝ (fderiv ℝ (ComparisonCutoffs.weight R)) x‖ ≤
+      weightSecondDerivativeConstant / R ^ 2 := by
+  have hn := norm_iteratedFDeriv_fderiv (𝕜 := ℝ)
+    (f := fderiv ℝ (ComparisonCutoffs.weight R)) (x := x) (n := 0)
+  simp only [norm_iteratedFDeriv_zero] at hn
+  rw [hn, norm_iteratedFDeriv_fderiv]
+  exact weight_iteratedFDeriv_two_le hR x
+
+/-- The fixed constant in the inverse-square Laplacian estimate. -/
+def weightLaplacianConstant : ℝ := 3 * weightSecondDerivativeConstant
+
+theorem weightLaplacianConstant_pos : 0 < weightLaplacianConstant :=
+  mul_pos (by norm_num) weightSecondDerivativeConstant_pos
+
+theorem weight_laplacian_le {R : ℝ} (hR : 0 < R) (x : Space) :
+    ‖ComparisonCutoffs.laplacian (ComparisonCutoffs.weight R) x‖ ≤
+      weightLaplacianConstant / R ^ 2 := by
+  calc
+    ‖ComparisonCutoffs.laplacian (ComparisonCutoffs.weight R) x‖ ≤
+        ∑ i : Fin 3, ‖spatialPartial i (spatialPartial i (ComparisonCutoffs.weight R)) x‖ :=
+      norm_sum_le _ _
+    _ ≤ ∑ _ : Fin 3, weightSecondDerivativeConstant / R ^ 2 :=
+      Finset.sum_le_sum fun i _ =>
+        (ComparisonCutoffs.norm_partial_partial_le (ComparisonCutoffs.weight_smooth R)
+          i i x).trans (weight_second_fderiv_le hR x)
+    _ = weightLaplacianConstant / R ^ 2 := by
+      simp [weightLaplacianConstant, mul_div_assoc]
+
+/-- The Laplacian term in the energy identity is of order `R⁻² M²`.
+Finiteness is explicit and only requires `L²` membership of the velocity. -/
+theorem weight_laplacian_flux_bound {R : ℝ} (hR : 0 < R) {w : VelocityField} {t : ℝ}
+    (hw2 : MemLp (fun x => w (t, x)) 2 volume) :
+    Integrable (fun x => ‖w (t, x)‖ ^ 2 *
+      ∑ i : Fin 3, spatialPartial i (spatialPartial i (ComparisonCutoffs.weight R)) x) volume ∧
+      |∫ x, ‖w (t, x)‖ ^ 2 *
+        ∑ i : Fin 3, spatialPartial i (spatialPartial i (ComparisonCutoffs.weight R)) x| ≤
+          (weightLaplacianConstant / R ^ 2) * comparisonLpNorm 2 (fun x => w (t, x)) ^ 2 :=
+  laplacian_flux_bound (ComparisonCutoffs.weight_smooth R) hw2 (weight_laplacian_le hR)
+
+end NavierStokesR3.LocalizedFluxEstimates
+end
+
 /-! Merged from `NavierStokes.R3.ComparisonYoung` (in a section, so its `open`s cannot leak). -/
 section
 /-!

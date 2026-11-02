@@ -538,17 +538,11 @@ theorem signedModel_strictCone {c₀ u m t : ℝ} (hc₀ : c₀ < 0) (hu : 0 < u
 abbrev SignedPulsePair (r a A b B c₀ u E : ℝ) :=
   (j : Fin 2) → TangentPulse r a A b B c₀ (signedSlopes u j) (signedSlopes u j) E
 
-noncomputable def actualMatrix {r a A b B c₀ u E : ℝ}
-    (pulses : SignedPulsePair r a A b B c₀ u E) (ci : Vec2) : Mat2 :=
-  fun i j => actualColumn (ci j) (pulses j).cutoff (pulses j).component (pulses j).tangent i
 
 noncomputable def normalizedMatrix {r a A b B c₀ u E : ℝ}
     (pulses : SignedPulsePair r a A b B c₀ u E) : Mat2 :=
   fun i j => normalizedColumn (pulses j).cutoff (pulses j).component (pulses j).tangent i
 
-noncomputable def columnScales {r a A b B c₀ u E : ℝ}
-    (pulses : SignedPulsePair r a A b B c₀ u E) (ci : Vec2) : Vec2 :=
-  fun j => ci j * mass (pulses j).cutoff (pulses j).component
 
 
 

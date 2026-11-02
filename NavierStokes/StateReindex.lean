@@ -515,13 +515,7 @@ variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S]
 
 abbrev Associated (S : Type) := (ℝ × S) × TorusInverse.Plane
 
-/-- The actual auxiliary torus integral in the associated layout. -/
-noncomputable def associatedTorusAverage (f : Associated S → ℝ) (p : ℝ × S) : ℝ :=
-  ∫ y in (0 : ℝ)..1, ∫ x in (0 : ℝ)..1, f (p, (x, y))
 
-/-- The actual radial integral of that torus average. -/
-noncomputable def associatedMass (f : Associated S → ℝ) (s : S) : ℝ :=
-  ∫ r, associatedTorusAverage f (r, s)
 
 
 

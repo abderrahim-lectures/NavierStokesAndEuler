@@ -413,8 +413,6 @@ def Supported (F : Profile) (XR : ℝ) (s : Slot) (v : ℝ × ℝ → ℝ) : Pro
 
 
 
-def RadialSupported (F : Profile) (XR : ℝ) (s : Slot) (v : ℝ × ℝ → ℝ) : Prop :=
-  ∀ eta, support (fun R => v (R, eta)) ⊆ radialWindow F XR s
 
 
 

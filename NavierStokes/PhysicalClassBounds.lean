@@ -659,23 +659,5 @@ theorem commonLift_mem_cylindricalDomain {a b : ℝ} (ha : 0 < a)
     simpa only [Metric.mem_closedBall, dist_zero_right] using hz.1
   constructor <;> linarith
 
-/-- Direct adapter for a genuine cylindrical coefficient.  No coordinate
-derivative estimate is assumed: the preceding theorems prove it. -/
-noncomputable def cylindricalCommonChart {H : ℕ} (F : PhysicalWaveSum.WaveFamily H)
-    (a b h r0 σ : ℝ) (ha : 0 < a) (f : ι → ℕ → CylindricalPoint → ℂ)
-    (index : PhysicalWaveSum.WaveIndex H → ι)
-    (he : ∀ I, F.amplitude I = fun x =>
-      (ChartScales.Q I.1.val.1 ^ σ) • f (index I) I.1.val.1 (cylindricalMap x)) :
-    CommonChart F a b h r0 σ f where
-  sourceIndex := index
-  map _ := cylindricalMap
-  domain _ := cylindricalDomain a b
-  open_domain _ := cylindricalDomain_open a b
-  smooth _ := cylindricalMap_smooth ha
-  positive_jets m := by
-    obtain ⟨B, hB, hb⟩ := cylindricalMap_positiveJets (b := b) ha m
-    exact ⟨B, hB, 0, fun _ x hx j hj hjm => by simpa using hb x hx j hj hjm⟩
-  amplitude_eq := he
-  contains I z _ _ hz := commonLift_mem_cylindricalDomain ha h I.1.val.1 (F.gap I.1) z hz
 
 end NavierStokes.PhysicalClassBounds

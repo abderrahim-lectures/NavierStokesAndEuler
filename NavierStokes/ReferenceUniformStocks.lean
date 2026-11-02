@@ -61,9 +61,6 @@ variable {h j σ Λ : ℝ} {P0 : ℝ → ℝ} (d : AnalyticInputs h j σ P0)
 
 
 
-noncomputable def normalizedReferenceLog {C : ℝ}
-    (E : NaturalEntrance.CoefficientProfile d Λ C) (hΛ : 0 < Λ) (δ X η : ℝ) : ℝ :=
-  Real.log C + Real.log ((Input.ofNatural hΛ E.family).refF δ (X, η))
 
 
 
@@ -152,10 +149,7 @@ end Uniform
 
 
 
-abbrev Slab (R : ℝ) := {X : ℝ // X ∈ Icc 0 R}
 
-abbrev FieldUniform {ι : Type*} (k : ℕ) (R : ℝ) (F : ι → Field) : Prop :=
-  Uniform k (fun q : ι × Slab R => fun η => F q.1 (q.2,η))
 
 
 
@@ -166,20 +160,8 @@ theorem parameterPartial_const_mul (D : RadialDomain) {F : Field}
   (parameterPartial_hasDerivAt D (contDiffOn_const.mul hF) hp).unique
     ((parameterPartial_hasDerivAt D hF hp).const_mul c)
 
-def axialFormula {D : RadialDomain} (P : Profiles D) (h : ℝ) (p : Point) : ℝ :=
-  (-ActivationStocks.massFlux h p.1 p.2 (P.M p) (parameterPartial P.M p)*P.U p +
-    NaturalAxisData.D h*(P.M p-p.2*parameterPartial P.M p) +
-    4*h*p.2*P.S p-NaturalAxisData.d p.2*parameterPartial P.S p +
-    p.1*(4*NaturalAxisData.A h*p.2*P.pressure p-
-      NaturalAxisData.d p.2*parameterPartial P.pressure p)) / NaturalAxisData.L h p.2
 
 
-def angularNormalizedFormula {D : RadialDomain} (P : Profiles D) (h C : ℝ) (p : Point) : ℝ :=
-  (-ActivationStocks.massFlux h p.1 p.2 (P.M p) (parameterPartial P.M p) +
-    ActivationStocks.angularRemainder h p.2 (C*P.I p)
-      (parameterPartial (fun q => C*P.I q) p) (C*P.J p)
-      (parameterPartial (fun q => C*P.J q) p) * (2*p.1)⁻¹ * (C*P.f p)⁻¹) /
-      NaturalAxisData.L h p.2
 
 
 section ActualReference
@@ -224,10 +206,7 @@ variable (hΛ : 0 < Λ) (hP0 : ContDiff ℝ ∞ P0)
 
 
 
-abbrev PositiveSlab (a R : ℝ) := {X : ℝ // X ∈ Icc a R}
 
-def toSlab {a R : ℝ} (ha : 0 ≤ a) (X : PositiveSlab a R) : Slab R :=
-  ⟨X,ha.trans X.property.1,X.property.2⟩
 
 
 

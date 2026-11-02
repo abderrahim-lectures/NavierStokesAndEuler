@@ -646,9 +646,6 @@ section ScaleDomain
 
 open ProblemStatement
 
-/-- Approach `q = 0` through positive scales while staying in the domain. -/
-def scaleFilter (U : Set SpaceTime) (q : SpaceTime → ℝ) : Filter SpaceTime :=
-  Filter.principal U ⊓ Filter.comap q (𝓝[>] (0 : ℝ))
 
 
 

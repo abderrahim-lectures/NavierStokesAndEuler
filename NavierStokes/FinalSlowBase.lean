@@ -200,13 +200,6 @@ noncomputable def leadingAxial : PhaseCalculus.Slow → ℝ :=
 
 
 
-/-- The actual covariance target, including its positive chart factor. -/
-noncomputable def covarianceTarget (q : ℝ) (N : ℕ) (U : PartitionedCovariance.UnsignedLabel)
-    (p : PhaseCalculus.Slow) : MovingFrameODE.Plane :=
-  let w := (BaseChartJets.normalizedCoordinates F.data.h p).2
-  let T := PartitionedCovariance.chartTarget F.data.h q N
-    ![(coefficients H v).stressTheta 0 w, (coefficients H v).stressAxial 0 w] U
-  !₂[T 0, T 1]
 
 
 /-- The sequence is selected once from the aligned enlarged bundle. -/

@@ -71,9 +71,6 @@ theorem cycle_representation (B N0 j : ℕ) :
 
 
 
-noncomputable def initialTemporalAlias (B N0 : ℕ) : Oscillation Point :=
-  VariableGaugeMean.temporalAliasState commonGauge h (CorrectionInitialization.CommonWindow.index h)
-    (commonContext B) (ActualInitialization.primaryState B N0)
 
 noncomputable def temporalAlias (B N0 j : ℕ) : Oscillation Point :=
   CycleStateCoherence.temporalAliasAt (parameterSequence B N0) (commonContext B)
@@ -132,8 +129,6 @@ noncomputable def selectedThreshold : ℕ := ActualCarrierGeometry.startingThres
 theorem selectedThreshold_geometry : ActualCarrierGeometry.geometricThreshold ≤ selectedThreshold :=
   ActualCarrierGeometry.geometricThreshold_le_startingThreshold 0
 
-noncomputable def selectedCycle : ℕ → CycleState (Index selectedBudget selectedThreshold) :=
-  cycle selectedBudget selectedThreshold
 
 noncomputable def selectedQbig : ℝ := qbig selectedBudget selectedThreshold
 
@@ -148,15 +143,8 @@ noncomputable def graph (n : ℕ) : PhysicalResidualBridge.ScaledGraph :=
 noncomputable def basePressure (B n : ℕ) : Full → ℝ :=
   ActualBaseResidual.basePressure certificate modulation upper B n
 
-noncomputable def chartVelocity (B N0 : ℕ) (a : ℝ) (i : PolarCharts.Index) (n j : ℕ) : VelocityField :=
-  CyclePhysicalPrefixes.velocity a i (graph n) n (commonContext B) (cycle B N0 j).state
 
-noncomputable def chartPressure (B N0 : ℕ) (a : ℝ) (i : PolarCharts.Index) (n j : ℕ) : PressureField :=
-  CyclePhysicalPrefixes.pressure a i (graph n) n (basePressure B n) (cycle B N0 j).state
 
-noncomputable def chartVelocityStages (B N0 : ℕ) (a : ℝ) (i : PolarCharts.Index) (n : ℕ) : ℕ → VelocityField :=
-  CyclePhysicalPrefixes.velocityStages (parameterSequence B N0) (commonContext B)
-    (ActualInitialization.initialCycleState B N0) a i (graph n) n
 
 noncomputable def chartPressureStages (B N0 : ℕ) (a : ℝ) (i : PolarCharts.Index) (n : ℕ) : ℕ → PressureField :=
   CyclePhysicalPrefixes.pressureStages (parameterSequence B N0) (commonContext B)
@@ -730,13 +718,6 @@ noncomputable def initialPotentialStage (B N0 : ℕ)
   streamCount := 1
   streams _ := ActualMeanStageData.initialStreamSupport B N0 (firstBand B N0) (qbig B N0) le_rfl
 
-noncomputable def positivePotentialStage {B N0 : ℕ} (H : MeanCycleInput B N0)
-    (j : ℕ) (particular signed : MixedAxisPreservation.CopyPotential.{u} h) :
-    MixedAxisPreservation.PotentialStage.{u} h (MixedAxisPreservation.localDomain h (qbig B N0)) where
-  waveCount := 2
-  waves := ![particular, signed]
-  streamCount := 1
-  streams _ := meanStreamSupport H (j + 1)
 
 theorem initialPotentialStage_field (B N0 : ℕ)
     (wave : MixedAxisPreservation.CopyPotential.{u} h) :

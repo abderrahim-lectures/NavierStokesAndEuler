@@ -20,17 +20,11 @@ def phi {Λ C : ℝ} (E : CoefficientProfile d Λ C) (Y η : ℝ) : ℝ :=
 def u {Λ C : ℝ} (E : CoefficientProfile d Λ C) (Y η : ℝ) : ℝ :=
   AxisEvaluation.profile window d.coefficients.epsilon E.coefficients.2 (Y, η)
 
-def phiY {Λ C : ℝ} (E : CoefficientProfile d Λ C) (Y η : ℝ) : ℝ :=
-  AxisEvaluation.mixedSeries window d.coefficients.epsilon E.coefficients.1 1 0 (Y, η)
 
 def uY {Λ C : ℝ} (E : CoefficientProfile d Λ C) (Y η : ℝ) : ℝ :=
   AxisEvaluation.mixedSeries window d.coefficients.epsilon E.coefficients.2 1 0 (Y, η)
 
-def scaledP1 {Λ C : ℝ} (E : CoefficientProfile d Λ C) (Y η : ℝ) : ℝ :=
-  -2 * Y * (phiY d E Y η * (phi d E Y η)⁻¹)
 
-def scaledNs {Λ C : ℝ} (E : CoefficientProfile d Λ C) (Y η : ℝ) : ℝ :=
-  -2 * uY d E Y η
 
 theorem radial_mem {Y : ℝ} (hY : Y ∈ Icc (0 : ℝ) (41 / 10)) :
     Y ∈ Ioo (-20 : ℝ) 20 := by constructor <;> linarith [hY.1, hY.2]

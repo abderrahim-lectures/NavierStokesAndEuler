@@ -289,8 +289,6 @@ theorem temporalDerivative_eq (v : VelocityField) {t : ℝ} (ht : 0 < t) (x : Sp
 def rescale {V : Type*} [SMul ℝ V] (a c : ℝ) (f : SpaceTime → V) : SpaceTime → V :=
   fun z => a • f (c * z.1, z.2)
 
-/-- The force for viscosity `ν`, starting with a force for viscosity one. -/
-def rescaledForce (ν : ℝ) (f : VelocityField) : VelocityField := rescale (ν ^ 2) ν f
 
 theorem rescale_smooth {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
     {f : SpaceTime → V} (hf : ContDiffOn ℝ ∞ f futureDomain)

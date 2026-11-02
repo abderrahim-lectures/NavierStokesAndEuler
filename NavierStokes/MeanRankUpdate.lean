@@ -896,21 +896,6 @@ theorem normalizedDomain_isOpen {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
     (isOpen_Ioo.preimage continuous_fst).mem_nhds hp.2.2
   exact inter_mem ht (inter_mem hq hr)
 
-/-- The concrete logarithmic radial weights, restricted to one normalized
-physical `q/Q` strip. The torus variables remain unrestricted. -/
-noncomputable def normalizedStripData (coord qlo qhi rlo rhi cL cR : ℝ)
-    (hc : 0 < coord) (hc1 : coord < 1) (hrlo : 0 < rlo) (hcL : 0 < cL) (hcR : 0 < cR)
-    (ε S : ℕ → ℝ) (hε : ∀ n, 0 < ε n) (hεone : ∀ n, ε n ≤ 1) (hS : ∀ n, 1 ≤ S n) :
-    WeightedClasses.StripData ChartPoint :=
-  { WeightedRadialPrimitive.logStripData rlo rhi cL cR hrlo hcL hcR ε S hε hεone hS with
-    domain := normalizedDomain coord qlo qhi rlo rhi
-    isOpen_domain := normalizedDomain_isOpen hc hc1 qlo qhi rlo rhi
-    delta_pos := fun _ hp => WeightedRadialPrimitive.delta_pos
-      (WeightedRadialPrimitive.logPosition_mem hrlo hp.2.2)
-    zeta_smooth := (WeightedRadialPrimitive.logStripData rlo rhi cL cR hrlo hcL hcR
-      ε S hε hεone hS).zeta_smooth.mono (fun _ hp => hp.2.2)
-    zeta_nonneg := fun _ hp => (WeightedRadialPrimitive.zeta_pos cL cR
-      (WeightedRadialPrimitive.logPosition_mem hrlo hp.2.2)).le }
 
 
 
@@ -920,23 +905,7 @@ section PhysicalChart
 
 
 
-noncomputable def normalizedPhysicalAngular (coord A B lam a b Q : ℝ)
-    (d : ChartPoint → Debt) (p : ChartPoint) : ℝ :=
-  angularIncrement lam
-    (shapedAmplitude B (PhysicalCoordinateBounds.etaCoord coord
-      (PhysicalCoordinateBounds.dilation coord Q (chartInput p)))) a b
-    (Real.sqrt (PhysicalCoordinateBounds.qCoord coord (PhysicalCoordinateBounds.dilation coord Q (chartInput p))))
-    ((PhysicalCoordinateBounds.qCoord coord (PhysicalCoordinateBounds.dilation coord Q (chartInput p))) ^ (-A))
-    (scaleDebt (Real.sqrt Q) (Q ^ (-A)) (d p)) (Real.sqrt Q * p.1) / Q ^ (-A)
 
-noncomputable def normalizedPhysicalAxial (coord A B lam a b Q : ℝ)
-    (d : ChartPoint → Debt) (p : ChartPoint) : ℝ :=
-  desiredAxialIncrement lam
-    (shapedAmplitude B (PhysicalCoordinateBounds.etaCoord coord
-      (PhysicalCoordinateBounds.dilation coord Q (chartInput p)))) a b
-    (Real.sqrt (PhysicalCoordinateBounds.qCoord coord (PhysicalCoordinateBounds.dilation coord Q (chartInput p))))
-    ((PhysicalCoordinateBounds.qCoord coord (PhysicalCoordinateBounds.dilation coord Q (chartInput p))) ^ (-A))
-    (scaleDebt (Real.sqrt Q) (Q ^ (-A)) (d p)) (Real.sqrt Q * p.1) / Q ^ (-A)
 
 
 
@@ -1114,12 +1083,7 @@ end SmoothFamily
 
 section ReservedMeanPatch
 
-noncomputable def reservedAngularBase (F : OutgoingProfile.Profile) (XR : ℝ)
-    (c : ℝ → HeatedOutgoing.Coeff) (q U η r : ℝ) : ℝ :=
-  U * HeatedOutgoing.E F XR c ((r / Real.sqrt q) ^ 2 / 2, η)
 
-noncomputable def reservedAxialBase (F : OutgoingProfile.Profile) (XR q U η r : ℝ) : ℝ :=
-  U * HeatedOutgoing.U F XR ((r / Real.sqrt q) ^ 2 / 2, η)
 
 
 variable {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -1202,8 +1166,6 @@ theorem scaledPrimitive_zero_of_support {l u r : ℝ} (hl : 0 < l) (_ : l < u)
     rw [he, hm, zero_div]
 
 
-noncomputable def primitiveModel (coord A B lam a b : ℝ) (d : Debt) (y : ModelPoint) : ℝ :=
-  scaledPrimitive (fun r => axialModel coord A B lam a b d (y.1, r, y.2.2)) y.2.1
 
 
 
@@ -1214,12 +1176,7 @@ end PrimitiveKernels
 section PrimitiveClass
 
 
-noncomputable def chartPotential (coord A B lam a b : ℝ) (d : ChartPoint → Debt) : ChartPoint → ℝ :=
-  fun p => ∑ i : Fin 3, d p i * chartKernel coord (primitiveModel coord A B lam a b (Pi.single i 1)) p
 
-noncomputable def chartStreamRadial (coord A B lam a b : ℝ)
-    (w : PressureStream.Plane × PressureStream.Plane) (d : ChartPoint → Debt) : ChartPoint → ℝ :=
-  PressureStream.streamBeta w (chartPotential coord A B lam a b d)
 
 
 
@@ -1318,19 +1275,8 @@ end ExactPrimitive
 
 section ActualChartStream
 
-noncomputable def slowChartDesired (coord A B lam a b : ℝ) (d : PressureStream.Plane → Debt) :
-    ℝ × PressureStream.Plane → ℝ :=
-  fun p => chartAxial coord A B lam a b (fun z => d z.2.1) (p.1, p.2, 0)
 
-noncomputable def actualChartPotential (coord A B lam a b power lo hi M : ℝ)
-    (v : PressureStream.Plane) (d : PressureStream.Plane → Debt) : ChartPoint → ℝ :=
-  PressureStream.streamPotential power lo hi M ((0 : PressureStream.Plane), v)
-    (slowLift (slowChartDesired coord A B lam a b d))
 
-noncomputable def actualChartRadial (coord A B lam a b power lo hi M : ℝ)
-    (v : PressureStream.Plane) (w : PressureStream.Plane × PressureStream.Plane)
-    (d : PressureStream.Plane → Debt) : ChartPoint → ℝ :=
-  PressureStream.streamBeta w (actualChartPotential coord A B lam a b power lo hi M v d)
 
 
 
@@ -1386,10 +1332,6 @@ end LocalSlowStream
 
 section ActualChartIdentities
 
-noncomputable def actualChartAxial (coord A B lam a b power lo hi M : ℝ)
-    (v : PressureStream.Plane) (d : PressureStream.Plane → Debt) : ChartPoint → ℝ :=
-  PressureStream.streamGamma (PressureStream.physicalSpeed power M) ((0 : PressureStream.Plane), v)
-    (actualChartPotential coord A B lam a b power lo hi M v d)
 
 
 

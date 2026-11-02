@@ -77,15 +77,7 @@ end CommonFields
 
 /-! ## The inherited sublattice, without a unit-lattice assertion -/
 
-/-- Periodicity on the image of the integer lattice under the d-fold
-cover. The parameter is fixed throughout the statement. -/
-def SubcoverPeriodicAt {P V : Type} (d : ℕ) (f : P × Plane → V) (p : P) : Prop :=
-  ∀ Y : Plane, ∀ k : Frequency,
-    f (p, Y + TorusAverages.latticePoint (coverIndex d k)) = f (p,Y)
 
-/-- The actual inverse-cover pullback of a source. -/
-noncomputable def inverseCoverSource {P V : Type} (d : ℕ) (f : P × Plane → V) : P × Plane → V :=
-  fun x => f (x.1, (coverPower d).symm x.2)
 
 
 
@@ -184,13 +176,6 @@ noncomputable def pullBlockCoefficients (e : D ≃L[ℝ] E)
 
 
 
-noncomputable def pullFrame (e : D ≃L[ℝ] E) (g : HarmonicResidual.Frame E) :
-    HarmonicResidual.Frame D where
-  radius x := g.radius (e x)
-  radial x := e.symm (g.radial (e x))
-  axial x := e.symm (g.axial (e x))
-  time x := e.symm (g.time (e x))
-  viscosity := g.viscosity
 
 
 
@@ -274,15 +259,6 @@ open CorrectionInitialization CorrectionInitialization.ActualPrimary
 
 variable {B N0 : ℕ}
 
-noncomputable def referenceResidualSource
-    (x : CorrectionStep.CycleState (ActualParticularStageControls.Label B N0))
-    (l : ActualParticularStageControls.Label B N0) (j : ℤ) :
-    PhysicalResidualNaturality.Associated → ComplexVector :=
-  fun z => ParticularWaveAssembly.residualSource (ActualParticularStageControls.assembly x l).context
-    (ActualParticularStageControls.assembly x l).state (ActualParticularStageControls.assembly x l).carrierBlock
-    (ActualParticularStageControls.assembly x l).gaussianInput (ActualParticularStageControls.assembly x l).aliasInput
-    j (BaseChartJets.cellBand l.2)
-    (z.1, (coverPower (ActualParticularStageControls.gap l (BaseChartJets.cellBand l.2))).symm z.2)
 
 noncomputable def nativeAssembly
     (x : CorrectionStep.CycleState (ActualParticularStageControls.Label B N0))

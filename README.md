@@ -63,8 +63,8 @@ The four headline theorems are unaffected: `lake build NavierStokes` typechecks 
 **Size.** Three reduction steps are recorded in [MIGRATION.md](MIGRATION.md): 74 unreachable
 modules (26,089 lines) were deleted, 6,330 unreachable `theorem`/`lemma` declarations
 (73,943 lines) were pruned, and 89 modules that exactly one file imported were folded into
-that file (`NavierStokes` 753 -> 571). The two libraries now stand at 541,936 lines and
-30,615 theorem/lemma declarations in 2,402 files. Library substitution is the third step and it is
+that file (`NavierStokes` 753 -> 504). The two libraries now stand at 538,303 lines and
+30,533 theorem/lemma declarations in 2,335 files. Library substitution is the third step and it is
 small: three `Real.image_exp_*` restatements and one TauCeti replacement
 (`SchwartzMap.dense_hasCompactSupport` for a 235-line reconstruction). The pruning is
 checked by a build on `NavierStokes`, by a diff of `Euler`'s failure set (unchanged), and,

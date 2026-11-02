@@ -1491,8 +1491,6 @@ theorem profile_relative_cone {C : ℝ} (hC : 0 < C) (d : TailData) (y0 : ℝ) :
 noncomputable def physicalStress (C : ℝ) (d : TailData) (y0 : ℝ)
     (y : EdgeParam × ℝ) : ℝ × ℝ := (angularStress C d y0 y, axialStress C d y0 y)
 
-noncomputable def physicalStressFactor (C : ℝ) (d : TailData) (y0 : ℝ)
-    (y : EdgeParam × ℝ) : ℝ × ℝ := (angularFactor C d y0 y, y.2 ^ 6 * axialFactor C d y0 y)
 
 
 

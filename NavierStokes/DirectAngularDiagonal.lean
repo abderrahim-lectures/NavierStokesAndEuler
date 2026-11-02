@@ -382,121 +382,23 @@ theorem spatialCut_angularSum_divergence {U : Set Slow} (hU : IsOpen U) (D : ℕ
 
 abbrev Lift := PressureStream.Lift Slow
 
-/-- The time/axial variables in the actual mean-field convention `(T,Z)`. -/
-noncomputable def graphSlow (G : PhysicalResidualBridge.ScaledGraph) (s : Slow) : Slow :=
-  (G.velocityScale * G.radialScale * G.epsilon * (1 - s.1),
-    G.radialScale * G.epsilon * s.2)
-
-noncomputable def graphPoint (G : PhysicalResidualBridge.ScaledGraph) (p : CylPoint) : Lift :=
-  (G.radialScale * p.2.1, (graphSlow G (slowOfCyl p),
-    (G.frequency * (G.radialScale * p.2.1) ^ G.exponent) • G.radialVector +
-      (G.velocityScale * G.radialScale * G.fastCoefficient * p.1) • G.temporalVector))
-
-/-- The physical velocity normalization is included here. -/
-noncomputable def graphCoefficient (G : PhysicalResidualBridge.ScaledGraph) (f : Lift → ℝ) : Coefficient :=
-  fun p => G.velocityScale * f (graphPoint G p)
 
 
 
-theorem graphSlow_smooth (G : PhysicalResidualBridge.ScaledGraph) : ContDiff ℝ ∞ (graphSlow G) :=
-  (contDiff_const.mul (contDiff_const.sub contDiff_fst)).prodMk (contDiff_const.mul contDiff_snd)
-
-theorem graphPoint_smoothAt (G : PhysicalResidualBridge.ScaledGraph) (hG : 0 < G.radialScale)
-    {p : CylPoint} (hp : 0 < p.2.1) : ContDiffAt ℝ ∞ (graphPoint G) p := by
-  have hr : ContDiffAt ℝ ∞ (fun p : CylPoint => (G.radialScale * p.2.1) ^ G.exponent) p :=
-    (contDiffAt_const.mul contDiffAt_snd.fst).rpow_const_of_ne (mul_pos hG hp).ne'
-  exact (contDiffAt_const.mul contDiffAt_snd.fst).prodMk
-    (((graphSlow_smooth G).contDiffAt.comp p (contDiffAt_fst.prodMk contDiffAt_snd.snd)).prodMk
-      (((contDiffAt_const.mul hr).smul contDiffAt_const).add
-        ((contDiffAt_const.mul contDiffAt_fst).smul contDiffAt_const)))
-
-/-- Smoothness and the positive moving support of the actual mean field
-produce the angular data. No divergence or physical output is assumed. -/
-noncomputable def graphAngularData (G : PhysicalResidualBridge.ScaledGraph) (hG : 0 < G.radialScale)
-    {U : Set Slow} (hU : IsOpen U) {a b : ℝ} (ha : 0 < a) (ell : Slow → ℝ)
-    (hell : ContinuousOn ell U) (hpos : ∀ s ∈ U, 0 < ell s)
-    (f : Lift → ℝ) (hf : ContDiffOn ℝ ∞ f (PhysicalMeanDomain.slowDomain U))
-    (hs : VariableGaugeMean.SupportedGauge a b ell U f) : AngularData (graphSlow G ⁻¹' U) where
-  scalar := graphCoefficient G f
-  smooth := by
-    intro p hp
-    have hfAt : ContDiffAt ℝ ∞ f (graphPoint G p) :=
-      hf.contDiffAt ((PhysicalMeanDomain.slowDomain_open hU).mem_nhds hp.1)
-    exact (contDiffAt_const.mul (hfAt.comp p (graphPoint_smoothAt G hG hp.2))).contDiffWithinAt
-  inner s := ell (graphSlow G s) * a / G.radialScale
-  inner_continuous := ((hell.comp (graphSlow_smooth G).continuous.continuousOn (fun _ hx => hx)).mul
-    continuousOn_const).div_const _
-  inner_pos s hs := div_pos (mul_pos (hpos _ hs) ha) hG
-  vanishes := by
-    classical
-    intro p hp _ hi
-    have hz : f (graphPoint G p) = 0 := by
-      by_contra hn
-      have hbound := (hs (graphPoint G p) hp hn).1
-      have hlt := (lt_div_iff₀ hG).mp hi
-      apply (not_lt_of_ge hbound)
-      simpa only [graphPoint, mul_comm G.radialScale p.2.1] using hlt
-    simp only [graphCoefficient, hz, mul_zero]
-
-noncomputable def commonAngularData {Q : ℝ} (hQ : 0 < Q) (h : ℝ) (cover : ℕ)
-    {U : Set Slow} (hU : IsOpen U) {a b : ℝ} (ha : 0 < a) (ell : Slow → ℝ)
-    (hell : ContinuousOn ell U) (hpos : ∀ s ∈ U, 0 < ell s)
-    (f : Lift → ℝ) (hf : ContDiffOn ℝ ∞ f (PhysicalMeanDomain.slowDomain U))
-    (hs : VariableGaugeMean.SupportedGauge a b ell U f) :
-    AngularData (graphSlow (PhysicalResidualBridge.commonGraph Q h cover) ⁻¹' U) :=
-  graphAngularData _ (Real.rpow_pos_of_pos hQ _) hU ha ell hell hpos f hf hs
 
 
-/-- The direct angular part of the literal temporal update, with its
-regularity and support inherited from the actual input residual. -/
-noncomputable def temporalAngularData (G : PhysicalResidualBridge.ScaledGraph) (hG : 0 < G.radialScale)
-    (g : VariableGaugeMean.GaugeData Slow) (h : ℝ) (index : ℕ → ℕ)
-    (axial : Slow × PressureStream.Plane) (c : CorrectionState.Context Lift)
-    (u : CorrectionState.State Lift) (n : ℕ) {U : Set Slow} (hU : IsOpen U)
-    {a b : ℝ} (ha : 0 < a) (ell : Slow → ℝ) (hell : ContinuousOn ell U)
-    (hpos : ∀ s ∈ U, 0 < ell s)
-    (hf : ContDiffOn ℝ ∞ (u.thetaResidual c n) (PhysicalMeanDomain.slowDomain U))
-    (hp : PhysicalMeanDomain.PeriodicOn U (u.thetaResidual c n))
-    (hs : VariableGaugeMean.SupportedGauge a b ell U (u.thetaResidual c n)) :
-    AngularData (graphSlow G ⁻¹' U) :=
-  graphAngularData G hG hU ha ell hell hpos
-    ((VariableGaugeMean.temporalIncrementState g h index axial c u).angular n)
-    (VariableGaugeMean.temporalAtIndex_contDiffOn h n (index n) hU hf hp)
-    (VariableGaugeMean.temporalAtIndex_supportedGauge h n (index n) hs)
 
-/-- The direct angular part of the literal rank update. Its smoothness
-comes from the actual five-row rank family and current debt. -/
-noncomputable def rankAngularData (G : PhysicalResidualBridge.ScaledGraph) (hG : 0 < G.radialScale)
-    (g : VariableGaugeMean.GaugeData Slow) (r : CorrectionState.RankData Slow)
-    (axial : Slow × PressureStream.Plane) (c : CorrectionState.Context Lift)
-    (u : CorrectionState.State Lift) (n : ℕ) {U : Set Slow} (hU : IsOpen U)
-    (H : LocalRankDefect.RankGeometry g r U c u) : AngularData (graphSlow G ⁻¹' U) :=
-  graphAngularData G hG hU H.inner_pos (r.length n) (H.length_smooth n).continuousOn
-    (H.length_pos n) ((VariableGaugeMean.rankIncrementState g r axial c u).angular n)
-    (H.angular_lift_smooth n) (H.angular_supportedGauge axial n)
+
+
+
+
+
 
 /-! ## Agreement with the actual offplane continuation fields -/
 
-noncomputable def nativeGraphData (h : ℝ) (n : ℕ) : PhysicalResidualBridge.ScaledGraph where
-  radialScale := 1
-  velocityScale := 1
-  epsilon := 1
-  exponent := ChartScales.radialExponent h
-  frequency := ChartScales.Lambda ^ ChartScales.nativeIndex h n
-  fastCoefficient := ChartScales.Tg ^ ChartScales.nativeIndex h n
-  radialVector := PhysicalGraphBounds.radialDirection
-  temporalVector := PhysicalGraphBounds.timeDirection
 
 
 
-noncomputable def continuationAngularData {coord a b : ℝ}
-    {W : OffplaneCorrectionExtensions.Window coord a b} {f : Lift → ℝ}
-    (e : OffplaneCorrectionExtensions.SupportedContinuation W f) (h : ℝ) (n : ℕ) :
-    AngularData (graphSlow (nativeGraphData h n) ⁻¹' W.carrier) :=
-  graphAngularData (nativeGraphData h n) (by norm_num [nativeGraphData]) W.isOpen W.lower_pos
-    (fun _ => 1) continuousOn_const (fun _ _ => by norm_num) e.value e.smooth (by
-      intro p hp hn
-      simpa only [one_mul] using W.fixed_support e.supported p hp hn)
 
 
 /-! ## Mixed finite prefixes and preservation of every axis jet -/

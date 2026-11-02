@@ -262,9 +262,9 @@ the modules `scripts/` imports) is never merged away.
 
 | | files before | files after | lines |
 |---|---|---|---|
-| `NavierStokes` | 753 | 571 | 344,369 → 344,743 |
+| `NavierStokes` | 753 | 504 | 344,369 → 341,110 |
 
-182 modules moved in two rounds (89 at the 100-line threshold, 93 at 250). The text
+249 modules moved in three rounds (89 at the 100-line threshold, 93 at 250, 67 at 600). The text
 grows by roughly one line per move — the marker, plus `section` / `end` where the
 moved body's `open`s are not already open in the parent.
 
@@ -279,10 +279,12 @@ found by a build going red:
   parent and it declares no file-scope `variable`, `set_option`, `local`,
   `attribute` or `notation`. It is needed in the other case because `open`,
   `variable` and `set_option` are *section*-scoped in Lean 4 (checked directly);
-* one parent, `PaperAdditionalResults`, is excluded: with 109 modules folded in,
-  `CompleteSpace (RepairData E)` stopped being synthesizable in one proof.
-  Instance search there is at the edge of its budget and the merge pushed it
-  over; excluding the file is cheaper and more honest than a `haveI`;
+* two parents are excluded. `PaperAdditionalResults`: with 109 modules folded in,
+  `CompleteSpace (RepairData E)` stopped being synthesizable in one proof, as
+  instance search there sits at the edge of its budget. `PaperResults`: at the
+  600-line threshold the merged bodies brought two declarations called
+  `majorant` into one file scope, and references became ambiguous. Excluding a
+  file is cheaper and more honest than a `haveI` or a rename;
 * `import C` is replaced **in place** by `C`'s own import lines, duplicates
   dropped keeping the first, so the depth-first import order is unchanged.
   Merging the import lines at the end instead made instance search pick
@@ -300,6 +302,24 @@ Verification, in the form of a before/after dump of every declaration's type
   on them is unchanged;
 * eighteen declarations have a type that differs only in which definitionally
   equal instance term appears. No statement text changed.
+
+## Definitions, and where the reduction stops
+
+The prune was extended from `theorem`/`lemma` to `def`/`abbrev`
+(`--kinds theorem,lemma,def,abbrev`): 547 declarations, 3,693 lines. `instance` is
+excluded because an instance is found by typeclass search rather than by its name,
+so a name count cannot see its uses; `structure`, `class` and `inductive` are
+excluded for the same reason about projections and recursors.
+
+Three measurements say the mechanical floor has been reached:
+
+* **no repeated proof text.** Runs of five or more identical proof lines occurring
+  three times or more: 10 such lines in `CorrectionStep.lean` (8,339 lines), 50 in
+  `CorrectionInitialization.lean`. The 19,000 lines a naive repeated-window scan
+  reports are repeated *hypothesis blocks*, not repeated proofs;
+* **no expendable module.** A module all of whose declarations are referenced only
+  inside itself can be deleted with its import; iterating that leaves zero modules;
+* **no library material left**: see below, and §6.8 of the paper.
 
 ## Using the libraries
 

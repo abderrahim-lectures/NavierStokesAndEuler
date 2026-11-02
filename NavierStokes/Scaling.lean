@@ -23,14 +23,8 @@ namespace NavierStokes.Scaling
 /-- The core velocity scale, with the fixed profile coefficient omitted. -/
 def coreVelocity (q h : ℝ) : ℝ := q ^ (-(1 / 2 + h))
 
-/-- The radial length scale. -/
-def radialLength (q : ℝ) : ℝ := q ^ (1 / 2 : ℝ)
 
-/-- The axial length scale. -/
-def axialLength (q h : ℝ) : ℝ := q ^ (1 / 2 - h)
 
-/-- Reynolds number at physical viscosity one. -/
-def reynolds (velocity length : ℝ) : ℝ := velocity * length
 
 
 
@@ -112,14 +106,8 @@ theorem reciprocal_frequency_bounds {ε : ℝ} (hε : 0 < ε) (hε₁ : ε ≤ 1
   · apply (div_le_iff₀ hk).mpr
     nlinarith
 
-/-- The physical wavelength with the actual integer carrier frequency. -/
-def waveLength (Q h : ℝ) : ℝ :=
-  radialLength Q / (carrierFrequency (Q ^ h) : ℝ)
 
 
-/-- The primary velocity includes an arbitrary real envelope coefficient. -/
-def waveVelocity (Q h envelope : ℝ) : ℝ :=
-  coreVelocity Q h * Real.sqrt (Q ^ h) * envelope
 
 
 

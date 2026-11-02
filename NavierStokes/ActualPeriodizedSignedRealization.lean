@@ -254,9 +254,6 @@ theorem views_coefficients (request : ℕ → Cylinder → Vec2) (j : Fin 2) :
     (views B l V).coefficients request j =
       coefficientsWith B l V request j (totalMask B l V) (commonUnit B l V j) := rfl
 
-noncomputable def commonScalar (request : ℕ → Cylinder → Vec2) (j : Fin 2) (n : ℕ) (x : Cylinder) : ℝ :=
-  SignedWaveUpdate.signedScalar V.strip (fun n x => B.matrix reference (V.map n x))
-    (B.viewTarget V.strip V.velocity (fun n => V.map n) reference) request (sharedMask B V) j n x
 
 theorem coefficientsWith_amplitude (request : ℕ → Cylinder → Vec2) (j : Fin 2)
     (mask : ℕ → Cylinder → ℝ) (unit : ℕ → Cylinder → Space) (n : ℕ) (x : Cylinder) :
@@ -613,12 +610,6 @@ noncomputable def periodizedAngular {request : ℕ → Cylinder → Vec2} {refer
 
 variable {reference : ℕ} (V : B.Views reference) (D : V.StateData)
 
-/-- The integer harmonic block is built from the same corrected native
-sum.  No independent wave is substituted into the iteration. -/
-noncomputable def actualBlock (j : Fin 2) (angularFrequency : ℕ → ℤ) :
-    CorrectionState.HarmonicBlock PhysicalResidualBridge.Lift :=
-  SignedWaveUpdate.blockOfCoefficients
-    ((actualCopyData B l V D j).commonCorrected V.strip V.directions) angularFrequency
 
 
 

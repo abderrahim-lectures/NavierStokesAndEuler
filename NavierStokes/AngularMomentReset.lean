@@ -264,15 +264,6 @@ theorem pressure_change_moment (lam : ℝ) (c : Coeff) :
     (weighted_relative_sq_integrable _ c), integral_const_mul, relative_moment, relative_square_moment]
   ring
 
-/-- The quadratic coefficient map equals the two actual integral changes. -/
-theorem moment_map_identity (lam : ℝ) (hlam : 0 < lam) (c : Coeff) :
-    linearEquiv lam hlam c + quadraticCLM lam c c =
-      ![∫ y, Real.exp (angularSlope lam * y) * relative c y,
-        ∫ y, Real.exp (pressureSlope lam * y) * ((1 + relative c y) ^ 2 - 1)] := by
-  rw [linearEquiv_apply, quadraticCLM_apply, relative_moment, pressure_change_moment]
-  ext i
-  fin_cases i <;> simp [linearMatrix, dotProduct, Fin.sum_univ_two]
-  ring
 
 def debt (δ : ℝ) : Coeff := ![δ, 0]
 
@@ -288,33 +279,6 @@ theorem debt_norm_le (δ : ℝ) : ‖debt δ‖ ≤ |δ| := by
   intro i
   fin_cases i <;> simp [debt]
 
-/-- A smooth small branch is obtained from the proved actual moment derivative,
-not from an assumed solution or matrix rank. -/
-theorem exists_normalized_branch (lam : ℝ) (hlam : 0 < lam) :
-    ∃ (c : ℝ → Coeff) (ε K : ℝ), 0 < ε ∧ 0 < K ∧
-      ContDiffOn ℝ ∞ c (Ioo (-ε) ε) ∧ c 0 = 0 ∧
-      ∀ δ ∈ Ioo (-ε) ε,
-        (∫ y, Real.exp (angularSlope lam * y) * relative (c δ) y) = δ ∧
-        (∫ y, Real.exp (pressureSlope lam * y) * ((1 + relative (c δ) y) ^ 2 - 1)) = 0 ∧
-        ‖c δ‖ ≤ K * |δ| := by
-  obtain ⟨c, U, K, hU, h0, hK, hc, hc0, heq⟩ :=
-    SmoothMomentRepair.exists_smooth_parameter_branch (E := Coeff) (P := ℝ) 0
-      (fun _ => (linearEquiv lam hlam).toContinuousLinearMap)
-      (fun _ => quadraticCLM lam) debt contDiff_const contDiff_const debt_contDiff
-      (linearEquiv lam hlam) rfl (by ext i; fin_cases i <;> simp [debt])
-  obtain ⟨ε, hε, hεU⟩ := Metric.mem_nhds_iff.mp (hU.mem_nhds h0)
-  have hsub : Ioo (-ε) ε ⊆ U := by
-    intro δ hδ
-    apply hεU
-    simpa only [Metric.mem_ball, Real.dist_eq, sub_zero, abs_lt, Set.mem_Ioo] using hδ
-  refine ⟨c, ε, K, hε, hK, hc.mono hsub, hc0, ?_⟩
-  intro δ hδ
-  obtain ⟨he, hb⟩ := heq δ (hsub hδ)
-  change linearEquiv lam hlam (c δ) + quadraticCLM lam (c δ) (c δ) = debt δ at he
-  rw [moment_map_identity] at he
-  refine ⟨?_, ?_, hb.trans (mul_le_mul_of_nonneg_left (debt_norm_le δ) hK.le)⟩
-  · exact congrFun he 0
-  · exact congrFun he 1
 
 theorem relative_deriv (c : Coeff) (y : ℝ) :
     deriv (relative c) y = c 0 * deriv (bump 0) y + c 1 * deriv (bump 1) y := by
@@ -389,61 +353,7 @@ structure ResetBranch (lam : ℝ) where
     |relative (coefficients δ) y| ≤ 1 / 2 ∧
     |deriv (relative (coefficients δ)) y| ≤ lam / 4
 
-/-- No branch fields are hypotheses: all of them are constructed from the explicit bumps. -/
-theorem exists_resetBranch (lam : ℝ) (hlam : 0 < lam) : Nonempty (ResetBranch lam) := by
-  obtain ⟨c, ε0, K, hε0, hK, hc, hc0, heq⟩ := exists_normalized_branch lam hlam
-  obtain ⟨D, hD, hjet⟩ := relative_first_jet_bound
-  let b : ℝ := min (1 / 2) (lam / 4)
-  let ε : ℝ := min ε0 (b / (D * K))
-  let L : ℝ := (1 + D) * K
-  have hb : 0 < b := lt_min (by norm_num) (by positivity)
-  have hDK : 0 < D * K := mul_pos hD hK
-  have hε : 0 < ε := lt_min hε0 (div_pos hb hDK)
-  have hL : 0 < L := mul_pos (by linarith) hK
-  have hsub : Ioo (-ε) ε ⊆ Ioo (-ε0) ε0 := by
-    intro δ hδ
-    have he : ε ≤ ε0 := min_le_left _ _
-    constructor <;> linarith [hδ.1, hδ.2]
-  have htotal : ∀ δ ∈ Ioo (-ε) ε, D * ‖c δ‖ ≤ b := by
-    intro δ hδ
-    have hnorm := (heq δ (hsub hδ)).2.2
-    have habs : |δ| ≤ ε := (abs_lt.mpr hδ).le
-    have he : ε ≤ b / (D * K) := min_le_right _ _
-    have he' := (le_div_iff₀ hDK).mp he
-    nlinarith
-  have hcoeff : ∀ δ ∈ Ioo (-ε) ε, ‖c δ‖ ≤ L * |δ| := by
-    intro δ hδ
-    apply ((heq δ (hsub hδ)).2.2).trans
-    apply mul_le_mul_of_nonneg_right _ (abs_nonneg δ)
-    dsimp [L]
-    nlinarith
-  refine ⟨{
-    coefficients := c
-    radius := ε
-    bound := L
-    radius_pos := hε
-    bound_pos := hL
-    smooth := hc.mono hsub
-    at_zero := hc0
-    angular := fun δ hδ => (heq δ (hsub hδ)).1
-    pressure := fun δ hδ => (heq δ (hsub hδ)).2.1
-    coefficient_bound := hcoeff
-    first_jet_bound := ?_
-    small_jets := ?_ }⟩
-  · intro δ hδ y
-    have hn := (heq δ (hsub hδ)).2.2
-    have hL' : D * K ≤ L := by dsimp [L]; nlinarith
-    have hbound : D * ‖c δ‖ ≤ L * |δ| :=
-      (mul_le_mul_of_nonneg_left hn hD.le).trans
-        (by simpa only [mul_assoc] using mul_le_mul_of_nonneg_right hL' (abs_nonneg δ))
-    exact ⟨(hjet (c δ) y).1.trans hbound, (hjet (c δ) y).2.trans hbound⟩
-  · intro δ hδ y
-    exact ⟨((hjet (c δ) y).1.trans (htotal δ hδ)).trans (min_le_left _ _),
-      ((hjet (c δ) y).2.trans (htotal δ hδ)).trans (min_le_right _ _)⟩
 
-/-- One fixed choice of the proved small branch. -/
-def resetBranch (lam : ℝ) (hlam : 0 < lam) : ResetBranch lam :=
-  Classical.choice (exists_resetBranch lam hlam)
 
 /-! ## Actual modified angular fields -/
 

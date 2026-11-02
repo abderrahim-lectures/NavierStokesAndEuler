@@ -149,18 +149,6 @@ noncomputable def reindexState {ι κ : Type} (e : κ ≃ ι)
   coefficients := reindexCoefficients e x.coefficients
   axisymmetricAlias := x.axisymmetricAlias
 
-noncomputable def reindexParameters {ι κ : Type} (e : κ ≃ ι)
-    (p : CycleParameters ι) : CycleParameters κ where
-  gauge := p.gauge
-  strip := p.strip
-  patch := p.patch
-  coordinate := p.coordinate
-  timeExponent := p.timeExponent
-  commonIndex := p.commonIndex
-  axial := p.axial
-  particular l := p.particular (e l)
-  signed l := p.signed (e l)
-  rank := p.rank
 
 @[simp] theorem reindexCoefficients_mem {ι κ : Type} (e : κ ≃ ι)
     (v : CycleCoefficients ι) (n : ℕ) (l : κ) :
@@ -231,14 +219,6 @@ noncomputable def parameters {B N0 : ℕ} (x : CycleState (Index B N0)) :
     (fun l => ActualParticularStageControls.parameters (particularState x) (swap B N0 l))
     ActualSignedStageControls.parameters ActualPrimary.rankData
 
-/-- The same literal builder expressed in the particular solver's label
-order.  This has no additional geometric or analytic choices. -/
-noncomputable def parametersInParticularOrder {B N0 : ℕ}
-    (x : CycleState (ParticularIndex B N0)) : CycleParameters (ParticularIndex B N0) :=
-  CycleParameters.ofGeometry ActualInitialization.geometry ActualPrimary.h
-    (CommonWindow.index ActualPrimary.h) ActualInitialization.axial
-    (ActualParticularStageControls.parameters x)
-    (fun l => ActualSignedStageControls.parameters ((swap B N0).symm l)) ActualPrimary.rankData
 
 
 @[simp] theorem parameters_gauge {B N0 : ℕ} (x : CycleState (Index B N0)) :

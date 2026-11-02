@@ -511,58 +511,11 @@ copies are evaluated at their own absolute-lift points. -/
 noncomputable def commonSolve (κ : Plane → ℝ) (p : P × Plane) : E :=
   ∑' k : Frequency, d.localizedCopy g hab κ k p
 
-theorem localizedCopy_deck (κ : Plane → ℝ) (k n : Frequency)
-    (p : P) (hp : PeriodicAt d.source p) (Y : Plane) :
-    d.localizedCopy g hab κ (k + coverIndex g.gap n) (p, Y + TorusAverages.latticePoint n) =
-      d.localizedCopy g hab κ k (p, Y) := by
-  unfold localizedCopy
-  rw [g.coordinates_deck, d.copySolve_deck g hab k n p hp]
-
-/-- Common-torus periodicity follows by reindexing the actual copy sum.
-The source is required to be periodic only in the common variable. -/
-theorem commonSolve_periodic (κ : Plane → ℝ) (p : P) (hp : PeriodicAt d.source p)
-    (Y : Plane) (n : Frequency) :
-    d.commonSolve g hab κ (p, Y + TorusAverages.latticePoint n) =
-      d.commonSolve g hab κ (p, Y) := by
-  unfold commonSolve
-  calc
-    (∑' k : Frequency, d.localizedCopy g hab κ k (p, Y + TorusAverages.latticePoint n)) =
-        ∑' k : Frequency, d.localizedCopy g hab κ (k + coverIndex g.gap n)
-          (p, Y + TorusAverages.latticePoint n) :=
-      ((Equiv.addRight (coverIndex g.gap n)).tsum_eq
-        (fun k => d.localizedCopy g hab κ k (p, Y + TorusAverages.latticePoint n))).symm
-    _ = ∑' k : Frequency, d.localizedCopy g hab κ k (p, Y) := by
-      apply tsum_congr
-      intro k
-      exact d.localizedCopy_deck g hab κ k n p hp Y
 
 
 
-omit [NormedSpace ℝ P] in
-theorem commonSolve_eventually_eq_sum {κ : Plane → ℝ} (hκ : HasCompactSupport κ)
-    (p : P × Plane) :
-    ∃ s : Finset Frequency,
-      d.commonSolve g hab κ =ᶠ[𝓝 p] fun q => ∑ k ∈ s, d.localizedCopy g hab κ k q := by
-  obtain ⟨s, hs⟩ := g.finite_copy_cutoffs hκ (‖p.2‖ + 1)
-  refine ⟨s, ?_⟩
-  have hn : {q : P × Plane | ‖q.2‖ < ‖p.2‖ + 1} ∈ 𝓝 p :=
-    (isOpen_lt continuous_snd.norm continuous_const).mem_nhds (by simp)
-  filter_upwards [hn] with q hq
-  apply tsum_eq_sum
-  intro k hk
-  unfold localizedCopy
-  rw [hs q.2 hq.le k hk, zero_smul]
 
-theorem commonSolve_contDiffOn_of_copies {U : Set P} (hU : IsOpen U)
-    {κ : Plane → ℝ} (hκ : HasCompactSupport κ)
-    (hc : ∀ k : Frequency, ContDiffOn ℝ ∞ (d.localizedCopy g hab κ k) (U ×ˢ univ)) :
-    ContDiffOn ℝ ∞ (d.commonSolve g hab κ) (U ×ˢ univ) := by
-  apply (hU.prod isOpen_univ).contDiffOn_iff.mpr
-  intro p hp
-  obtain ⟨s, hs⟩ := d.commonSolve_eventually_eq_sum g hab hκ p
-  have hsum : ContDiffAt ℝ ∞ (fun q => ∑ k ∈ s, d.localizedCopy g hab κ k q) p :=
-    ContDiffAt.sum (fun k _ => (hc k).contDiffAt ((hU.prod isOpen_univ).mem_nhds hp))
-  exact hsum.congr_of_eventuallyEq hs
+
 
 end LinearData
 
@@ -570,31 +523,11 @@ end Paths
 
 /-! ## A function on the quotient torus, not merely a periodic lift -/
 
-def LatticePeriodic {W : Type} (f : Plane → W) : Prop :=
-  ∀ Y : Plane, ∀ k : Frequency, f (Y + TorusAverages.latticePoint k) = f Y
 
-theorem latticePeriodic_first {W : Type} {f : Plane → W} (hf : LatticePeriodic f) (y : ℝ) :
-    Function.Periodic (fun x => f (x, y)) 1 := by
-  intro x
-  simpa [TorusAverages.latticePoint] using hf (x, y) (1, 0)
 
-theorem latticePeriodic_second {W : Type} {f : Plane → W} (hf : LatticePeriodic f) (x : ℝ) :
-    Function.Periodic (fun y => f (x, y)) 1 := by
-  intro y
-  simpa [TorusAverages.latticePoint] using hf (x, y) (0, 1)
 
-noncomputable def firstDescent {W : Type} (f : Plane → W) (hf : LatticePeriodic f)
-    (z : UnitAddCircle) (y : ℝ) : W := (latticePeriodic_first hf y).lift z
 
-theorem firstDescent_periodic {W : Type} (f : Plane → W) (hf : LatticePeriodic f)
-    (z : UnitAddCircle) : Function.Periodic (firstDescent f hf z) 1 := by
-  intro y
-  refine Quotient.inductionOn' z (fun x => ?_)
-  change f (x, y + 1) = f (x, y)
-  exact latticePeriodic_second hf x y
 
-noncomputable def torusDescent {W : Type} (f : Plane → W) (hf : LatticePeriodic f)
-    (z : Torus) : W := (firstDescent_periodic f hf z.1).lift z.2
 
 
 
@@ -605,11 +538,6 @@ variable {P V E : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
   [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
   {a b : ℝ} (d : LinearData P V E) (g : Geometry) (hab : a ≤ b)
 
-/-- The constructed common-torus solution is obtained by a genuine quotient
-lift of the reindexed copy sum. -/
-noncomputable def commonOnTorus (κ : Plane → ℝ) (p : P) (hp : PeriodicAt d.source p) :
-    Torus → E := torusDescent (fun Y => d.commonSolve g hab κ (p, Y))
-      (d.commonSolve_periodic g hab κ p hp)
 
 
 /-! Joint regularity is derived from the actual ODE construction. -/
@@ -641,41 +569,7 @@ theorem copySolve_contDiffAt {U : Set P} (hU : IsOpen U) (k : Frequency)
   have hcomp := hs.comp p hc.contDiffAt
   exact hcomp
 
-/-- The localization cutoff is supported strictly inside the slot interval.
-The clamped extension outside the interval is never claimed to be smooth. -/
-theorem localizedCopy_contDiffOn {U : Set P} (hU : IsOpen U) (k : Frequency)
-    (hA : ContDiffOn ℝ ∞ d.coefficient (U ×ˢ univ))
-    (hB : ContDiffOn ℝ ∞ d.forcingMap (U ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ d.source (U ×ˢ univ))
-    {κ : Plane → ℝ} (hκ : ContDiff ℝ ∞ κ)
-    (hsupp : tsupport κ ⊆ univ ×ˢ Ioo a b) :
-    ContDiffOn ℝ ∞ (d.localizedCopy g hab κ k) (U ×ˢ univ) := by
-  apply (hU.prod isOpen_univ).contDiffOn_iff.mpr
-  intro p hp
-  have hc : ContDiff ℝ ∞ (fun q : P × Plane => g.coordinates k q.2) :=
-    (g.coordinates_contDiff k).comp contDiff_snd
-  by_cases hmem : g.coordinates k p.2 ∈ tsupport κ
-  · exact ((hκ.comp hc).contDiffAt).smul
-      (d.copySolve_contDiffAt g hab hU k hA hB hf hp.1 (hsupp hmem).2)
-  · have hz : κ =ᶠ[𝓝 (g.coordinates k p.2)] (fun _ => 0) :=
-      notMem_tsupport_iff_eventuallyEq.mp hmem
-    have hzero : d.localizedCopy g hab κ k =ᶠ[𝓝 p] (fun _ => (0 : E)) := by
-      filter_upwards [hz.comp_tendsto hc.continuous.continuousAt] with q hq
-      change κ (g.coordinates k q.2) = 0 at hq
-      simp only [localizedCopy, hq, zero_smul]
-    exact contDiffAt_const.congr_of_eventuallyEq hzero
 
-/-- The actual sum of native copy solves is jointly smooth in slow and common
-torus coordinates. Local finiteness was proved from compact support. -/
-theorem commonSolve_contDiffOn {U : Set P} (hU : IsOpen U)
-    (hA : ContDiffOn ℝ ∞ d.coefficient (U ×ˢ univ))
-    (hB : ContDiffOn ℝ ∞ d.forcingMap (U ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ d.source (U ×ˢ univ))
-    {κ : Plane → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsupp : tsupport κ ⊆ univ ×ˢ Ioo a b) :
-    ContDiffOn ℝ ∞ (d.commonSolve g hab κ) (U ×ˢ univ) :=
-  d.commonSolve_contDiffOn_of_copies g hab hU hcκ
-    (fun k => d.localizedCopy_contDiffOn g hab hU k hA hB hf hκ hsupp)
 
 
 end LinearData

@@ -120,11 +120,6 @@ def insertFactors (I : Window) {ε : ℝ} (hε : 0 < ε) (r : ℕ) (hr : 1 ≤ r
   | B :: Bs => insertFactors I hε r hr (insert I hε r hr A B) Bs
 
 
-/-- Recover the source coefficients by applying the radial differential
-operator to a zero-constant inverse. These coefficients need not themselves
-belong to the bounded axis space. -/
-def recoveredSource (I : Window) (ε : ℝ) (r : ℕ) (A : AxisSpace I ε)
-    (n : ℕ) (x : ℝ) : ℝ := radialDivisor r n * coefficient I (weight ε) A (n+1) x
 
 
 

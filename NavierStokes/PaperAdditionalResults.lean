@@ -223,11 +223,6 @@ namespace NavierStokes.LabelCountingFinite
 open SlotColoring
 open scoped BigOperators
 
-def gridCandidates (c : Grid) (K : Fin 3 → ℕ) : Finset Grid :=
-  Fintype.piFinset (fun j => Finset.Icc (c j - (K j : ℤ)) (c j + (K j : ℤ)))
-
-def labelCandidates (n : ℕ) (c : Grid) (K : Fin 3 → ℕ) : Finset Label :=
-  ((gridCandidates c K).product (Finset.univ : Finset Bool)).image (fun gs => (n, gs))
 
 
 
@@ -236,10 +231,7 @@ def labelCandidates (n : ℕ) (c : Grid) (K : Fin 3 → ℕ) : Finset Label :=
 
 
 
-/-- Five consecutive integer indices include every natural band at distance
-at most one from a real logarithmic coordinate. -/
-def bandCandidates (c : ℝ) : Finset ℕ :=
-  (Finset.Icc (⌊c⌋ - 2) (⌊c⌋ + 2)).image Int.toNat
+
 
 
 
@@ -260,13 +252,7 @@ open Set
 open scoped BigOperators
 open SlotColoring SquaredPartition
 
-/-- A closed slow-coordinate grid box with an arbitrary enlargement factor. -/
-def normalizedBox (A : ℝ) (L : Label) : Set Position :=
-  {x | ∀ j, |x j - nativeSpacing L.1 * (L.2.1 j : ℝ)| ≤ A * nativeSpacing L.1}
 
-/-- Both signs are counted separately, exactly as in the manuscript. -/
-def relevantLabels (n : ℕ) (A : ℝ) (B : Set Position) : Set Label :=
-  {L | L.1 = n ∧ (normalizedBox A L ∩ B).Nonempty}
 
 
 
@@ -283,11 +269,6 @@ def radialSlice (I : Set ℝ) (Z T : ℝ) : Set Position :=
 
 
 
-/-- Labels whose genuine closed dyadic band and enlarged slow box contain
-the point. Each band uses its own physical-to-normalized chart. -/
-def pointwiseLabels (D A q : ℝ) (x : Position) : Set Label :=
-  {L | 1 ≤ L.1 ∧ q ∈ tsupport (dyadicMask (L.1 : ℤ)) ∧
-    slowCoordinates D L.1 x ∈ normalizedBox A L}
 
 
 
@@ -372,8 +353,6 @@ namespace NavierStokes.WholeDomainStageBounds
 open Set Function Filter ProblemStatement PhysicalWaveSum SharpGluedStageBounds
 open scoped Topology ContDiff BigOperators
 
-/-- The loss is selected before the length of the finite prefix. -/
-def prefixLoss (initial positive : ℕ → ℝ) (m : ℕ) : ℝ := max (initial m) (positive m)
 
 section Prefix
 
@@ -397,14 +376,6 @@ open Set Function Filter ProblemStatement PhysicalWaveSum SharpGluedStageBounds
 open CorrectionInitialization.ActualPrimary ActualCandidateAssembly
 open scoped Topology ContDiff BigOperators
 
-/-- One derivative loss controls both finite fields. It contains no
-finite-stage index and is chosen on the original fixed construction. -/
-noncomputable def finiteLoss (B N0 : ℕ) (m : ℕ) : ℝ :=
-  max
-    (prefixLoss (initialVelocityLoss B N0 ActualBaseVelocityBounds.heatLoss)
-      (SharpPhysicalCarrier.physicalLoss h) m)
-    (prefixLoss (initialPressureTotalLoss B N0 ActualBasePressureBounds.pressureLoss)
-      (SharpPhysicalCarrier.physicalLoss h) m)
 
 
 
@@ -412,13 +383,8 @@ noncomputable def finiteLoss (B N0 : ℕ) (m : ℕ) : ℝ :=
 
 
 
-noncomputable def paperLoss (B N0 : ℕ) (m : ℕ) : ℝ :=
-  max (finiteLoss B N0 m) (ActualCycleResidualBounds.fixedLoss m)
 
 
-/-- A stage-independent loss for all derivatives through the specified order. -/
-noncomputable def paperJetLoss (B N0 : ℕ) (m : ℕ) : ℝ :=
-  ∑ k : Fin (m+1), |paperLoss B N0 k.val|
 
 
 
@@ -448,24 +414,10 @@ open Set
 
 namespace NavierStokes.SeedConePaper
 
-/-- The squared shear parameter in the manuscript. -/
-def shearMagnitude (a b : ℝ) : ℝ := a * (1 + (-b / a) ^ 2)
 
-/-- The component of the stress in the unnormalized shear direction. -/
-def parallelStress (a b p₁ p₂ : ℝ) : ℝ := p₁ + (-b / a) * p₂
 
-/-- The component of the stress in the orthogonal unnormalized direction. -/
-def transverseStress (a b p₁ p₂ : ℝ) : ℝ := p₂ - (-b / a) * p₁
 
-/-- The two relaxed inequalities, including the positive radial shear. -/
-def RelaxedCone (a b p₁ p₂ : ℝ) : Prop :=
-  0 < a ∧ 2 < parallelStress a b p₁ p₂ ∧
-    shearMagnitude a b < ConeAlgebra.coneBound
-      (parallelStress a b p₁ p₂) (transverseStress a b p₁ p₂)
 
-/-- The relaxed cone with the additional lower bound required by the waves. -/
-def AdmissibleCone (a b p₁ p₂ : ℝ) : Prop :=
-  RelaxedCone a b p₁ p₂ ∧ 2 < shearMagnitude a b
 
 
 

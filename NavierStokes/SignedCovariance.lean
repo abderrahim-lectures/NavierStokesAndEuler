@@ -663,18 +663,10 @@ section Edge
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-noncomputable def extendedIncrement (H : E × ℝ → Mat2) (T R : E × ℝ → Vec2)
-    (j : Fin 2) : E × ℝ → ℝ :=
-  FlatZeroExtension.zeroExtension (fun p => ((H p)⁻¹.mulVec (R p)) j /
-    (2 * Real.sqrt (((H p)⁻¹.mulVec (T p)) j)))
 
 
 
 
-noncomputable def maskedExtendedIncrement (D : ℝ) (L : UnsignedLabel)
-    (q : E × ℝ → ℝ) (x : E × ℝ → SlotColoring.Position)
-    (H : E × ℝ → Mat2) (T R : E × ℝ → Vec2) (j : Fin 2) (p : E × ℝ) : ℝ :=
-  mask D L (q p) (x p) * extendedIncrement H T R j p
 
 
 

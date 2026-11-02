@@ -51,9 +51,6 @@ noncomputable def pressureGradient (n : ℕ) (e : History) (omega : Profile) (R 
   (cauchy n e e R - omega R) / R
 
 
-/-- The angular similarity coefficient in (22), reconstructed from E. -/
-noncomputable def phiHistory (C : ℝ) (e : History) : History :=
-  fun j R => C * e j R / R
 
 
 
@@ -328,8 +325,6 @@ abbrev JointHistory := ℕ → JointProfile
 
 noncomputable def slice (f : JointHistory) (eta : ℝ) : History := fun j R => f j (R, eta)
 
-noncomputable def jointIncrement (u : JointHistory) (n : ℕ) (du : JointProfile) : JointHistory :=
-  Function.update u n (fun w => u n w + du w)
 
 
 

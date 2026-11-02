@@ -38,14 +38,10 @@ def timeVector (vt : Plane) : Lift := ((0, 1), vt)
 def along (V : Lift → Lift) (F : Lift → ℝ) (p : Lift) : ℝ :=
   fderiv ℝ F p (V p)
 
-def radialOp (d : ℝ) (vr : Plane) (F : Lift → ℝ) : Lift → ℝ :=
-  along (radialVector d vr) F
 
 def timeOp (vt : Plane) (F : Lift → ℝ) : Lift → ℝ :=
   along (fun _ => timeVector vt) F
 
-def partialR (u : Plane → ℝ) (q : Plane) : ℝ :=
-  deriv (fun r => u (r, q.2)) q.1
 
 def partialT (u : Plane → ℝ) (q : Plane) : ℝ :=
   deriv (fun t => u (q.1, t)) q.2
@@ -68,9 +64,6 @@ theorem partialT_pullback (d : ℝ) (vr vt : Plane) (F : Lift → ℝ) (q : Plan
     (hasDerivAt_graph_time d vr vt q.1 q.2)).deriv
 
 
-/-- This form keeps the exponent arithmetic of the derivative explicit. -/
-def radialAcceleration (d r : ℝ) : ℝ :=
-  d * ((d - 1) * r ^ (d - 1 - 1))
 
 
 

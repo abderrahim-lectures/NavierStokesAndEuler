@@ -215,14 +215,10 @@ theorem initialized_overlap (B N0 N : ℕ) :
   intro n hn m hm k hk
   exact ActualInitialCoherence.initialized_on_overlap B N0 n m k hk
 
-noncomputable def initialRadialFamily (B N0 N : ℕ) :=
-  (initialAtlas N).radialFamily (initialized_overlap B N0 N)
 
 noncomputable def initialAngularFamily (B N0 N : ℕ) :=
   (initialAtlas N).angularFamily (initialized_overlap B N0 N)
 
-noncomputable def initialAxialFamily (B N0 N : ℕ) :=
-  (initialAtlas N).axialFamily (initialized_overlap B N0 N)
 
 noncomputable def initialPressureFamily (B N0 N : ℕ) :=
   (initialAtlas N).pressureFamily (initialized_overlap B N0 N)

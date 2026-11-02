@@ -23,8 +23,12 @@ import os
 import re
 import sys
 
+# `instance` is deliberately absent: an instance is used by *typeclass search*, not
+# by its name, so a name count cannot see its uses. `structure`/`class`/`inductive`
+# are absent for the same kind of reason (constructors, recursors, projections).
+KINDS = 'theorem|lemma|def|abbrev'
 DECL = re.compile(r"^\s*(?:@\[[^\]]*\]\s*)*(?:private\s+|protected\s+|noncomputable\s+|scoped\s+)*"
-                  r"(theorem|lemma)\s+([A-Za-z_][A-Za-z0-9_']*)")
+                  r"(" + KINDS + r")\s+([A-Za-z_][A-Za-z0-9_']*)")
 # anything that starts a new top-level command at column 0
 TOP = re.compile(r"^(?:@\[|/-|theorem\s|lemma\s|def\s|abbrev\s|structure\s|instance\s|class\s|"
                  r"namespace\s|end\b|section\b|open\s|variable\s|omit\s|include\s|set_option\s|"
@@ -229,7 +233,16 @@ def lean_files(root):
 
 
 def main(argv):
+    global KINDS
     dry = '--dry' in argv
+    kinds = 'theorem|lemma'
+    if '--kinds' in argv:
+        k = argv.index('--kinds')
+        kinds = argv[k + 1].replace(',', '|')
+        del argv[k:k + 2]
+        KINDS = kinds
+        DECL = re.compile(r"^\s*(?:@\[[^\]]*\]\s*)*(?:private\s+|protected\s+|noncomputable\s+|scoped\s+)*"
+                          r"(" + KINDS + r")\s+([A-Za-z_][A-Za-z0-9_']*)")
     also = []
     argv = list(argv)
     while '--also' in argv:

@@ -172,10 +172,6 @@ theorem chartInner_transition {h Q Q' : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     chartInner h (chartTransition h Q Q' p) = chartInner h p :=
   Prod.ext (chartX_transition hh hh1 hQ hQ' hp) (chartEta_transition hh hh1 hQ hQ' hp)
 
-/-- The genuine chart-to-physical map, with radial variable `s=r²/2`. -/
-noncomputable def chartToPhysical (h Q : ℝ) (p : ChartPoint) :
-    SimilarityProfile.PhysicalPoint :=
-  (1 - Q * p.2.2, (Q * (p.1 ^ 2 / 2), Q ^ D h * p.2.1))
 
 
 
@@ -192,22 +188,8 @@ noncomputable def chartToPhysical (h Q : ℝ) (p : ChartPoint) :
 be added using `chartX_mem_transition`. -/
 noncomputable def chartDomain : Set ChartPoint := {p | 0 < p.1 ∧ 0 < p.2.2}
 
-theorem isOpen_chartDomain : IsOpen chartDomain :=
-  (isOpen_lt continuous_const continuous_fst).inter
-    (isOpen_lt continuous_const continuous_snd.snd)
 
 
-theorem chartInner_smoothAt {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {p : ChartPoint} (hp : 0 < p.2.2) : ContDiffAt ℝ ∞ (chartInner h) p := by
-  have hm : ContDiffAt ℝ ∞ (fun x : ChartPoint => (x.2.2, x.2.1)) p :=
-    contDiffAt_snd.snd.prodMk contDiffAt_snd.fst
-  have hq : ContDiffAt ℝ ∞ (chartQ h) p :=
-    (coordinateQ_smooth (by linarith) (by linarith) (p := (p.2.2, p.2.1)) hp).comp p hm
-  have he : ContDiffAt ℝ ∞ (chartEta h) p :=
-    (coordinateEta_smooth (by linarith) (by linarith) (p := (p.2.2, p.2.1)) hp).comp p hm
-  have hqp : 0 < chartQ h p :=
-    (coordinateQ_spec (by linarith) (by linarith) (p := (p.2.2, p.2.1)) hp).1
-  exact (((contDiffAt_fst.pow 2).div_const 2).div hq hqp.ne').prodMk he
 
 theorem chartX_mem_transition {h Q Q' : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     (hQ : 0 < Q) (hQ' : 0 < Q') {p : ChartPoint} (hp : 0 < p.2.2) (I : Set ℝ) :
@@ -215,22 +197,10 @@ theorem chartX_mem_transition {h Q Q' : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
   rw [chartX_transition hh hh1 hQ hQ' hp]
 
 
-noncomputable def chartWeight {E : Type*} (h : ℝ) (ζ : ℝ → E) (p : ChartPoint) : E :=
-  ζ (chartX h p)
 
 
-/-- The lesser of one and the two logarithmic distances to fixed profile
-edges. Positivity is asserted only inside a positive profile interval. -/
-noncomputable def profileLogDistance (left right X : ℝ) : ℝ :=
-  min 1 (min (Real.log X - Real.log left) (Real.log right - Real.log X))
 
-theorem profileLogDistance_pos {left right X : ℝ} (hl : 0 < left)
-    (hLX : left < X) (hXR : X < right) : 0 < profileLogDistance left right X := by
-  exact lt_min zero_lt_one (lt_min (sub_pos.mpr (Real.log_lt_log hl hLX))
-    (sub_pos.mpr (Real.log_lt_log (hl.trans hLX) hXR)))
 
-noncomputable def chartLogDistance (h left right : ℝ) (p : ChartPoint) : ℝ :=
-  profileLogDistance left right (chartX h p)
 
 
 

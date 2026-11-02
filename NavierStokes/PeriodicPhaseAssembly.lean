@@ -227,15 +227,6 @@ theorem phase_contDiff (g : Geometry) (w : ClockWindow) {A B : P → ℝ}
   (hA.comp contDiff_fst).sub
     (((periodicClock_contDiff g w).comp contDiff_snd).mul (hB.comp contDiff_fst))
 
-theorem phase_contDiffOn (g : Geometry) (w : ClockWindow) {A B : P → ℝ} {U : Set P}
-    (hA : ContDiffOn ℝ ∞ A U) (hB : ContDiffOn ℝ ∞ B U) :
-    ContDiffOn ℝ ∞ (phase g w.cutoff A B) (U ×ˢ univ) :=
-  (hA.comp (s := U ×ˢ univ) (t := U) (contDiffOn_fst (s := U ×ˢ univ))
-      (fun _ hx => hx.1)).sub
-    (((periodicClock_contDiff g w).comp_contDiffOn
-        (contDiffOn_snd (s := U ×ˢ univ))).mul
-      (hB.comp (s := U ×ˢ univ) (t := U) (contDiffOn_fst (s := U ×ˢ univ))
-        (fun _ hx => hx.1)))
 
 omit [NormedAddCommGroup P] [NormedSpace ℝ P] in
 theorem phase_periodic (g : Geometry) (χ : Plane → ℝ) (A B : P → ℝ)
@@ -290,7 +281,6 @@ end Phases
 
 abbrev Parameter := PhysicalParticularWave.Parameter
 
-noncomputable def slowSwap (p : Parameter) : PhaseCalculus.Slow := (p.1, (p.2.2, p.2.1))
 
 noncomputable def profileIntercept (ε pz x0 : ℝ) (s : Parameter) : ℝ :=
   (pz / ε) * s.2.2 + x0 * s.1

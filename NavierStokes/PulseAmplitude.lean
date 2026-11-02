@@ -42,26 +42,14 @@ namespace NavierStokes.RadialSchedule
 
 def axialExponent (h : ℝ) : ℝ := 1 / 2 - h
 
-def axialShape (η : ℝ) : ℝ := 1 - η ^ 2
 
 def coordinateFactor (h η : ℝ) : ℝ := 1 - 2 * h * η ^ 2
 
-def idealAxialVelocity (η : ℝ) : ℝ := 4 * η
-
-def idealTransport (h η : ℝ) : ℝ :=
-  1 - 2 * axialExponent h * η * idealAxialVelocity η - axialShape η * 4
-
-/-- The logarithmic shape derivative of `(1 + η²)⁻¹`. -/
-def logShapeDerivative (η : ℝ) : ℝ := -(2 * η / (1 + η ^ 2))
 
 
-def idealSource (h η : ℝ) : ℝ :=
-  -(3 / 5) * idealTransport h η - h * (1 - 2 * η * idealAxialVelocity η) -
-    (axialExponent h * η + axialShape η * idealAxialVelocity η) *
-      logShapeDerivative η
 
-/-- The constant particular solution with `l = 3/5`. -/
-def idealLag (h η : ℝ) : ℝ := idealSource h η / (8 / 5)
+
+
 
 
 
@@ -70,11 +58,7 @@ def idealLag (h η : ℝ) : ℝ := idealSource h η / (8 / 5)
 
 def radiusProfile (X₀ y : ℝ) : ℝ := X₀ * Real.exp y
 
-def angularVelocityProfile (e₀ lam y : ℝ) : ℝ :=
-  e₀ * Real.exp (-(1 / 2 + lam) * y)
 
-def angularMomentumProfile (H₀ lam y : ℝ) : ℝ :=
-  H₀ * Real.exp (-lam * y)
 
 
 
@@ -108,9 +92,6 @@ theorem pulse_energy_debt_bounds :
 
 
 
-/-- Constant-source lag solution, written in a form that also specifies its initial value. -/
-def lagSolution (a c q₀ y : ℝ) : ℝ :=
-  c / a + (q₀ - c / a) * Real.exp (-a * y)
 
 
 

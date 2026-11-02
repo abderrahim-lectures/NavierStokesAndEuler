@@ -154,8 +154,6 @@ end Paths
 
 /-! ## Changing the integer representative of the native slot center -/
 
-noncomputable def recenterGeometry (g : Geometry) (l : Frequency) : Geometry :=
-  { g with center := g.center + TorusAverages.latticePoint l }
 
 
 
@@ -457,9 +455,6 @@ theorem commonSolve_transport {a b : ℝ} (d : LinearData P V E) (φ : Q → P)
   rw [commonSolve_scaleSource, commonSolve_transform,
     commonSolve_timeData d g τ rate hrate hab hA hB hf κ hκ hq]
 
-noncomputable def physicalOutput {a b : ℝ} (d : LinearData P V E) (g : Geometry)
-    (hab : a ≤ b) (κ : Plane → ℝ) (χ : X → P × Plane) : X → E :=
-  fun x => d.commonSolve g hab κ (χ x)
 
 
 
@@ -535,10 +530,6 @@ end InputCompatibility
 
 /-! ## Why the anchor must be transported as input data -/
 
-noncomputable def constantForcing : LinearData ℝ ℝ ℝ where
-  coefficient := fun _ => 0
-  forcingMap := fun _ => ContinuousLinearMap.id ℝ ℝ
-  source := fun _ => 1
 
 
 

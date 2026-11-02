@@ -316,23 +316,6 @@ theorem ShrinkingSupport.jets_tendsto_zero {h C : ℝ} (hh : 0 < h) (hh1 : h < 1
   tendsto_const_nhds.congr' (hf.jets_eventually_zero hh hh1 hx hz m).symm
 
 
-/-- Adding a correction which vanishes on a past neighborhood preserves
-the literal extension of the base field on the intersection. -/
-noncomputable def addZeroExtension {f g : SpaceTime → V} {x : Space}
-    (e : JointResidualLimits.OneSidedExtension f x) {U : Set SpaceTime}
-    (hU : IsOpen U) (hxU : (1, x) ∈ U)
-    (hg : EqOn g (fun _ => 0) (U ∩ SpacetimeEndpoint.openPast 1)) :
-    JointResidualLimits.OneSidedExtension (fun w => f w + g w) x where
-  value := e.value
-  domain := e.domain ∩ U
-  isOpen := e.isOpen.inter hU
-  mem := ⟨e.mem, hxU⟩
-  smooth := e.smooth.mono inter_subset_left
-  agrees := by
-    intro w hw
-    change e.value w = f w + g w
-    rw [hg ⟨hw.1.2, hw.2⟩, add_zero]
-    exact e.agrees ⟨hw.1.1, hw.2⟩
 
 
 end Extensions
@@ -348,36 +331,12 @@ theorem ShrinkingSupport.spatialCurl {h C : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     (hA.zero_germ hh hh1 ht (lt_of_not_ge hs))
   exact hn (he.trans (SpatialCurl.curl_zero _))
 
-/-- The extension of a potential yields the extension of its actual
-Cartesian spatial curl. -/
-noncomputable def curlExtension {A : SpaceTime → Space} {x : Space}
-    (e : JointResidualLimits.OneSidedExtension A x) :
-    JointResidualLimits.OneSidedExtension (SpatialCurl.spatialCurl A) x where
-  value := SpatialCurl.spatialCurl e.value
-  domain := e.domain
-  isOpen := e.isOpen
-  mem := e.mem
-  smooth := by
-    intro w hw
-    exact (SpatialCurl.contDiffAt_spatialCurl
-      (e.smooth.contDiffAt (e.isOpen.mem_nhds hw)) (by simp)).contDiffWithinAt
-  agrees := by
-    intro w hw
-    apply SolenoidalDiagonal.spatialCurl_eq_of_eventuallyEq
-    filter_upwards [(e.isOpen.inter (SpacetimeEndpoint.openPast_isOpen 1)).mem_nhds hw]
-      with y hy
-    exact e.agrees hy
 
 end Curl
 
 section Diagonal
 
 
-/-- Add the actual diagonal sum before taking any velocity derivative. -/
-noncomputable def diagonalAddition {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
-    (f : SpaceTime → V) (a : ℕ → ℝ) (q : SpaceTime → ℝ)
-    (F : ℕ → SpaceTime → V) (w : SpaceTime) : V :=
-  f w + SolenoidalDiagonal.potentialSum a q F w
 
 
 

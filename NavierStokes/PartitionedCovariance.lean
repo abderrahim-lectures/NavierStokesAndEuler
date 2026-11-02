@@ -795,10 +795,6 @@ noncomputable def PairData.ofSignedPulses {D h : ℝ} {vr vt : Plane} (sys : Slo
   phases := phases
 
 
-noncomputable def roundedPhaseRemainder (k ε target pz x0 : ℝ) (F G : PhaseCalculus.Slow → ℝ)
-    (s : PhaseCalculus.Slow) (v : Plane → ℝ) (Y : Plane) : ℝ :=
-  k * ((pz / ε) * s.2.1 + x0 * s.1 -
-    v Y * (PhaseEstimates.roundedFrequency k target * F s + pz * G s))
 
 
 

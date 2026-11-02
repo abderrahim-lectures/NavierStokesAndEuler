@@ -251,11 +251,7 @@ noncomputable def axialProfile (h : ℝ) : SimilarityProfile.PhysicalProfile :=
 noncomputable def pressureProfile (h : ℝ) : SimilarityProfile.PhysicalProfile :=
   pullback h (-2 * A h) P.pressure
 
-noncomputable def physicalStressTheta (h : ℝ) : SimilarityProfile.PhysicalProfile :=
-  pullback h (-A h - 1 / 2) (theta P h)
 
-noncomputable def physicalStressAxial (h : ℝ) : SimilarityProfile.PhysicalProfile :=
-  pullback h (-A h - 1 / 2) (axial P h)
 
 noncomputable def physicalVelocity (h : ℝ) : ProblemStatement.VelocityField :=
   AxisymmetricResidual.velocity (RadialFluxResidual.radialB (fluxProfile P h))
@@ -264,14 +260,7 @@ noncomputable def physicalVelocity (h : ℝ) : ProblemStatement.VelocityField :=
 noncomputable def physicalPressure (h : ℝ) : ProblemStatement.PressureField :=
   AxisymmetricResidual.pressure (pressureProfile P h)
 
-/-- The angular axial-viscosity term omitted from the leading radial balance. -/
-noncomputable def thetaAxialViscosity (h : ℝ) (p : SimilarityProfile.PhysicalPoint) : ℝ :=
-  Real.sqrt (2 * p.2.1) *
-    SimilarityProfile.partialZ (SimilarityProfile.partialZ (swirlProfile P h)) p
 
-/-- The axial axial-viscosity term omitted from the leading radial balance. -/
-noncomputable def axialAxialViscosity (h : ℝ) (p : SimilarityProfile.PhysicalPoint) : ℝ :=
-  SimilarityProfile.partialZ (SimilarityProfile.partialZ (axialProfile P h)) p
 
 theorem inner_X_pos {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
     {p : SimilarityProfile.PhysicalPoint} (hp : p.1 < 1) (hs : 0 < p.2.1) :
@@ -285,9 +274,6 @@ theorem inner_X_pos {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
 
 
 
-/-- Cylindrical angular component of a genuine Cartesian vector. -/
-noncomputable def angularComponent (x v : ProblemStatement.Space) : ℝ :=
-  (x 0 * v 1 - x 1 * v 0) / Real.sqrt (2 * AxisymmetricFields.radialEnergy x)
 
 
 

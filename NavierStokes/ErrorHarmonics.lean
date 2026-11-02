@@ -190,32 +190,14 @@ section AliasErrors
 
 variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S]
 
-/-- The pressure alias already used in the correction state, represented in
-mode zero. Its metadata can be chosen to equal any associated label. -/
-noncomputable def pressureAliasBlock (r : ReconstructionData) (c : Context (Lift S))
-    (u : State (Lift S)) (k : ℕ → ℝ) (Φ : ℕ → Lift S → ℝ) (kp : ℕ → ℤ) :
-    HarmonicBlock (Lift S) :=
-  zeroBlock k Φ kp (fun n x => CorrectionState.pressureAlias r c u n (x, 0))
 
 
 
 
-/-- The temporal alias retains its actual differentiated shifted integral. -/
-noncomputable def temporalAliasBlock (r : ReconstructionData) (h : ℝ)
-    (c : Context (Lift S)) (u : State (Lift S))
-    (k : ℕ → ℝ) (Φ : ℕ → Lift S → ℝ) (kp : ℕ → ℤ) : HarmonicBlock (Lift S) :=
-  zeroBlock k Φ kp (fun n x => CorrectionState.temporalAlias r h c u n (x, 0))
 
 
 
 
-/-- Replacing a pressure reconstruction changes the saved alias by its exact
-new-minus-old value, which is again mode zero. -/
-noncomputable def pressureAliasRefreshBlock (r : ReconstructionData)
-    (c : Context (Lift S)) (oldState newState : State (Lift S))
-    (k : ℕ → ℝ) (Φ : ℕ → Lift S → ℝ) (kp : ℕ → ℤ) : HarmonicBlock (Lift S) :=
-  zeroBlock k Φ kp (fun n x => CorrectionState.pressureAlias r c newState n (x, 0) -
-    CorrectionState.pressureAlias r c oldState n (x, 0))
 
 
 
@@ -331,9 +313,6 @@ theorem GaussianData.block_represents (g : GaussianData D)
   gaussianBlock_represents g.directions g.harmonic k Φ g.phase kp
     hg.1 hg.2.1 hg.2.2.1 hg.2.2.2.1 hg.2.2.2.2
 
-noncomputable def accumulatedGaussianBlock (steps : ℕ) (g : ℕ → GaussianData D)
-    (k : ℕ → ℝ) (Φ : ℕ → D → ℝ) (kp : ℕ → ℤ) : HarmonicBlock D :=
-  sumBlock (Finset.range steps) k Φ kp (fun s => (g s).block k Φ kp)
 
 
 
@@ -345,17 +324,6 @@ section AliasStages
 
 variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S]
 
-/-- Actual saved aliases after finitely many temporal stages and the current
-pressure reconstruction. The state path may be produced by any correction rule. -/
-noncomputable def accumulatedAlias (steps : ℕ) (r : ReconstructionData) (h : ℝ)
-    (c : Context (Lift S)) (u : ℕ → State (Lift S)) : Oscillation (Lift S) :=
-  CorrectionState.pressureAlias r c (u steps) +
-    ∑ s ∈ Finset.range steps, CorrectionState.temporalAlias r h c (u s)
-
-noncomputable def accumulatedAliasBlock (steps : ℕ) (r : ReconstructionData) (h : ℝ)
-    (c : Context (Lift S)) (u : ℕ → State (Lift S))
-    (k : ℕ → ℝ) (Φ : ℕ → Lift S → ℝ) (kp : ℕ → ℤ) : HarmonicBlock (Lift S) :=
-  zeroBlock k Φ kp (fun n x => accumulatedAlias steps r h c u n (x, 0))
 
 
 
@@ -363,18 +331,7 @@ noncomputable def accumulatedAliasBlock (steps : ℕ) (r : ReconstructionData) (
 
 
 
-/-- The two retained error types for one label are added as actual finite
-coefficient families. The base error is handled separately in the physical
-decomposition and cancels from the good residual. -/
-noncomputable def accumulatedErrorBlock (steps : ℕ) (g : ℕ → GaussianData (Lift S))
-    (r : ReconstructionData) (h : ℝ) (c : Context (Lift S)) (u : ℕ → State (Lift S))
-    (k : ℕ → ℝ) (Φ : ℕ → Lift S → ℝ) (kp : ℕ → ℤ) : HarmonicBlock (Lift S) where
-  velocity n i := (accumulatedGaussianBlock steps g k Φ kp).velocity n i +
-    (accumulatedAliasBlock steps r h c u k Φ kp).velocity n i
-  pressure _ := 0
-  frequency := k
-  phase := Φ
-  angularFrequency := kp
+
 
 
 
@@ -385,38 +342,16 @@ section AxisymmetricBase
 
 open ProblemStatement AxisymmetricFields
 
-/-- Cartesian location of the cylindrical point `(r,z,θ)`. -/
-noncomputable def polarSpace (r z θ : ℝ) : Space :=
-  AxisymmetricResidual.pack (r * Real.cos θ) (r * Real.sin θ) z
-
-noncomputable def polarProfile (q : ProfilePoint) : ProfilePoint :=
-  (q.1, (q.2.1 ^ 2 / 2, q.2.2))
-
-
-/-- Components in the actual orthonormal radial/angular/axial frame. -/
-noncomputable def cylindricalComponents (θ : ℝ) (v : Space) : Fin 3 → ℝ :=
-  ![Real.cos θ * v 0 + Real.sin θ * v 1,
-    -Real.sin θ * v 0 + Real.cos θ * v 1, v 2]
 
 
 
-/-- The literal Cartesian Navier--Stokes residual, expressed in its cylindrical
-frame. This is not an independently specified error oracle. -/
-noncomputable def axisymmetricBaseError (B F U P : ℕ → Profile) : Oscillation ProfilePoint :=
-  fun n p => cylindricalComponents p.2
-    (navierStokesResidual (AxisymmetricResidual.velocity (B n) (F n) (U n))
-      (AxisymmetricResidual.pressure (P n)) p.1.1 (polarSpace p.1.2.1 p.1.2.2 p.2))
-
-noncomputable def axisymmetricBaseValue (B F U P : ℕ → Profile) : MeanVector ProfilePoint :=
-  fun n q => ![q.2.1 * AxisymmetricResidual.residualRadial (B n) (F n) (U n) (P n) (polarProfile q),
-    -q.2.1 * AxisymmetricResidual.residualAngular (B n) (F n) (U n) (polarProfile q),
-    AxisymmetricResidual.residualAxial (B n) (U n) (P n) (polarProfile q)]
 
 
 
-noncomputable def axisymmetricBaseBlock (B F U P : ℕ → Profile)
-    (k : ℕ → ℝ) (Φ : ℕ → ProfilePoint → ℝ) (kp : ℕ → ℤ) : HarmonicBlock ProfilePoint :=
-  zeroBlock k Φ kp (axisymmetricBaseValue B F U P)
+
+
+
+
 
 
 

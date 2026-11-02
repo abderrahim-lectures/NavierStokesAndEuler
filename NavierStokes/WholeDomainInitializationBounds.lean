@@ -61,20 +61,11 @@ open Set Function Filter ProblemStatement CorrectionInitialization
 open CorrectionInitialization.ActualPrimary ActualCandidateAssembly PhysicalWaveSum
 open scoped Topology ContDiff BigOperators
 
-/-- One common scale for every finite stage and every derivative order. -/
-noncomputable def commonQ (B N0 : ℕ) : ℝ :=
-  ChartScales.Q (ActualCandidateConstruction.residualBand B N0)
 
 
 
 
-noncomputable abbrev finiteVelocity (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (J : ℕ) : VelocityField :=
-  MixedDiagonalResidual.uncutVelocity (potentialStages B N0 hN) (directStages B N0 hN) J
 
-noncomputable abbrev finitePressure (B N0 : ℕ)
-    (hN : ActualCarrierGeometry.geometricThreshold ≤ N0) (J : ℕ) : PressureField :=
-  DiagonalJetBounds.uncutPrefix (pressureStages B N0 hN) (J+1)
 
 
 end NavierStokes.WholeDomainStageBounds
@@ -99,9 +90,6 @@ private noncomputable abbrev seedR (B N0 : ℕ) :=
 private noncomputable abbrev seedB (B N0 : ℕ) :=
   ActualPhysicalStageBounds.actualInitialAngularInput B N0 (ActualCandidateConstruction.firstBand B N0)
     (ActualCandidateConstruction.firstBand_four B N0)
-private noncomputable abbrev seedP (B N0 : ℕ) :=
-  ActualPhysicalStageBounds.actualInitialPressureInput B N0 (ActualCandidateConstruction.firstBand B N0)
-    (ActualCandidateConstruction.firstBand_four B N0)
 
 noncomputable def seedPotentialLoss (B N0 : ℕ) : ℕ → ℝ :=
   InitializedPhysicalBackground.seedPotentialLoss h (InitialPhysicalData.potentialWaveData B N0).alpha
@@ -110,18 +98,11 @@ noncomputable def seedPotentialLoss (B N0 : ℕ) : ℕ → ℝ :=
 noncomputable def seedDirectLoss (B N0 : ℕ) : ℕ → ℝ :=
   InitializedPhysicalBackground.seedDirectLoss h (seedB B N0).alpha
 
-noncomputable def seedPressureLoss (B N0 : ℕ) : ℕ → ℝ :=
-  ActualPhysicalStageBounds.initialPressureLoss h (InitialPhysicalData.pressureWaveData B N0).alpha
-    (InitialPhysicalData.pressureWaveData B N0).shift (seedP B N0).alpha
 
 
 
 
-noncomputable def initialVelocityLoss (B N0 : ℕ) (base : ℕ → ℝ) (m : ℕ) : ℝ :=
-  max (base m) (max (seedPotentialLoss B N0 (m+1)) (seedDirectLoss B N0 m))
 
-noncomputable def initialPressureTotalLoss (B N0 : ℕ) (base : ℕ → ℝ) (m : ℕ) : ℝ :=
-  max (base m) (seedPressureLoss B N0 m)
 
 
 

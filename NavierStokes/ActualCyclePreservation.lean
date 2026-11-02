@@ -5,9 +5,14 @@ import NavierStokes.ActualCoreSupport
 import NavierStokes.ActualWaveRegularityData
 import NavierStokes.ActualParticularMeanGain
 import NavierStokes.ActualSignedOutputBounds
-import NavierStokes.ActualSignedGaussian
+import NavierStokes.ActualSignedStageControls
+import NavierStokes.ActualInitialExcluded
+import NavierStokes.UniformBlockBounds
 import NavierStokes.ActualCycleAssembly
-import NavierStokes.ActualSignedMeanBinding
+import NavierStokes.ActualPrimaryCovariance
+import NavierStokes.ActualInitialization
+import NavierStokes.BandReindexedSignedMeanGain
+import NavierStokes.SignedCrossDefectClass
 import NavierStokes.ActualSignedCommonDynamics
 import NavierStokes.ActualParticularCycleData
 import NavierStokes.ActualIntermediateDebtBounds
@@ -22,6 +27,754 @@ The fixed parameters, current residual, signed request, and comparison
 primary are those of the existing initialization. The concrete wave
 constructions supply the inputs to the generic analytic step.
 -/
+/-! Merged from `NavierStokes.ActualSignedMeanBinding` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# The actual signed mean cross and its physical scale
+
+The fixed comparison primary is the actual tangent block, and every signed
+coefficient uses the same selected matrix, pulse and once-applied cutoff.
+The physical partition scale is `Q n * q_normalized`; finite low bands retain
+their partition factor.
+-/
+
+noncomputable section
+
+namespace NavierStokes.ActualSignedMeanBinding
+
+open Set Function Filter
+open scoped ContDiff Topology BigOperators
+open CorrectionInitialization.ActualPrimary ActualPrimaryCovariance
+
+abbrev Point := LocalSignedRequest.Point
+abbrev FullPoint := Point × ℝ
+abbrev Vec2 := SignedWaveUpdate.Vec2
+abbrev Mat2 := SignedWaveUpdate.Mat2
+abbrev Space := ProblemStatement.Space
+abbrev Frequency := TorusInverse.Frequency
+
+/-! ## The legacy normalized-tail input cannot describe this chart -/
+
+
+
+
+
+
+/-! ## Shared matrix, scaled target and ratio of the signed coefficients -/
+
+variable {B N0 : ℕ}
+
+noncomputable def velocityScale (L : Label B N0) (n : ℕ) : ℝ :=
+  PhysicalParticularWave.velocityWeight h (ChartScales.Q n) (ChartScales.Q (BaseChartJets.cellBand L))
+
+noncomputable def commonMatrix (L : Label B N0) (n : ℕ) (x : Point) : Mat2 :=
+  covariance B N0 L (nativePoint n x L)
+
+noncomputable def referenceTarget (L : Label B N0) (n : ℕ) (x : Point) : Vec2 :=
+  fun i => PrimaryTargetBounds.actualTarget modulation (nativePoint n x L) i
+
+noncomputable def commonTarget (L : Label B N0) (n : ℕ) (x : Point) : Vec2 :=
+  (ActualSignedStageControls.coefficientScale (L, (0 : Fin 2)) n) ^ 2 • referenceTarget L n x
+
+noncomputable def signedRatio (request : ℕ → FullPoint → Vec2) (L : Label B N0)
+    (n : ℕ) (x : Point) (j : Fin 2) : ℝ :=
+  SignedCovariance.increment (commonMatrix L n x) (commonTarget L n x) (request n (x, 0)) j /
+    SmoothCovariance.amplitudes (commonMatrix L n x) (commonTarget L n x) j
+
+theorem velocityScale_pos (L : Label B N0) (n : ℕ) : 0 < velocityScale L n :=
+  PhysicalParticularWave.ratioPower_pos (ChartScales.Q_pos n) (ChartScales.Q_pos _) _
+
+theorem velocityScale_eq (L : Label B N0) (n : ℕ) :
+    velocityScale L n = ChartScales.Q n ^ CoordinateAlgebra.A h *
+      ChartScales.Q (BaseChartJets.cellBand L) ^ (-CoordinateAlgebra.A h) := by
+  simp only [velocityScale, PhysicalParticularWave.velocityWeight, PhysicalParticularWave.ratioPower,
+    Real.rpow_neg (ChartScales.Q_pos _).le, div_eq_mul_inv]
+
+
+
+theorem commonTarget_cone (L : Label B N0) (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (hm : spatialMask L (nativePoint n x L) ≠ 0) :
+    SmoothCovariance.StrictCone (commonMatrix L n x) (commonTarget L n x) := by
+  have hT := BaseContextAssembly.nativeStrip_time nominal standardRegion hx
+  have hp := spatialMask_carrier L (nativePoint_time n hT L) hm
+  have hbase := sourcePair_strictCone L (nativePoint n x L) hp
+    (nativePoint_reference n hx L hm) (nativePoint_weight_pos n hx L)
+  rw [← PrimaryFieldAssembly.SourcePair.sourceMatrix_eq, sourcePair_matrix] at hbase
+  apply (SmoothCovariance.weights_pos_iff _ _).mp
+  intro i
+  rw [commonTarget, PhysicalSignedWave.weights_smul_target]
+  exact mul_pos (sq_pos_of_pos (ActualSignedStageControls.coefficientScale_pos (L, 0) n))
+    (hbase.weights_pos i)
+
+theorem primary_scalar_common (L : Label B N0) (n : ℕ) (x : Point) (m : ℝ) (j : Fin 2) :
+    PartitionedCovariance.amplitude (ChartScales.epsilon h n) m
+      (commonMatrix L n x) (commonTarget L n x) j =
+      velocityScale L n * PartitionedCovariance.amplitude
+        (ChartScales.epsilon h (BaseChartJets.cellBand L)) m
+        (commonMatrix L n x) (referenceTarget L n x) j :=
+  PhysicalSignedWave.primary_scalar_scale _ _ m (ChartScales.epsilon_pos h n)
+    (ChartScales.epsilon_pos h _) (velocityScale_pos L n) j
+
+theorem signed_scalar_ratio (request : ℕ → FullPoint → Vec2) (L : Label B N0) (n : ℕ)
+    {x : Point} (hx : x ∈ ActualInitialization.geometry.strip.domain) (j : Fin 2) :
+    Real.sqrt (ChartScales.epsilon h n) *
+      SignedCovariance.increment (commonMatrix L n x) (commonTarget L n x) (request n (x, 0)) j *
+        spatialMask L (nativePoint n x L) =
+      signedRatio request L n x j * velocityScale L n *
+        PartitionedCovariance.amplitude (ChartScales.epsilon h (BaseChartJets.cellBand L))
+          (spatialMask L (nativePoint n x L)) (commonMatrix L n x) (referenceTarget L n x) j := by
+  by_cases hm : spatialMask L (nativePoint n x L) = 0
+  · simp [hm, PartitionedCovariance.amplitude]
+  have ha := (commonTarget_cone L n hx hm).amplitudes_pos j
+  rw [mul_assoc (signedRatio request L n x j), ← primary_scalar_common]
+  unfold signedRatio PartitionedCovariance.amplitude
+  field_simp
+
+/-! ## The actual once-cutoff coefficients -/
+
+theorem localized_amplitude_ratio (request : ℕ → FullPoint → Vec2) (L : Label B N0)
+    (n : ℕ) {x : Point} (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (j : Fin 2) (k : Frequency) :
+    (((ActualSignedStageControls.parameters (L, j)).copyData ActualInitialization.geometry.strip request).localized k).amplitude
+      n (x, 0) =
+      signedRatio request L n x j • (velocityScale L n •
+        CurlClassBounds.complexify (cutVelocity j L
+          (nativePoint n x L, (geometry j L).coordinates k (toAbsolute n x).2))) := by
+  have hr := signed_scalar_ratio request L n hx j
+  change (ActualSignedStageControls.cutoff (L, j) k n (x, 0)) •
+    CurlClassBounds.complexify
+      ((Real.sqrt (ChartScales.epsilon h n) *
+        SignedCovariance.increment (commonMatrix L n x) (commonTarget L n x) (request n (x, 0)) j *
+        spatialMask L (nativePoint n x L)) •
+      ActualSignedStageControls.fundamental (L, j) k n (x, 0)) = _
+  rw [hr]
+  simp only [ActualSignedStageControls.cutoff, ActualSignedStageControls.fundamental,
+    ActualSignedStageControls.nativePoint, cutVelocity, rawVelocity, PartitionedCovariance.amplitude,
+    map_smul, smul_smul]
+  congr 1
+  simp only [commonMatrix, nativePoint]
+  rw [show referenceTarget L n x = (fun i => PrimaryTargetBounds.actualTarget modulation
+    (nativeSlow L (toAbsolute n x)) i) from rfl]
+  ring
+
+theorem signed_common_amplitude_ratio (request : ℕ → FullPoint → Vec2) (L : Label B N0)
+    (n : ℕ) {x : Point} (hx : x ∈ ActualInitialization.geometry.strip.domain) (j : Fin 2) :
+    ((ActualSignedStageControls.parameters (L, j)).copyData ActualInitialization.geometry.strip request).common.amplitude
+      n (x, 0) = signedRatio request L n x j • cutAmplitude j L n (x, 0) := by
+  rw [cutAmplitude_eq_common j L n hx 0, ← velocityScale_eq]
+  change (∑' k : Frequency,
+    (((ActualSignedStageControls.parameters (L, j)).copyData ActualInitialization.geometry.strip request).localized k).amplitude
+      n (x, 0)) = _
+  unfold commonAmplitude
+  rw [← tsum_const_smul'', ← tsum_const_smul'']
+  exact tsum_congr (fun k => localized_amplitude_ratio request L n hx j k)
+
+theorem primaryBlock_eq_model (L : Label B N0) (j : Fin 2) :
+    ActualInitialization.tangentBlock (L, j) = SignedWaveUpdate.blockOfCoefficients
+      ((chartCoefficients j L).withCutoff (chartCutoff j L))
+      (fun _ => PrimaryGeometryAssembly.angularMode certificate modulation (choice B N0).prepared j L) := rfl
+
+theorem primary_tangent_band (l : Label B N0 × Fin 2) :
+    (ActualInitialization.tangentBlock l).BandLimited 1 :=
+  CorrectionInitialization.PrimaryHarmonics.block_band _ _ _
+
+
+theorem signed_tangent_ratio (request : ℕ → FullPoint → Vec2) (L : Label B N0)
+    (n : ℕ) {x : Point} (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (j : Fin 2) (theta : ℝ) (i : Fin 3) :
+    ((ActualSignedStageControls.parameters (L, j)).tangentBlock ActualInitialization.geometry.strip request).oscillation
+      n (x, theta) i = signedRatio request L n x j *
+      (ActualInitialization.tangentBlock (L, j)).oscillation n (x, theta) i := by
+  rw [primaryBlock_eq_model]
+  unfold CorrectionStep.PeriodizedSignedParameters.tangentBlock SignedWaveUpdate.blockOfCoefficients
+  rw [SignedWaveUpdate.coefficientBlock_velocity, SignedWaveUpdate.coefficientBlock_velocity,
+    signed_common_amplitude_ratio request L n hx j]
+  simp only [PeriodizedWaveBounds.CopyData.common, CorrectionStep.PeriodizedSignedParameters.copyData,
+    ActualSignedStageControls.parameters, LinearWaveBounds.WaveCoefficients.withCutoff,
+    cutAmplitude, Pi.smul_apply, Complex.real_smul,
+    ← mul_assoc, Complex.mul_re, Complex.mul_im, Complex.ofReal_re, Complex.ofReal_im,
+    zero_mul, mul_zero, add_zero, sub_zero]
+  ring
+
+
+/-! ## Individual primary modes at the actual common cover -/
+
+theorem primary_mode_view (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (l : Label B N0 × Fin 2) (Y : TorusInverse.Plane) (theta : ℝ) (i : Fin 3) :
+    (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) i =
+      ChartScales.Q n ^ CoordinateAlgebra.A h * viewTangent n x l Y theta i := by
+  rw [ActualInitialization.tangentBlock_represents]
+  have hr := ((BaseContextAssembly.nativeStrip_mem nominal standardRegion x).mp hx).2
+  have hT := BaseContextAssembly.nativeStrip_time nominal standardRegion hx
+  have hR := BaseContextAssembly.nativeStrip_radius nominal standardRegion hx
+  have hrad : PrimaryTargetBounds.profileRadius h (nativePoint n x l.1) ∈
+      Ioo (PrimaryTargetBounds.leftRadius nominal) (PrimaryTargetBounds.rightRadius nominal) := by
+    rwa [nativePoint_profileRadius n hT hR]
+  unfold ActualInitialization.primaryPiece
+  rw [piece_tangent_representation,
+    absoluteTangent_eq l.2 l.1 (toAbsolute n (x.1, (x.2.1, Y)), theta) hrad]
+  rfl
+
+theorem primary_cross_zero (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    {l m : Label B N0 × Fin 2} (hlm : l ≠ m)
+    (Y : TorusInverse.Plane) (theta : ℝ) (i : Fin 2) :
+    (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+      (ActualInitialization.tangentBlock m).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ = 0 := by
+  rw [primary_mode_view n hx, primary_mode_view n hx]
+  have hz := viewTangent_cross_zero n hx hlm Y theta i
+  calc
+    _ = (ChartScales.Q n ^ CoordinateAlgebra.A h) ^ 2 *
+      (viewTangent n x l Y theta 0 * viewTangent n x m Y theta i.succ) := by ring
+    _ = 0 := by rw [hz, mul_zero]
+
+theorem primary_diagonal_continuous (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (l : Label B N0 × Fin 2) (hl : l ∈ activeLabels standardRegion B N0 n) (i : Fin 2) :
+    (∀ Y, Continuous (fun theta =>
+      (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+      (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ)) ∧
+    Continuous (fun Y => SmoothLoop.angularMean (fun theta =>
+      (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+      (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ)) := by
+  have hc := viewTangent_diagonal_continuous n hx l hl i
+  have he (Y : TorusInverse.Plane) (theta : ℝ) :
+      (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+      (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ =
+      (ChartScales.Q n ^ CoordinateAlgebra.A h) ^ 2 *
+        (viewTangent n x l Y theta 0 * viewTangent n x l Y theta i.succ) := by
+    rw [primary_mode_view n hx, primary_mode_view n hx]
+    ring
+  simp_rw [he]
+  constructor
+  · intro Y
+    exact continuous_const.mul (hc.1 Y)
+  · simp_rw [SmoothLoop.angularMean_const_mul]
+    exact continuous_const.mul hc.2
+
+theorem primary_diagonal_average (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (L : Label B N0) (hL : L ∈ unsignedLabels B N0 n) (j i : Fin 2) :
+    PartitionedCovariance.doubleAverage (fun Y theta =>
+      (ActualInitialization.tangentBlock (L, j)).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+      (ActualInitialization.tangentBlock (L, j)).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ) =
+      (PartitionedCovariance.amplitude (ChartScales.epsilon h n)
+        (spatialMask L (nativePoint n x L)) (commonMatrix L n x) (commonTarget L n x) j) ^ 2 *
+        commonMatrix L n x i j := by
+  by_cases hm : spatialMask L (nativePoint n x L) = 0
+  · simp only [primary_mode_view n hx, viewTangent, physicalTangentMode_zero_of_mask j L _ hm,
+      Pi.zero_apply, mul_zero, PartitionedCovariance.doubleAverage, SmoothLoop.angularMean,
+      TorusAverages.squareAverage, intervalIntegral.integral_zero, zero_div,
+      PartitionedCovariance.amplitude, hm, zero_pow (by decide : (2 : ℕ) ≠ 0), zero_mul]
+  have hT := BaseContextAssembly.nativeStrip_time nominal standardRegion hx
+  have hp := spatialMask_carrier L (nativePoint_time n hT L) hm
+  let P := (sourcePair L (nativePoint n x L) hp).pairData
+  have hmat : P.matrix = commonMatrix L n x := by
+    rw [← PrimaryFieldAssembly.SourcePair.sourceMatrix_eq, sourcePair_matrix]
+    rfl
+  have he (Y : TorusInverse.Plane) (theta : ℝ) :
+      (ActualInitialization.tangentBlock (L, j)).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+      (ActualInitialization.tangentBlock (L, j)).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ =
+      (ChartScales.Q n ^ CoordinateAlgebra.A h) ^ 2 *
+        (viewTangent n x (L, j) Y theta 0 * viewTangent n x (L, j) Y theta i.succ) := by
+    rw [primary_mode_view n hx, primary_mode_view n hx]
+    ring
+  simp_rw [he]
+  rw [PartitionedCovariance.doubleAverage_const_mul]
+  simp only [viewTangent, physicalTangentMode_eq_slot j L _ hp]
+  rw [pair_diagonal_common P vectors_det (active_cover_le n hL), hmat]
+  rw [primary_scalar_common, velocityScale_eq]
+  change _ = (_ * PartitionedCovariance.amplitude _ _ _ _ j) ^ 2 * _
+  simp only [PartitionedCovariance.amplitude, commonMatrix, spatialMask]
+  rw [show referenceTarget L n x = (fun i => PrimaryTargetBounds.actualTarget modulation
+    (nativePoint n x L) i) from rfl]
+  ring
+
+/-! ## The literal requested field and its finite covariance sum -/
+
+noncomputable def actualRequest (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) : ℕ → FullPoint → Vec2 :=
+  LocalSignedRequest.fullRequest ActualInitialization.geometry.strip
+    ActualInitialization.geometry.patch ActualInitialization.geometry.coord c u
+
+noncomputable def actualSignedBlock (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) (l : Label B N0 × Fin 2) :=
+  (ActualSignedStageControls.parameters l).tangentBlock ActualInitialization.geometry.strip
+    (actualRequest c u)
+
+noncomputable def actualPrimaryField (B N0 : ℕ) : CorrectionState.Oscillation Point :=
+  LabelSumBounds.fieldSum (activeLabels standardRegion B N0)
+    (fun l => (ActualInitialization.tangentBlock l).oscillation)
+
+noncomputable def actualSignedField (B N0 : ℕ) (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) : CorrectionState.Oscillation Point :=
+  LabelSumBounds.fieldSum (activeLabels standardRegion B N0)
+    (fun l => (actualSignedBlock c u l).oscillation)
+
+noncomputable def actualCross (B N0 : ℕ) (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) : LabelSumBounds.Tensor Point :=
+  LabelSumBounds.symmetricCovariance (actualPrimaryField B N0) (actualSignedField B N0 c u)
+
+theorem actualSignedBlock_fiber (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) (l : Label B N0 × Fin 2)
+    (n : ℕ) {x : Point} (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (Y : TorusInverse.Plane) (theta : ℝ) (i : Fin 3) :
+    (actualSignedBlock c u l).oscillation n ((x.1, (x.2.1, Y)), theta) i =
+      signedRatio (actualRequest c u) l.1 n x l.2 *
+        (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) i := by
+  rw [actualSignedBlock, signed_tangent_ratio (actualRequest c u) l.1 n
+    (SignedMeanGain.Geometry.strip_fiber ActualInitialization.geometry hx Y)]
+  rfl
+
+theorem actual_cross_diagonal (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain)
+    (Y : TorusInverse.Plane) (theta : ℝ) (i : Fin 2) :
+    actualPrimaryField B N0 n ((x.1, (x.2.1, Y)), theta) 0 *
+        actualSignedField B N0 c u n ((x.1, (x.2.1, Y)), theta) i.succ +
+      actualSignedField B N0 c u n ((x.1, (x.2.1, Y)), theta) 0 *
+        actualPrimaryField B N0 n ((x.1, (x.2.1, Y)), theta) i.succ =
+    ∑ l ∈ activeLabels standardRegion B N0 n,
+      (2 * signedRatio (actualRequest c u) l.1 n x l.2) *
+        ((ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) 0 *
+         (ActualInitialization.tangentBlock l).oscillation n ((x.1, (x.2.1, Y)), theta) i.succ) := by
+  classical
+  simp only [actualPrimaryField, actualSignedField, LabelSumBounds.fieldSum,
+    actualSignedBlock_fiber c u _ n hx]
+  rw [PartitionedCovariance.sum_product_diagonal,
+    PartitionedCovariance.sum_product_diagonal, ← Finset.sum_add_distrib]
+  · apply Finset.sum_congr rfl
+    intro l hl
+    ring
+  · intro l hl m hm hlm
+    rw [mul_assoc, primary_cross_zero n hx hlm, mul_zero]
+  · intro l hl m hm hlm
+    rw [mul_left_comm, primary_cross_zero n hx hlm, mul_zero]
+
+theorem actual_cross_average_sum (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain) (i : Fin 2) :
+    StateMomentBalances.meanBar (actualCross B N0 c u 0 i.succ) n x =
+      ∑ l ∈ activeLabels standardRegion B N0 n,
+        (2 * signedRatio (actualRequest c u) l.1 n x l.2) *
+          ((PartitionedCovariance.amplitude (ChartScales.epsilon h n)
+            (spatialMask l.1 (nativePoint n x l.1))
+            (commonMatrix l.1 n x) (commonTarget l.1 n x) l.2) ^ 2 *
+            commonMatrix l.1 n x i l.2) := by
+  rw [actualCross, SignedMeanGain.meanBar_symmetricCovariance
+    (actualPrimaryField B N0) (actualSignedField B N0 c u)
+    (LabelSumBounds.fieldSum_angularContinuous _ _
+      (fun _ => LabelSumBounds.block_angularContinuous _))
+    (LabelSumBounds.fieldSum_angularContinuous _ _
+      (fun _ => LabelSumBounds.block_angularContinuous _))]
+  simp_rw [actual_cross_diagonal c u n hx]
+  rw [PartitionedCovariance.doubleAverage_sum]
+  · apply Finset.sum_congr rfl
+    intro l hl
+    rw [PartitionedCovariance.doubleAverage_const_mul, primary_diagonal_average n hx]
+    rw [activeLabels_product] at hl
+    exact (Finset.mem_product.mp hl).1
+  · intro l hl Y
+    exact continuous_const.mul ((primary_diagonal_continuous n hx l hl i).1 Y)
+  · intro l hl
+    simp_rw [SmoothLoop.angularMean_const_mul]
+    exact continuous_const.mul (primary_diagonal_continuous n hx l hl i).2
+
+theorem pair_signed_reconstruction (request : ℕ → FullPoint → Vec2)
+    (L : Label B N0) (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain) (i : Fin 2) :
+    ∑ j : Fin 2,
+      (2 * signedRatio request L n x j) *
+        ((PartitionedCovariance.amplitude (ChartScales.epsilon h n)
+          (spatialMask L (nativePoint n x L)) (commonMatrix L n x) (commonTarget L n x) j) ^ 2 *
+          commonMatrix L n x i j) =
+      ChartScales.epsilon h n * spatialMask L (nativePoint n x L) ^ 2 * request n (x, 0) i := by
+  by_cases hm : spatialMask L (nativePoint n x L) = 0
+  · simp [PartitionedCovariance.amplitude, hm]
+  have hcone := commonTarget_cone L n hx hm
+  have hrec := SignedCovariance.cross_reconstruct_component
+    (commonMatrix L n x) (commonTarget L n x) (request n (x, 0)) hcone i
+  have heps := Real.sq_sqrt (ChartScales.epsilon_pos h n).le
+  calc
+    _ = ChartScales.epsilon h n * spatialMask L (nativePoint n x L) ^ 2 *
+        (2 * ((commonMatrix L n x).mulVec (fun j =>
+          SmoothCovariance.amplitudes (commonMatrix L n x) (commonTarget L n x) j *
+            SignedCovariance.increment (commonMatrix L n x) (commonTarget L n x)
+              (request n (x, 0)) j)) i) := by
+      simp only [Matrix.mulVec, dotProduct, Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro j hj
+      have ha := ne_of_gt (hcone.amplitudes_pos j)
+      unfold signedRatio PartitionedCovariance.amplitude
+      simp only [mul_pow, heps]
+      field_simp
+    _ = _ := by rw [hrec]
+
+/-! ## Exact physical partition factor, and exact cancellation on its tail -/
+
+theorem requested_cross_factor (B N0 : ℕ) (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) (n : ℕ) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain) (i : Fin 2) :
+    StateMomentBalances.meanBar (actualCross B N0 c u 0 i.succ) n x =
+      partitionFactor B N0 n x * LocalSignedRequest.requestedStress
+        ActualInitialization.geometry.patch ActualInitialization.geometry.coord c u n x i := by
+  rw [actual_cross_average_sum c u n hx i, activeLabels_product,
+    Finset.product_eq_sprod, Finset.sum_product]
+  simp_rw [pair_signed_reconstruction (actualRequest c u) _ n hx i]
+  have he : ChartScales.epsilon h n * actualRequest c u n (x, 0) i =
+      LocalSignedRequest.requestedStress ActualInitialization.geometry.patch
+        ActualInitialization.geometry.coord c u n x i := by
+    change ChartScales.epsilon h n * ((ChartScales.epsilon h n)⁻¹ * _) = _
+    rw [← mul_assoc, mul_inv_cancel₀ (ChartScales.epsilon_pos h n).ne', one_mul]
+  rw [partitionFactor, Finset.sum_mul]
+  apply Finset.sum_congr rfl
+  intro L hL
+  rw [mul_right_comm, he, mul_comm]
+
+/-- The physical scale, and therefore this threshold, is shared by every
+signed request made from the fixed primary choice. -/
+theorem requested_cross_tail (B N0 : ℕ) (c : CorrectionState.Context Point)
+    (u : CorrectionState.State Point) {n : ℕ}
+    (hn : (choice B N0).prepared.N + 1 ≤ n) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain) (i : Fin 2) :
+    StateMomentBalances.meanBar (actualCross B N0 c u 0 i.succ) n x =
+      LocalSignedRequest.requestedStress ActualInitialization.geometry.patch
+        ActualInitialization.geometry.coord c u n x i := by
+  rw [requested_cross_factor B N0 c u n hx i,
+    partitionFactor_eq_one B N0 n hx (physicalScale_tail B N0 hn hx), one_mul]
+
+
+
+
+
+/-! ## Binding to the signed family of the literal correction cycle -/
+
+open CorrectionStep CorrectionState
+
+
+
+
+
+
+
+
+
+
+/-! The cycle field identity is stated without expanding its quantitative
+`SignedFamily` proof object.  Its coefficient projections are all that the
+covariance uses. -/
+
+
+
+
+
+section Family
+
+variable {P : (Label B N0 × Fin 2) → ℕ → Point → ℝ} {α δ β η : ℝ}
+
+/-- Only stored coefficient projections identify the quantitative family.
+For the literal `CycleParameters.signedFamily`, these equalities are `rfl`. -/
+theorem family_cross_eq (c : Context Point) (u : State Point)
+    (f : LabelSumBounds.SignedFamily ActualInitialization.geometry.strip P α δ β η)
+    (a : SignedMeanGain.Assembly f)
+    (hprimary : f.primary = ActualInitialization.tangentBlock)
+    (htangent : f.tangent = actualSignedBlock c u)
+    (hlabels : a.labels = activeLabels standardRegion B N0) :
+    SignedMeanGain.crossTensor f a = actualCross B N0 c u := by
+  simp only [SignedMeanGain.crossTensor, SignedMeanGain.primaryField,
+    SignedMeanGain.tangentField, hprimary, htangent, hlabels]
+  rfl
+
+theorem family_requested_cross_tail (c : Context Point) (u : State Point)
+    (f : LabelSumBounds.SignedFamily ActualInitialization.geometry.strip P α δ β η)
+    (a : SignedMeanGain.Assembly f)
+    (hprimary : f.primary = ActualInitialization.tangentBlock)
+    (htangent : f.tangent = actualSignedBlock c u)
+    (hlabels : a.labels = activeLabels standardRegion B N0) {n : ℕ}
+    (hn : (choice B N0).prepared.N + 1 ≤ n) {x : Point}
+    (hx : x ∈ ActualInitialization.geometry.strip.domain) (i : Fin 2) :
+    StateMomentBalances.meanBar (SignedMeanGain.crossTensor f a 0 i.succ) n x =
+      LocalSignedRequest.requestedStress ActualInitialization.geometry.patch
+        ActualInitialization.geometry.coord c u n x i := by
+  rw [family_cross_eq c u f a hprimary htangent hlabels]
+  exact requested_cross_tail B N0 c u hn hx i
+
+
+end Family
+
+end NavierStokes.ActualSignedMeanBinding
+end
+
+/-! Merged from `NavierStokes.ActualSignedGaussian` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Gaussian cutoff errors of the actual signed correction
+
+The transverse cutoff and the Gaussian cutoff remain in the literal
+native cutoff.  The transverse factor has zero fast derivative.  Thus
+the actual error vanishes on the central Gaussian plateau and retains
+the exact square-root edge weight at every decay exponent.
+-/
+
+noncomputable section
+
+namespace NavierStokes.ActualSignedGaussian
+
+open Set Function Filter WeightedClasses CorrectionInitialization
+open ActualSignedStageControls
+open scoped ContDiff Topology BigOperators
+
+
+variable {B N0 : ℕ}
+
+noncomputable def copies (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) : PeriodizedWaveBounds.CopyData FullPoint Frequency :=
+  (parameters l).copyData ActualPrimaryBounds.strip request
+
+noncomputable def localGaussian (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) (n : ℕ) (k : Frequency) : FullPoint → HarmonicCalculus.ComplexVector :=
+  (copies request l).localGaussian (directions B) n k
+
+theorem source_zero (request : ℕ → FullPoint → SignedWaveUpdate.Vec2) (l : SignedLabel B N0) :
+    (copies request l).source = fun _ _ => 0 := rfl
+
+theorem localGaussian_formula (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) (n : ℕ) (k : Frequency) (x : FullPoint) :
+    localGaussian request l n k x =
+      (directions B).Dfast (cutoff l k) n x • (copies request l).amplitude n k x := by
+  unfold localGaussian
+  rw [PeriodizedWaveBounds.CopyData.localGaussian_eq]
+  change _ + (1 - cutoff l k n x) • (0 : HarmonicCalculus.ComplexVector) = _
+  simp only [smul_zero, add_zero]
+  rfl
+
+noncomputable def transverse (l : SignedLabel B N0) (k : Frequency) (n : ℕ)
+    (x : FullPoint) : ℝ :=
+  PartitionedCovariance.cutoff ActualPrimary.slots.radius (nativePoint l n k x).2.1
+
+theorem transverse_smooth (l : SignedLabel B N0) (n : ℕ) (k : Frequency) :
+    ContDiff ℝ ∞ (transverse l k n) :=
+  (SquaredPartition.gridMask_smooth ActualPrimary.slots.radius 0).comp
+    (nativePoint_smooth l n k).snd.fst
+
+/-- Only the native clock changes along the fast direction. -/
+theorem transverse_fast_zero (l : SignedLabel B N0) (n : ℕ) (k : Frequency) (x : FullPoint) :
+    (directions B).Dfast (transverse l k) n x = 0 := by
+  have hd : HasDerivAt (fun _ : ℝ =>
+      PartitionedCovariance.cutoff ActualPrimary.slots.radius (nativePoint l n k x).2.1)
+      0 (nativePoint l n k x).2.2 := hasDerivAt_const _ _
+  have h := ActualPrimaryDynamics.along_copy l.2 l.1 n k
+    (fun y => PartitionedCovariance.cutoff ActualPrimary.slots.radius y.2.1) hd
+    ((transverse_smooth l n k).differentiable (by simp)).differentiableAt
+  simp only [smul_zero] at h
+  exact h
+
+
+/-- The central Gaussian plateau kills the actual error even when the
+transverse cutoff is strictly between zero and one. -/
+theorem localGaussian_zero_plateau (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) (n : ℕ) (k : Frequency) {x : FullPoint}
+    (hm : |nativeTime l n k x - 1 / 2| < 1 / 5) :
+    localGaussian request l n k =ᶠ[𝓝 x] fun _ => 0 := by
+  have hg := (GaussianTailFlat.profile_eventually_one hm).comp_tendsto
+    (nativeTime_smooth l n k).continuous.continuousAt.tendsto
+  have hc : cutoff l k n =ᶠ[𝓝 x] transverse l k n := by
+    filter_upwards [hg] with y hy
+    change GaussianTailFlat.profile (nativeTime l n k y) = 1 at hy
+    change transverse l k n y * GaussianTailFlat.profile (nativeTime l n k y) = transverse l k n y
+    rw [hy, mul_one]
+  have hd := ParticularWaveAssembly.along_germ hc ((directions B).fastField n)
+  filter_upwards [hd] with y hy
+  rw [localGaussian_formula]
+  change HarmonicCalculus.along ((directions B).fastField n) (cutoff l k n) y • _ = 0
+  rw [hy]
+  change (directions B).Dfast (transverse l k) n y • _ = 0
+  rw [transverse_fast_zero, zero_smul]
+
+theorem localGaussian_zero_of_cutoff (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) {n : ℕ} {k : Frequency} {x : FullPoint}
+    (hz : cutoff l k n =ᶠ[𝓝 x] fun _ => 0) :
+    localGaussian request l n k =ᶠ[𝓝 x] fun _ => 0 :=
+  LocalizedGaussianBounds.localGaussian_zero_of_cutoff_source (copies request l) (directions B)
+    hz (Filter.Eventually.of_forall (fun _ => rfl))
+
+theorem localGaussian_zero_of_mask (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) {n : ℕ} {k : Frequency} {x : FullPoint}
+    (hz : mask l k n =ᶠ[𝓝 x] fun _ => 0) :
+    localGaussian request l n k =ᶠ[𝓝 x] fun _ => 0 := by
+  have ha : (copies request l).amplitude n k =ᶠ[𝓝 x] fun _ => 0 := by
+    filter_upwards [hz] with y hy
+    exact ((parameters l).raw_zero_of_mask request n k y hy).1
+  exact (copies request l).localGaussian_zero_of_fields (directions B) ha
+    (Filter.Eventually.of_forall (fun _ => rfl))
+
+theorem localGaussian_zero_outside_phaseCell (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) (n : ℕ) (k : Frequency) {x : FullPoint}
+    (hx : x ∈ fullStrip.domain) (hc : x ∉ phaseCell l n k) :
+    localGaussian request l n k =ᶠ[𝓝 x] fun _ => 0 := by
+  rcases ActualWaveRegularityData.signed_phaseCell_or_zero l n k hx with h | h | h
+  · exact (hc h).elim
+  · exact localGaussian_zero_of_cutoff request l h
+  · exact localGaussian_zero_of_mask request l h
+
+noncomputable def bandScales : GaussianTailFlat.BandScaleControl fullStrip where
+  power := ActualPrimary.h
+  epsilon_eq := fun _ => rfl
+  constant := 1
+  constant_one_le := le_rfl
+  degree := 1
+  slow_le := fun n => by
+    change max 1 (ChartScales.S n) ≤ 1 * (1 + ChartScales.S n) ^ 1
+    simp only [pow_one, one_mul]
+    have hS : 0 ≤ ChartScales.S n := by unfold ChartScales.S; positivity
+    exact max_le (by linarith) (by linarith)
+
+theorem envelope_gaussian (l : SignedLabel B N0) (n : ℕ) (k : Frequency)
+    {x : FullPoint} (hc : x ∈ phaseCell l n k) :
+    envelope l n x ≤ Real.exp (-ActualInitialExcluded.gaussianRate B N0 *
+      (nativeTime l n k x - 1 / 2)^2 * ActualInitialExcluded.gaussianLength (l.2,l.1) n) := by
+  have he : envelope l n x = ActualPrimaryBounds.pulseEnvelope (l.2,l.1)
+      (ActualPrimaryBounds.fullCopy (l.2,l.1) n k x).2.2 :=
+    ActualPrimaryBounds.envelope_copy (l.2,l.1) n k hc.1.2.2.1
+  rw [he, ActualInitialExcluded.gaussianLength_eq (l.2,l.1) n hc.1.1]
+  have hh := ActualInitialExcluded.nativeEnvelope_gaussian (l.2,l.1) hc.1.2.2.1.2
+  simp only [nativeTime, nativePoint_eq_fullCopy l n k hc.1.1] at hh ⊢
+  exact hh
+
+/-! ## Uniform Gaussian absorption with the edge weight retained -/
+
+theorem localGaussian_wave_jets {σ : ℝ}
+    {request : ℕ → FullPoint → SignedWaveUpdate.Vec2}
+    (hR : ∀ q, PeriodizedWaveBounds.UniformLocalJets fullStrip
+      (fun _ _ x => fullStrip.zeta x) σ (phaseCell (B := B) (N0 := N0))
+      (fun _ n _ x => request n x q)) :
+    LocalizedWaveBounds.LocalWave fullStrip
+      (fun n (i : SignedLabel B N0 × Frequency) => phaseCell i.1 n i.2)
+      (fun n i x => envelope i.1 n x) (σ + 1 / 2)
+      (fun n i => localGaussian request i.1 n i.2) := by
+  have hw : ∀ l n x, x ∈ fullStrip.domain →
+      0 ≤ Real.sqrt (fullStrip.zeta x) * envelope (B := B) (N0 := N0) l n x :=
+    fun l n x _ => mul_nonneg (Real.sqrt_nonneg _)
+      (ActualPrimaryBounds.fullEnvelope_nonneg (l.2,l.1) n x)
+  have hu := LocalizedWaveBounds.LocalClass.of_uniformLocalJets hw
+    (raw_coefficients_jets hR).1
+  have hψ := LocalizedWaveBounds.LocalClass.of_uniformLocalJets
+    (fun _ _ _ _ => zero_le_one) (cutoff_local_jets (B := B) (N0 := N0))
+  have hf : LocalizedWaveBounds.LocalWave fullStrip
+      (fun n (i : SignedLabel B N0 × Frequency) => phaseCell i.1 n i.2)
+      (fun n i x => envelope i.1 n x) (σ + 1 / 2)
+      (fun _ _ (_ : FullPoint) => (0 : HarmonicCalculus.ComplexVector)) :=
+    LocalizedWaveBounds.LocalClass.zero (fun n i x hx => hw i.1 n x hx)
+  have hfast : BandBound fullStrip 0 (directions B).fastScale :=
+    (ActualPrimaryBounds.actual_local_inputs (B := B) (N0 := N0)).fast_scale
+  exact LocalizedGaussianBounds.indexedCutoffError_wave_class (directions B) hψ hfast hu hf
+
+/-- All joint jets of the literal local Gaussian error have every
+epsilon exponent, with exactly the square-root edge weight. -/
+theorem localGaussian_all_gains {σ : ℝ}
+    {request : ℕ → FullPoint → SignedWaveUpdate.Vec2}
+    (hR : ∀ q, PeriodizedWaveBounds.UniformLocalJets fullStrip
+      (fun _ _ x => fullStrip.zeta x) σ (phaseCell (B := B) (N0 := N0))
+      (fun _ n _ x => request n x q)) (β : ℝ) :
+    PeriodizedWaveBounds.UniformLocalJets fullStrip
+      (fun _ _ x => Real.sqrt (fullStrip.zeta x)) β
+      (fun l : SignedLabel B N0 => (cells l).carrier)
+      (fun l n k => localGaussian request l n k) := by
+  have hflat := ActualGaussianCoverage.indexed_gaussian_weighted_all_gains
+    (localGaussian_wave_jets hR) bandScales
+    (fun n i x => nativeTime i.1 n i.2 x)
+    (fun n i => ActualInitialExcluded.gaussianLength (i.1.2,i.1.1) n)
+    (fun n i => ActualInitialExcluded.gaussianLength_pos (i.1.2,i.1.1) n)
+    ActualInitialExcluded.gaussianLengthLower ActualInitialExcluded.gaussianLengthLower_pos
+    (fun _ _ => le_max_right _ _) (ActualInitialExcluded.gaussianRate_pos B N0)
+    (fun n i _ _ hi => envelope_gaussian i.1 n i.2 hi)
+    (fun n i _ _ _ hm => localGaussian_zero_plateau request i.1 n i.2 hm) β
+  have hlarge : LocalizedWaveBounds.LocalClass fullStrip
+      (fun n (i : SignedLabel B N0 × Frequency) => (cells i.1).carrier n i.2)
+      (fun _ _ x => Real.sqrt (fullStrip.zeta x)) β
+      (fun n i => localGaussian request i.1 n i.2) := by
+    apply hflat.enlarge
+    intro n i x hx _
+    by_cases hc : x ∈ phaseCell i.1 n i.2
+    · exact Or.inl hc
+    · exact Or.inr (localGaussian_zero_outside_phaseCell request i.1 n i.2 hx hc)
+  exact hlarge.to_uniformLocalJets
+
+noncomputable def globalGaussian (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
+    (l : SignedLabel B N0) : ℕ → FullPoint → HarmonicCalculus.ComplexVector :=
+  (copies request l).globalGaussian (directions B)
+
+/-- The actual periodized Gaussian coefficient, including its source
+complement, has the exact weighted class. The signed source is identically zero. -/
+theorem globalGaussian_all_gains {σ : ℝ}
+    {request : ℕ → FullPoint → SignedWaveUpdate.Vec2}
+    (hR : ∀ q, PeriodizedWaveBounds.UniformLocalJets fullStrip
+      (fun _ _ x => fullStrip.zeta x) σ (phaseCell (B := B) (N0 := N0))
+      (fun _ n _ x => request n x q)) (β : ℝ) :
+    LabelSumBounds.UniformClass fullStrip
+      (fun _ _ x => Real.sqrt (fullStrip.zeta x)) β
+      (globalGaussian (B := B) (N0 := N0) request) := by
+  have hf : LocalizedGaussianBounds.UniformComplementJets fullStrip
+      (fun _ _ x => Real.sqrt (fullStrip.zeta x)) β
+      (fun l : SignedLabel B N0 => (cells l).carrier)
+      (fun l => (copies request l).source) :=
+    LocalizedGaussianBounds.UniformComplementJets.of_zero_germs fullStrip _ β _ _
+      (fun _ _ _ _ _ => Filter.Eventually.of_forall (fun _ => rfl))
+  exact LocalizedGaussianBounds.uniform_globalGaussian_class_with_complement
+    (copies request) cells (fun l n k => cutoff_support l n k) (directions B)
+    (fun _ _ _ _ => Real.sqrt_nonneg _) (localGaussian_all_gains hR β) hf
+
+/-- This is the precise Fourier-coefficient class required by the signed
+Gaussian field of `CorrectionAnalyticStep.WaveData`. -/
+theorem gaussianBlock_jets {σ : ℝ}
+    {request : ℕ → FullPoint → SignedWaveUpdate.Vec2}
+    (hR : ∀ q, PeriodizedWaveBounds.UniformLocalJets fullStrip
+      (fun _ _ x => fullStrip.zeta x) σ (phaseCell (B := B) (N0 := N0))
+      (fun _ n _ x => request n x q)) (β : ℝ) (i : Fin 3) (j : ℤ) :
+    LabelSumBounds.UniformClass ActualPrimaryBounds.strip
+      (fun _ _ x => Real.sqrt (ActualPrimaryBounds.strip.zeta x)) β
+      (fun l : SignedLabel B N0 => fun n x =>
+        ((parameters l).gaussianBlock ActualPrimaryBounds.strip request).velocity n i j x) := by
+  have hg : LabelSumBounds.UniformClass
+      (HarmonicWaveInteraction.productStrip ActualPrimaryBounds.strip)
+      (fun (_ : SignedLabel B N0) (_ : ℕ) (x : FullPoint) =>
+        Real.sqrt (ActualPrimaryBounds.strip.zeta x.1)) β
+      (globalGaussian request) := globalGaussian_all_gains hR β
+  have hs := UniformBlockBounds.uniform_slice
+    (s := ActualPrimaryBounds.strip)
+    (w := fun (_ : SignedLabel B N0) (_ : ℕ) (x : Point) =>
+      Real.sqrt (ActualPrimaryBounds.strip.zeta x)) hg
+  have hi := hs.map (ContinuousLinearMap.proj i)
+  exact UniformBlockBounds.pair_uniform hi 1 j
+
+/-- Actual current residuals and primitive identities supply the request
+jet premise; no signed Gaussian output estimate is an input. -/
+theorem actual_gaussianBlock_jets (G : SignedMeanGain.Geometry)
+    (hs : G.strip = ActualPrimaryBounds.strip)
+    (c : CorrectionState.Context Point) (u : CorrectionState.State Point) (α : ℝ)
+    (H : MeanStateRegularity.PrimitiveData G.region G.patch.a G.patch.b c u)
+    (hfixed : VariableGaugeMean.reconstructState G.gauge c u = u)
+    (hθ : MeanClass G.strip α (u.thetaResidual c))
+    (hz : MeanClass G.strip α (u.axialResidual c)) (β : ℝ) (i : Fin 3) (j : ℤ) :
+    LabelSumBounds.UniformClass ActualPrimaryBounds.strip
+      (fun _ _ x => Real.sqrt (ActualPrimaryBounds.strip.zeta x)) β
+      (fun l : SignedLabel B N0 => fun n x =>
+        ((parameters l).gaussianBlock ActualPrimaryBounds.strip
+          (LocalSignedRequest.fullRequest G.strip G.patch G.coord c u)).velocity n i j x) := by
+  have hr := fullRequest_jets_from_residuals G c u α H hfixed hθ hz
+    (phaseCell (B := B) (N0 := N0))
+  have hr' : ∀ q, PeriodizedWaveBounds.UniformLocalJets fullStrip
+      (fun _ _ x => fullStrip.zeta x) (α - 1) (phaseCell (B := B) (N0 := N0))
+      (fun _ n _ x => LocalSignedRequest.fullRequest G.strip G.patch G.coord c u n x q) := by
+    simp only [hs] at hr ⊢
+    exact hr
+  exact gaussianBlock_jets hr' β i j
+
+end NavierStokes.ActualSignedGaussian
+end
+
 
 noncomputable section
 
@@ -639,14 +1392,6 @@ theorem signed_inputSupport (l : Index B N0) :
 
 end SignedEquations
 
-noncomputable def nativeParticularData {B N0 : ℕ} (x : CycleState (Index B N0))
-    (l : Index B N0) (j : ℤ) :=
-  (ActualParticularStageControls.canonicalParameters (l.2,l.1)).copyData
-    (StateReindex.context cycleAssoc.symm (ActualPrimary.commonContext B))
-    (StateReindex.state cycleAssoc.symm x.state)
-    (StateReindex.block cycleAssoc.symm (x.coefficients.blocks l))
-    (StateReindex.blockCoefficients cycleAssoc.symm (x.coefficients.gaussian l))
-    (StateReindex.blockCoefficients cycleAssoc.symm (x.coefficients.aliasCoefficients l)) j
 
 
 

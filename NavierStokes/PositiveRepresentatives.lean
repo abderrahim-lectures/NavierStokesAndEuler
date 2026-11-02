@@ -554,8 +554,6 @@ theorem compact_jet_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 noncomputable def stablePullback (h exponent : ℝ) (f : (ℝ × ℝ) → ℝ) (p : Slow) : ℝ :=
   stableQ h p ^ exponent * f (stableInner h p)
 
-noncomputable def physicalPullback (h exponent : ℝ) (f : (ℝ × ℝ) → ℝ) (p : Slow) : ℝ :=
-  SimilarityHomogeneity.chartQ h p ^ exponent * f (SimilarityHomogeneity.chartInner h p)
 
 theorem stablePullback_smoothAt {h : ℝ} (hh : 0 ≤ h) (hh1 : h ≤ 1 / 2)
     (exponent : ℝ) {f : (ℝ × ℝ) → ℝ} {p : Slow} (hp : p ∈ stableDomain h)

@@ -164,13 +164,6 @@ theorem slotVelocity_formula {U : UnsignedLabel} (P : PairData sys U)
 
 
 
-noncomputable def principalField {N : ℕ}
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) (q : ℝ) (x : SlotColoring.Position)
-    (Y : Plane) (θ : ℝ) : Vector :=
-  ∑ᶠ a : SignedIndex,
-    slotVelocity (P a.1) hdet (outer a.1) (ε a.1) (T a.1) q x a.2 Y θ
 
 
 
@@ -216,28 +209,13 @@ open LinearWaveBounds WeightedClasses
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
-noncomputable def cutoffVelocity (a : WaveCoefficients X) (ψ : ℕ → X → ℝ)
-    (n : ℕ) (x : X) : Vector :=
-  fun i => (vectorMode (a.frequency n) (a.phase n)
-    ((a.withCutoff ψ).amplitude n) x i).re
 
-noncomputable def curlVelocity (a : WaveCoefficients X) (s : StripData X)
-    (d : GraphDirections X) (ψ : ℕ → X → ℝ) (n : ℕ) (x : X) : Vector :=
-  fun i => (vectorMode (a.frequency n) (a.phase n)
-    ((a.withCutoff ψ).curlCorrection s d n) x i).re
 
-noncomputable def correctedVelocity (a : WaveCoefficients X) (s : StripData X)
-    (d : GraphDirections X) (ψ : ℕ → X → ℝ) (n : ℕ) (x : X) : Vector :=
-  fun i => (vectorMode (a.frequency n) (a.phase n)
-    ((a.corrected s d ψ).amplitude n) x i).re
 
 
 
 end CurlCorrection
 
-noncomputable def covarianceError (V R : Plane → ℝ → Vector) (i : Fin 2)
-    (Y : Plane) (θ : ℝ) : ℝ :=
-  V Y θ 0 * R Y θ i.succ + R Y θ 0 * V Y θ i.succ + R Y θ 0 * R Y θ i.succ
 
 
 
@@ -419,10 +397,6 @@ open LinearWaveBounds
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 variable {Q : Type} [NormedAddCommGroup Q]
 
-noncomputable def cutoffModeField (a : SignedIndex → WaveCoefficients X)
-    (ψ : SignedIndex → ℕ → X → ℝ) (band : SignedIndex → ℕ)
-    (point : SignedIndex → Plane → ℝ → X) (Y : Plane) (θ : ℝ) : Vector :=
-  ∑ᶠ b : SignedIndex, cutoffVelocity (a b) (ψ b) (band b) (point b Y θ)
 
 
 
@@ -431,21 +405,11 @@ end CoefficientAssembly
 
 /-! ## The angular covariance is a genuine function on the auxiliary torus -/
 
-private noncomputable def latticeCover (k : TorusInverse.Frequency) : TorusInverse.Frequency :=
-  (3 * k.1 + k.2, k.1 + 5 * k.2)
 
 
 
 
 
-noncomputable def diagonalCovariance {N : ℕ}
-    (P : (U : UnsignedLabel) → PairData sys (tailLabel N U))
-    (hdet : vr.1 * vt.2 - vr.2 * vt.1 ≠ 0) (outer ε : UnsignedLabel → ℝ)
-    (T : UnsignedLabel → Vec2) (q : ℝ) (x : SlotColoring.Position)
-    (a : SignedIndex) (i : Fin 2) (Y : Plane) : ℝ :=
-  (outer a.1 * amplitude (ε a.1) (mask D (tailLabel N a.1) q x) (P a.1).matrix (T a.1) a.2) ^ 2 *
-    covered (SlotColoring.nativeIndex h (tailLabel N a.1).1) ((P a.1).rawRadial hdet a.2) Y *
-      covered (SlotColoring.nativeIndex h (tailLabel N a.1).1) ((P a.1).rawTangent hdet a.2 i) Y * (1 / 2)
 
 
 
@@ -483,13 +447,6 @@ open LinearWaveBounds
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 variable {Q : Type} [NormedAddCommGroup Q]
 
-/-- Chart velocity is converted to physical velocity outside the chart
-coefficient. The weighted class of the original coefficient is unchanged. -/
-noncomputable def scaledCutoffModeField (outer : UnsignedLabel → ℝ)
-    (a : SignedIndex → WaveCoefficients X) (ψ : SignedIndex → ℕ → X → ℝ)
-    (band : SignedIndex → ℕ) (point : SignedIndex → Plane → ℝ → X)
-    (Y : Plane) (θ : ℝ) : Vector :=
-  ∑ᶠ b : SignedIndex, outer b.1 • cutoffVelocity (a b) (ψ b) (band b) (point b Y θ)
 
 
 

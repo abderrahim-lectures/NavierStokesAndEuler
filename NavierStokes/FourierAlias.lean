@@ -197,9 +197,6 @@ theorem nonbarPart_zeroMean {f : State → ℂ} (hf : ContDiff ℝ ∞ f) :
 
 
 
-/-- The successive slow derivatives of actual directional Fourier inverses. -/
-noncomputable def fourierSourceJet (d : Direction) (f : State → ℂ) (p : ℕ) : State → ℂ :=
-  RadialAlias.sourceJet (inverse d) f p
 
 
 

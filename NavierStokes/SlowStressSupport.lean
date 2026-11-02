@@ -877,18 +877,8 @@ noncomputable def axialStress (h : ℝ) (n : ℕ) (v u : History) (p : Field) : 
 
 
 
-/-- The order-one angular input is a moment of the actual axial viscosity,
-not a condition on the total residual. It is supplied by differentiating
-the restored renormalized order-zero physical angular moment. -/
-noncomputable def LowerAngularViscosityMoment (S : Set ℝ) (B h : ℝ) (e₀ : Field) : Prop :=
-  ∀ eta ∈ S, moment B 2 (axialOp2 h (orderExponent h 0) e₀) eta = 0
 
 
-/-- A concrete two-edge weight of the form prescribed in (20). -/
-noncomputable def logFlatWeight (l r cL cR R : ℝ) : ℝ :=
-  if R ∈ Ioo l r then
-    FlatCutoff.edge cL (Real.log (R / l)) * FlatCutoff.edge cR (Real.log (r / R))
-  else 0
 
 
 

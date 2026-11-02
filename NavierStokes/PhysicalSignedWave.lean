@@ -164,13 +164,6 @@ noncomputable def nativePhase (K : ℝ) (copy : TorusInverse.Frequency) (x : Cyl
     (fun p => C.F (p.1, (p.2.2, p.2.1))) (fun p => C.G (p.1, (p.2.2, p.2.1)))
     ((x.1.1, x.1.2.1), (x.2, (C.geometry.coordinates copy x.1.2.2).2))
 
-theorem phase_affine (K : ℝ) :
-    CopyAngularInvariance.AffinePhase (0, 1) (C.angularMode / K) (C.phase K) := by
-  intro x t
-  simp only [phase, PeriodicPhaseAssembly.angularLift, PhysicalParticularWave.waveEquiv_apply,
-    Prod.fst_add, Prod.snd_add, Prod.smul_fst, Prod.smul_snd, smul_zero, add_zero,
-    smul_eq_mul, mul_one]
-  ring
 
 theorem phase_periodic (K : ℝ) (x : Cylinder) (k : TorusInverse.Frequency) :
     C.phase K (fastTranslate x k) = C.phase K x := by
@@ -443,8 +436,6 @@ namespace PrimaryData
 
 variable {U : PhaseJetBounds.Domain ℕ PhaseCalculus.Slow} (B : PrimaryData U)
 
-noncomputable def withReferencePhase (C : ReferencePhase) : PrimaryData U :=
-  { B with base := C.base B.base }
 
 noncomputable def matrix : ℕ → Cylinder → Mat2 :=
   SignedWaveUpdate.phaseMatrix B.pulse B.prefactor B.coordinate
@@ -741,35 +732,7 @@ noncomputable def Angular.forPrimary {request : ℕ → Cylinder → Vec2} {refe
     (H : B.Angular request reference) : B.Angular B.primaryRequest reference :=
   { H with request := H.target.map (fun t => (2 : ℝ) • t) }
 
-/-- The angular phase and full auxiliary periodicity can be supplied by
-the explicit compact-clock construction, before any signed solve. -/
-noncomputable def periodicAngular (C : ReferencePhase) (request : ℕ → Cylinder → Vec2) (reference : ℕ)
-    (hc : CopyAngularInvariance.Invariant (0, 1) (B.coordinate reference))
-    (hT : CopyAngularInvariance.Invariant (0, 1) (B.target reference))
-    (hR : CopyAngularInvariance.Invariant (0, 1) (request reference))
-    (hm : CopyAngularInvariance.Invariant (0, 1) (B.mask reference))
-    (hn : CopyAngularInvariance.Invariant (0, 1) (B.normalMotion reference))
-    (ha : CopyAngularInvariance.Invariant (0, 1) (B.action reference)) :
-    (B.withReferencePhase C).Angular request reference where
-  mode := C.angularMode
-  phase := C.phase_affine _
-  coordinate := hc
-  target := hT
-  request := hR
-  mask := hm
-  normalMotion := hn
-  action := ha
 
-noncomputable def periodicStateAngular (C : ReferencePhase) (P : SignedStressPrimitive.Patch)
-    (h : ℝ) (context : CorrectionState.Context Point) (current : CorrectionState.State Point)
-    (reference : ℕ)
-    (hc : CopyAngularInvariance.Invariant (0, 1) (B.coordinate reference))
-    (hT : CopyAngularInvariance.Invariant (0, 1) (B.target reference))
-    (hm : CopyAngularInvariance.Invariant (0, 1) (B.mask reference))
-    (hn : CopyAngularInvariance.Invariant (0, 1) (B.normalMotion reference))
-    (ha : CopyAngularInvariance.Invariant (0, 1) (B.action reference)) :
-    (B.withReferencePhase C).Angular (stateRequest B.strip P h context current) reference :=
-  B.periodicAngular C _ reference hc hT (stateRequest_invariant B.strip P h context current reference) hm hn ha
 
 noncomputable def raw (request : ℕ → Cylinder → Vec2) (j : Fin 2) (reference : ℕ) :
     Cylinder → ComplexVector := ((B.coefficients request j).withCutoff B.cutoff).amplitude reference
@@ -1317,8 +1280,6 @@ noncomputable def primaryCoefficients (j : Fin 2) : LinearWaveBounds.WaveCoeffic
   B.viewPrimaryCoefficients V.strip V.directions V.background V.frequency V.velocity V.clock V.normal
     (fun n => V.map n) reference j
 
-noncomputable def primaryExactCoefficients (j : Fin 2) : LinearWaveBounds.WaveCoefficients Cylinder :=
-  (V.primaryCoefficients j).corrected V.strip V.directions V.cutoff
 
 theorem primaryCoefficients_eq_signed (j : Fin 2) :
     V.primaryCoefficients j = V.coefficients V.primaryRequest j := by
@@ -1336,14 +1297,8 @@ theorem primaryCoefficients_eq_signed (j : Fin 2) :
   rw [he]
 
 
-noncomputable def primaryPhysicalPotential (delta : ℝ) (j : Fin 2) : VelocityField :=
-  V.physicalPotential B.primaryRequest j delta
 
-noncomputable def primaryPhysicalVelocity (delta : ℝ) (j : Fin 2) : VelocityField :=
-  SpatialCurl.spatialCurl (V.primaryPhysicalPotential delta j)
 
-noncomputable def primaryPhysicalPressure (delta : ℝ) (j : Fin 2) : PressureField :=
-  V.physicalPressure B.primaryRequest j delta
 
 
 

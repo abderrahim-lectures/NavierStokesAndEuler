@@ -217,10 +217,6 @@ variable {P V E : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
 include hU hu hA hB hf
 
 
-/-- The current copy argument with the unclamped endpoint-rescaled solve. -/
-noncomputable def copySolveRepresentative (k : Frequency) (p : P × Plane) : E :=
-  JointODE.reparamSolution a (d.coefficientAlong g k) (fun _ => 0)
-    (d.forcingAlong g k) (p, (g.coordinates k p.2).2)
 
 
 

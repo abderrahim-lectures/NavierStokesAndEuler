@@ -439,12 +439,8 @@ noncomputable def bandChart (D : ℝ) (n m : ℕ) : SlowPoint →L[ℝ] SlowPoin
       (bandRatio D n m * x.2.1, bandRatio 1 n m * x.2.2)) := rfl
 
 
-noncomputable def normalizedSlowChart (D : ℝ) (n : ℕ) (x : SlowPoint) : SlowPoint :=
-  (ChartScales.Q n ^ (-(1 / 2 : ℝ)) * x.1,
-    (ChartScales.Q n ^ (-D) * x.2.1, ChartScales.Q n ^ (-1 : ℝ) * x.2.2))
 
 
-noncomputable def chartCost (D : ℝ) : ℝ := 1 + (2 : ℝ) ^ (4 * (1 + |D|))
 
 
 
@@ -506,8 +502,6 @@ variable {P V : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
 noncomputable def sourceStrip (s : WeightedClasses.StripData P) : WeightedClasses.StripData (P × Plane) :=
   parameterStrip s (ContinuousLinearMap.fst ℝ P Plane)
 
-noncomputable def jointStrip (s : WeightedClasses.StripData P) : WeightedClasses.StripData (Joint P) :=
-  parameterStrip s ((ContinuousLinearMap.fst ℝ P Plane).comp (ContinuousLinearMap.fst ℝ (P × Plane) ℝ))
 
 
 end SourceClasses
@@ -534,8 +528,6 @@ noncomputable def bandCommonChart (D : ℝ) (n m : ℕ) (forward : Bool) (gap : 
     (x : SlowPoint × Plane) :
     bandCommonChart D n m forward gap x = (bandChart D n m x.1, coverChange forward gap x.2) := rfl
 
-noncomputable def commonChartCost (D : ℝ) (gapBound : ℕ) : ℝ :=
-  chartCost D + CommonCoverSolve.coveringBound gapBound
 
 
 
@@ -551,36 +543,9 @@ section PhysicalProfileWeights
 noncomputable def profileDomain (h a b : ℝ) : Set SlowPoint :=
   {x | x ∈ SimilarityHomogeneity.chartDomain ∧ SimilarityHomogeneity.chartX h x ∈ Ioo a b}
 
-theorem profileX_smoothAt {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    {x : SlowPoint} (hx : 0 < x.2.2) : ContDiffAt ℝ ∞ (SimilarityHomogeneity.chartX h) x :=
-  (SimilarityHomogeneity.chartInner_smoothAt hh hh1 hx).fst
-
-theorem isOpen_profileDomain {h : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2) (a b : ℝ) :
-    IsOpen (profileDomain h a b) := by
-  apply isOpen_iff_mem_nhds.mpr
-  intro x hx
-  exact Filter.inter_mem (SimilarityHomogeneity.isOpen_chartDomain.mem_nhds hx.1)
-    ((profileX_smoothAt hh hh1 hx.1.2).continuousAt (isOpen_Ioo.mem_nhds hx.2))
 
 
-/-- A concrete strip with the physical profile weight and logarithmic
-distance. The independent index chooses the actual dyadic band. -/
-noncomputable def profileSlowStrip {h a b : ℝ} (hh : 0 < h) (hh1 : h < 1 / 2)
-    (ha : 0 < a) (band : ℕ → ℕ) (hband : ∀ n, 1 ≤ band n)
-    (ζ : ℝ → ℝ) (hζ : ContDiff ℝ ∞ ζ) (hζ0 : ∀ X ∈ Ioo a b, 0 ≤ ζ X) :
-    WeightedClasses.StripData SlowPoint where
-  domain := profileDomain h a b
-  isOpen_domain := isOpen_profileDomain hh hh1 a b
-  epsilon n := ChartScales.epsilon h (band n)
-  epsilon_pos n := ChartScales.epsilon_pos h (band n)
-  epsilon_le_one n := ChartScales.epsilon_le_one h hh.le (band n)
-  slow n := ChartScales.S (band n)
-  one_le_slow n := PhysicalGraphBounds.S_ge_one (hband n)
-  delta := SimilarityHomogeneity.chartLogDistance h a b
-  delta_pos _ hx := SimilarityHomogeneity.profileLogDistance_pos ha hx.2.1 hx.2.2
-  zeta x := ζ (SimilarityHomogeneity.chartX h x)
-  zeta_smooth x hx := (hζ.contDiffAt.comp x (profileX_smoothAt hh hh1 hx.1.2)).contDiffWithinAt
-  zeta_nonneg _ hx := hζ0 _ hx.2
+
 
 
 
@@ -589,15 +554,7 @@ end PhysicalProfileWeights
 
 section MeshChanges
 
-/-- Normalized small slow-box coordinates, using the actual widths from
-the coloring construction. -/
-noncomputable def meshCoordinate (D : ℝ) (L : SlotColoring.Label)
-    (x : SlotColoring.Position) : SlotColoring.Position :=
-  fun j => (x j - SlotColoring.width D j L.1 * (L.2.1 j : ℝ)) / SlotColoring.width D j L.1
 
-noncomputable def meshPoint (D : ℝ) (L : SlotColoring.Label)
-    (x : SlotColoring.Position) : SlotColoring.Position :=
-  fun j => SlotColoring.width D j L.1 * x j + SlotColoring.width D j L.1 * (L.2.1 j : ℝ)
 
 noncomputable def meshLinear (D : ℝ) (L M : SlotColoring.Label) :
     SlotColoring.Position →L[ℝ] SlotColoring.Position :=
@@ -605,12 +562,7 @@ noncomputable def meshLinear (D : ℝ) (L M : SlotColoring.Label) :
     (SlotColoring.width D j L.1 / SlotColoring.width D j M.1) •
       (ContinuousLinearMap.proj j : SlotColoring.Position →L[ℝ] ℝ))
 
-noncomputable def meshOffset (D : ℝ) (L M : SlotColoring.Label) : SlotColoring.Position :=
-  fun j => (SlotColoring.width D j L.1 * (L.2.1 j : ℝ) -
-    SlotColoring.width D j M.1 * (M.2.1 j : ℝ)) / SlotColoring.width D j M.1
 
-noncomputable def meshTransition (D : ℝ) (L M : SlotColoring.Label)
-    (x : SlotColoring.Position) : SlotColoring.Position := meshOffset D L M + meshLinear D L M x
 
 @[simp] theorem meshLinear_apply (D : ℝ) (L M : SlotColoring.Label)
     (x : SlotColoring.Position) (j : Fin 3) :
@@ -628,14 +580,6 @@ end MeshChanges
 
 section NativeInstantiation
 
-/-- The actual radial/time eigenvector basis, not an abstract invertible
-basis supplied as an assumption. -/
-noncomputable def nativeBasis : Plane ≃L[ℝ] Plane :=
-  TorusAverages.slotChart PhysicalGraphBounds.radialDirection PhysicalGraphBounds.timeDirection
-    (by
-      unfold PhysicalGraphBounds.radialDirection PhysicalGraphBounds.timeDirection
-      dsimp only
-      nlinarith [sq_nonneg (Real.sqrt 2 - 1)])
 
 
 

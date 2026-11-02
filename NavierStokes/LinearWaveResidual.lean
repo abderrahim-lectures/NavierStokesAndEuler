@@ -410,24 +410,8 @@ theorem realMap_linearResidual {U : Set E} (L : ℂ →L[ℝ] ℝ) (ε : ℝ) (R
 
 open ProblemStatement
 
-noncomputable def bilinearAdvection (u v : Space → Space) (q : Space) : Space :=
-  u q 0 • CylindricalResidual.dCoord 0 v q +
-    (u q 1 / q 0) • (CylindricalResidual.dCoord 1 v q + CylindricalResidual.connection (v q)) +
-    u q 2 • CylindricalResidual.dCoord 2 v q
 
-noncomputable def cylindricalLinearResidual (ε : ℝ) (B a : VelocityField) (p : PressureField)
-    (t : ℝ) (q : Space) : Space :=
-  temporalDerivative a t q + bilinearAdvection (fun y => B (t, y)) (fun y => a (t, y)) q +
-    bilinearAdvection (fun y => a (t, y)) (fun y => B (t, y)) q +
-    CylindricalResidual.scalarGradient (fun y => p (t, y)) q -
-    ε • CylindricalResidual.vectorLaplacian (fun y => a (t, y)) q
 
-/-- Linearization in the original Cartesian derivative definitions. -/
-noncomputable def cartesianLinearResidual (ε : ℝ) (B a : VelocityField) (p : PressureField)
-    (t : ℝ) (x : Space) : Space :=
-  temporalDerivative a t x + spatialDerivative a t x (B (t, x)) +
-    spatialDerivative B t x (a (t, x)) + pressureGradient p t x -
-    ε • spatialLaplacian a t x
 
 
 

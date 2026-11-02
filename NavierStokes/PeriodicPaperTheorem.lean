@@ -1,9 +1,13 @@
 import NavierStokes.PeriodicLocalization
 import NavierStokes.R3.ProblemStatement
 import Mathlib.Analysis.Calculus.FDeriv.Const
-import NavierStokes.R3.ParabolicDefinitions
-import NavierStokes.R3.ParabolicSupport
-import NavierStokes.R3.ParabolicScaling
+import Mathlib.Tactic.Linarith
+import NavierStokes.R3.ViscosityScaling
+import NavierStokes.R3.SpatialSupportScaling
+import NavierStokes.ResidualRegularity
+import Mathlib.Analysis.Calculus.Deriv.Comp
+import Mathlib.Analysis.Calculus.Deriv.Mul
+import Mathlib.Analysis.Calculus.Deriv.Add
 import NavierStokes.R3.Theorem
 import NavierStokes.PeriodizePDE
 import NavierStokes.PeriodicUniqueness
@@ -18,6 +22,493 @@ The torus is represented by spatially periodic lifts to R³. The support
 clauses intersect topological support with the closed fundamental cube:
 they do not assert compact support of a nonzero periodic lift on all of R³.
 -/
+/-! Merged from `NavierStokes.R3.ParabolicDefinitions`. -/
+/-! Merged from `NavierStokes.R3.DelayedExtension`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# Smooth extension by zero to negative times
+
+A field that vanishes on a time interval around zero has a smooth extension by
+zero to all negative times. The agreement with zero on an open neighborhood of
+the seam proves every differentiability order at once.
+-/
+
+noncomputable section
+
+namespace NavierStokesR3.ParabolicScaling
+
+open NavierStokes.ProblemStatement Set Filter
+open scoped ContDiff Topology
+
+/-- Keep the original field at nonnegative times and use zero before time zero. -/
+def zeroBefore {V : Type*} [Zero V] (g : SpaceTime → V) (z : SpaceTime) : V :=
+  if 0 ≤ z.1 then g z else 0
+
+theorem zeroBefore_eq_of_nonneg {V : Type*} [Zero V] (g : SpaceTime → V)
+    {z : SpaceTime} (hz : 0 ≤ z.1) : zeroBefore g z = g z := by
+  simp only [zeroBefore, ite_eq_left hz]
+
+theorem zeroBefore_eq_zero_of_neg {V : Type*} [Zero V] (g : SpaceTime → V)
+    {z : SpaceTime} (hz : z.1 < 0) : zeroBefore g z = 0 := by
+  simp only [zeroBefore, ite_eq_right (not_le.mpr hz)]
+
+theorem zeroBefore_eventuallyEq_of_pos {V : Type*} [Zero V] (g : SpaceTime → V)
+    {z : SpaceTime} (hz : 0 < z.1) : zeroBefore g =ᶠ[𝓝 z] g := by
+  filter_upwards [continuous_fst.continuousAt.eventually_const_lt hz] with y hy
+  exact zeroBefore_eq_of_nonneg g hy.le
+
+
+theorem zeroBefore_eq_zero_of_le {V : Type*} [Zero V] {g : SpaceTime → V}
+    (hzero : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, g (t, x) = 0)
+    {z : SpaceTime} (hz : z.1 ≤ 3 / 8) : zeroBefore g z = 0 := by
+  by_cases ht : 0 ≤ z.1
+  · rw [zeroBefore_eq_of_nonneg g ht]
+    exact hzero z.1 (by rwa [abs_of_nonneg ht]) z.2
+  · simp only [zeroBefore, ite_eq_right ht]
+
+theorem zeroBefore_eq_zero_of_nonpos {V : Type*} [Zero V] {g : SpaceTime → V}
+    (hzero : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, g (t, x) = 0)
+    {z : SpaceTime} (hz : z.1 ≤ 0) : zeroBefore g z = 0 := by
+  exact zeroBefore_eq_zero_of_le hzero (by linarith)
+
+theorem zeroBefore_eventuallyEq_zero {V : Type*} [Zero V] {g : SpaceTime → V}
+    (hzero : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, g (t, x) = 0)
+    {z : SpaceTime} (hz : z.1 < 3 / 8) :
+    zeroBefore g =ᶠ[𝓝 z] (fun _ => 0) := by
+  filter_upwards [continuous_fst.continuousAt.eventually_lt_const hz] with y hy
+  exact zeroBefore_eq_zero_of_le hzero hy.le
+
+theorem zeroBefore_eventually_eq {V : Type*} [Zero V] (g : SpaceTime → V)
+    {z : SpaceTime} (hz : 0 < z.1) : zeroBefore g =ᶠ[𝓝 z] g :=
+  zeroBefore_eventuallyEq_of_pos g hz
+
+theorem zeroBefore_eventually_zero {V : Type*} [Zero V] {g : SpaceTime → V}
+    (hzero : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, g (t, x) = 0)
+    {z : SpaceTime} (hz : z.1 ≤ 0) : zeroBefore g =ᶠ[𝓝 z] (fun _ => 0) :=
+  zeroBefore_eventuallyEq_zero hzero (by linarith)
+
+/-- Extending by zero is smooth even at time zero, because the field vanishes
+on a fixed interval there. -/
+theorem zeroBefore_smooth_on {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
+    {g : SpaceTime → V} (hg : ContDiffOn ℝ ∞ g preSingularDomain)
+    (hzero : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, g (t, x) = 0) :
+    ContDiffOn ℝ ∞ (zeroBefore g) (Iio 1 ×ˢ univ) := by
+  intro z hz
+  by_cases ht : z.1 < 3 / 8
+  · exact (contDiffAt_const.congr_of_eventuallyEq
+      (zeroBefore_eventuallyEq_zero hzero ht)).contDiffWithinAt
+  · have htpos : 0 < z.1 := by linarith
+    have hdomain : preSingularDomain ∈ 𝓝 z := by
+      filter_upwards [continuous_fst.continuousAt.eventually_const_lt htpos,
+        continuous_fst.continuousAt.eventually_lt_const hz.1] with y hy0 hy1
+      exact ⟨⟨hy0.le, hy1⟩, mem_univ _⟩
+    exact ((hg.contDiffAt hdomain).congr_of_eventuallyEq
+      (zeroBefore_eventuallyEq_of_pos g htpos)).contDiffWithinAt
+
+end NavierStokesR3.ParabolicScaling
+
+
+end
+
+noncomputable section
+
+namespace NavierStokesR3.ParabolicScaling
+
+open ProblemStatement Set
+
+/-- The affine clock sends time one to itself and starts at `1-l⁻²`. -/
+def clock (l t : ℝ) : ℝ := l ^ 2 * (t - 1) + 1
+
+/-- Simultaneous affine time change, spatial dilation, and amplitude change. -/
+def pull {V : Type*} [SMul ℝ V] (a l : ℝ) (g : SpaceTime → V) : SpaceTime → V :=
+  fun z => a • g (clock l z.1, l • z.2)
+
+def velocity (l : ℝ) (u : VelocityField) : VelocityField :=
+  pull l l (zeroBefore u)
+
+def pressure (l : ℝ) (p : PressureField) : PressureField :=
+  pull (l ^ 2) l (zeroBefore p)
+
+def force (l : ℝ) (f : VelocityField) : VelocityField :=
+  pull (l ^ 3) l f
+
+theorem clock_lt_one {l t : ℝ} (hl : 0 < l) (ht : t < 1) : clock l t < 1 := by
+  dsimp [clock]
+  nlinarith [sq_pos_of_pos hl]
+
+theorem clock_zero_nonpos {l : ℝ} (hl : 1 ≤ l) : clock l 0 ≤ 0 := by
+  dsimp [clock]
+  nlinarith
+
+end NavierStokesR3.ParabolicScaling
+
+/-! Merged from `NavierStokes.R3.ParabolicSupport`. -/
+/-!
+# Support after affine time and spatial rescaling
+
+Positive affine time slopes and nonpositive time offsets preserve the force
+class. A sufficiently large spatial dilation puts any compact spatial support
+inside the central coordinate cube.
+-/
+
+noncomputable section
+
+open Set
+
+namespace NavierStokesR3.ProblemStatement
+
+/-- The inverse affine spacetime transform maps compact sets to compact sets. -/
+theorem isCompact_affineSpacetime_image {K : Set SpaceTime} (hK : IsCompact K)
+    (b c d : ℝ) :
+    IsCompact ((fun z : SpaceTime => ((z.1 - d) / c, b⁻¹ • z.2)) '' K) := by
+  exact hK.image (((continuous_fst.sub continuous_const).div_const c).prodMk
+    (continuous_snd.const_smul b⁻¹))
+
+/-- Affine pullback with a positive time slope and a nonpositive offset
+preserves compact support in strictly positive time. -/
+theorem CompactPositiveTimeSupport.affineScale {f : VelocityField}
+    (hf : CompactPositiveTimeSupport f) (a b c d : ℝ) (hb : b ≠ 0)
+    (hc : 0 < c) (hd : d ≤ 0) :
+    CompactPositiveTimeSupport
+      (fun z : SpaceTime => a • f (c * z.1 + d, b • z.2)) := by
+  have hsub : tsupport (fun z : SpaceTime => a • f (c * z.1 + d, b • z.2)) ⊆
+      (fun z : SpaceTime => ((z.1 - d) / c, b⁻¹ • z.2)) '' tsupport f := by
+    intro z hz
+    have hz' : (c * z.1 + d, b • z.2) ∈ tsupport f :=
+      tsupport_comp_subset_preimage f
+        (((continuous_fst.const_mul c).add continuous_const).prodMk
+          (continuous_snd.const_smul b))
+        (tsupport_smul_subset_right (fun _ : SpaceTime => a)
+          (fun z => f (c * z.1 + d, b • z.2)) hz)
+    refine ⟨(c * z.1 + d, b • z.2), hz', ?_⟩
+    apply Prod.ext
+    · dsimp
+      field_simp
+      ring
+    · simp [smul_smul, hb]
+  constructor
+  · exact (isCompact_affineSpacetime_image hf.1 b c d).of_isClosed_subset
+      (isClosed_tsupport _) hsub
+  · intro z hz
+    obtain ⟨w, hw, rfl⟩ := hsub hz
+    refine ⟨div_pos (sub_pos.mpr ?_) hc, mem_univ _⟩
+    exact hd.trans_lt (hf.2 hw).1
+
+/-- Every compact spatial set can be put in the central quarter cube by an
+inverse dilation whose factor is greater than one. -/
+theorem exists_spatialScale_into_quarterCube {K : Set Space} (hK : IsCompact K) :
+    ∃ b : ℝ, 1 < b ∧ ∀ x ∈ (fun y : Space => b⁻¹ • y) '' K,
+      ∀ i : Fin 3, |x i| ≤ (1 / 4 : ℝ) := by
+  obtain ⟨R, hR, hbound⟩ := hK.isBounded.exists_pos_norm_le
+  refine ⟨4 * R + 2, by linarith, ?_⟩
+  rintro x ⟨y, hy, rfl⟩ i
+  have hb : 0 < 4 * R + 2 := by linarith
+  have hyi : |y i| ≤ R := (PiLp.norm_apply_le y i).trans (hbound y hy)
+  change |(4 * R + 2)⁻¹ * y i| ≤ _
+  rw [abs_mul, abs_of_pos (inv_pos.mpr hb)]
+  have hdiv : |y i| / (4 * R + 2) ≤ (1 / 4 : ℝ) := by
+    apply (div_le_iff₀ hb).mpr
+    linarith
+  simpa only [div_eq_mul_inv, mul_comm] using hdiv
+
+end NavierStokesR3.ProblemStatement
+
+/-! Merged from `NavierStokes.R3.ParabolicScaling` (in a section, so its `open`s cannot leak). -/
+section
+/-!
+# Parabolic compression with singular time fixed at one
+
+The clock is `l²(t-1)+1`. Extension by zero before the original initial time
+makes the compressed solution start from rest, while the spatial support is
+divided by the arbitrary factor `l > 1`. Viscosity remains unchanged.
+-/
+
+/-! Merged from `NavierStokes.R3.ParabolicCalculus`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+noncomputable section
+
+namespace NavierStokesR3.ParabolicScaling
+
+open NavierStokes.ProblemStatement Set Filter
+open scoped ContDiff Topology
+
+theorem pull_temporalDerivative (a l : ℝ) (u : VelocityField) (t : ℝ) (x : Space)
+    (hu : DifferentiableAt ℝ (fun s => u (s, l • x)) (clock l t)) :
+    temporalDerivative (pull a l u) t x =
+      (a * l ^ 2) • temporalDerivative u (clock l t) (l • x) := by
+  have hc : HasDerivAt (clock l) (l ^ 2) t := by
+    convert ((((hasDerivAt_id t).sub_const 1).const_mul (l ^ 2)).add_const 1) using 1
+    all_goals first | rfl | simp
+  have hd := (hu.hasDerivAt.scomp t hc).const_smul a
+  change deriv (fun s => a • u (clock l s, l • x)) t =
+    (a * l ^ 2) • deriv (fun s => u (s, l • x)) (clock l t)
+  simpa only [Function.comp_def, Pi.smul_def, smul_smul] using hd.deriv
+
+
+theorem pull_divergence (a l : ℝ) (u : VelocityField) (t : ℝ) (x : Space) :
+    spatialDivergence (pull a l u) t x = (a * l) * spatialDivergence u (clock l t) (l • x) := by
+  exact ViscosityScaling.rescale_divergence a l
+    (fun z => u (clock l z.1, z.2)) t x
+
+theorem pull_advection (a l : ℝ) (u : VelocityField) (t : ℝ) (x : Space) :
+    advection (pull a l u) t x = (a ^ 2 * l) • advection u (clock l t) (l • x) := by
+  exact ViscosityScaling.rescale_advection a l
+    (fun z => u (clock l z.1, z.2)) t x
+
+theorem pull_laplacian (a l : ℝ) (u : VelocityField) (t : ℝ) (x : Space) :
+    spatialLaplacian (pull a l u) t x = (a * l ^ 2) • spatialLaplacian u (clock l t) (l • x) := by
+  exact ViscosityScaling.rescale_laplacian a l
+    (fun z => u (clock l z.1, z.2)) t x
+
+theorem pull_gradient (a l : ℝ) (p : PressureField) (t : ℝ) (x : Space) :
+    pressureGradient (pull a l p) t x = (a * l) • pressureGradient p (clock l t) (l • x) := by
+  exact ViscosityScaling.rescale_gradient a l
+    (fun z => p (clock l z.1, z.2)) t x
+
+theorem pull_residual (ν l : ℝ) (u : VelocityField) (p : PressureField) (t : ℝ) (x : Space)
+    (hu : DifferentiableAt ℝ (fun s => u (s, l • x)) (clock l t)) :
+    ProblemStatement.navierStokesResidual ν (pull l l u) (pull (l ^ 2) l p) t x =
+      l ^ 3 • ProblemStatement.navierStokesResidual ν u p (clock l t) (l • x) := by
+  have h1 : l * l ^ 2 = l ^ 3 := by ring
+  have h2 : l ^ 2 * l = l ^ 3 := by ring
+  have h3 : ν * l ^ 3 = l ^ 3 * ν := mul_comm _ _
+  simp only [ProblemStatement.navierStokesResidual, pull_temporalDerivative _ _ _ _ _ hu,
+    pull_advection, pull_laplacian, pull_gradient, smul_add, smul_sub, smul_smul, h1, h2, h3]
+
+theorem residual_congr (ν : ℝ) {u v : VelocityField} {p q : PressureField} {z : SpaceTime}
+    (hu : u =ᶠ[𝓝 z] v) (hp : p =ᶠ[𝓝 z] q) :
+    ProblemStatement.navierStokesResidual ν u p z.1 z.2 =
+      ProblemStatement.navierStokesResidual ν v q z.1 z.2 := by
+  unfold ProblemStatement.navierStokesResidual
+  rw [NavierStokes.ResidualRegularity.temporalDerivative_congr hu,
+    NavierStokes.ResidualRegularity.advection_congr hu,
+    NavierStokes.ResidualRegularity.spatialLaplacian_congr hu,
+    NavierStokes.ResidualRegularity.pressureGradient_congr hp]
+
+theorem zeroBefore_residual {ν : ℝ} {u f : VelocityField} {p : PressureField} {K : Set Space}
+    (hc : ProblemStatement.CandidateProperties ν u p f K)
+    (hrest : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 ∧ p (t, x) = 0)
+    {t : ℝ} (ht : t < 1) (x : Space) :
+    ProblemStatement.navierStokesResidual ν (zeroBefore u) (zeroBefore p) t x = f (t, x) := by
+  by_cases ht0 : 0 < t
+  · rw [residual_congr ν (z := (t, x))
+      (zeroBefore_eventually_eq u ht0) (zeroBefore_eventually_eq p ht0)]
+    exact hc.navier_stokes t ⟨ht0, ht⟩ x
+  · rw [residual_congr ν (z := (t, x))
+      (zeroBefore_eventually_zero (fun s hs y => (hrest s hs y).1) (le_of_not_gt ht0))
+      (zeroBefore_eventually_zero (fun s hs y => (hrest s hs y).2) (le_of_not_gt ht0))]
+    rw [hc.force_support.eq_zero_of_nonpos (le_of_not_gt ht0)]
+    simp [ProblemStatement.navierStokesResidual, temporalDerivative, advection,
+      spatialLaplacian, spatialDerivative, pressureGradient]
+
+end NavierStokesR3.ParabolicScaling
+
+
+end
+
+
+/-! Merged from `NavierStokes.R3.ParabolicEnergy`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# Energy and blowup under an affine parabolic change of variables
+
+The affine clock fixes time one.  Extension by zero before time zero lets a
+uniform kinetic-energy bound pass through the change of variables on the
+entire interval starting at zero.
+-/
+
+noncomputable section
+
+namespace NavierStokesR3.ParabolicScaling
+
+open ProblemStatement Set MeasureTheory
+
+theorem velocity_energy_bounded {u : VelocityField} {l : ℝ}
+    (hu : UniformFiniteEnergy (Ico 0 1) u) (hl : 1 < l) :
+    UniformFiniteEnergy (Ico 0 1) (velocity l u) := by
+  have hp : 0 < l := lt_trans zero_lt_one hl
+  have htime : UniformFiniteEnergy (Ico 0 1)
+      (fun z => zeroBefore u (clock l z.1, z.2)) := by
+    obtain ⟨E, hE, hu⟩ := hu
+    refine ⟨E, hE, ?_⟩
+    intro t ht
+    by_cases hc : 0 ≤ clock l t
+    · simpa only [SquareIntegrableAtTime, kineticEnergy, zeroBefore,
+        ite_eq_left hc] using hu (clock l t) ⟨hc, clock_lt_one hp ht.2⟩
+    · constructor
+      · simp [SquareIntegrableAtTime, zeroBefore, hc]
+      · simpa [kineticEnergy, zeroBefore, hc] using hE
+  exact htime.spatial_smul l l hp.ne'
+
+theorem velocity_speed_unbounded {u : VelocityField} {l : ℝ}
+    (hu : SpeedUnboundedAtOne u) (hl : 1 < l) :
+    SpeedUnboundedAtOne (velocity l u) := by
+  have hp : 0 < l := lt_trans zero_lt_one hl
+  have hq : 0 < l ^ 2 := sq_pos_of_pos hp
+  have hq1 : 1 ≤ l ^ 2 := by nlinarith
+  intro M hM δ hδ
+  obtain ⟨t, x, ht, hδt, hMtx⟩ := hu M hM δ hδ
+  let s : ℝ := (t - 1) / l ^ 2 + 1
+  have hs1 : s < 1 := by
+    dsimp [s]
+    have : (t - 1) / l ^ 2 < 0 := div_neg_of_neg_of_pos (by linarith [ht.2]) hq
+    linarith
+  have hts : t ≤ s := by
+    have hprod : (t - 1) * (l ^ 2 - 1) ≤ 0 :=
+      mul_nonpos_of_nonpos_of_nonneg (by linarith [ht.2]) (by linarith)
+    have hd : t - 1 ≤ (t - 1) / l ^ 2 := (le_div_iff₀ hq).2 (by nlinarith)
+    dsimp [s]
+    linarith
+  have hclock : clock l s = t := by
+    dsimp [clock, s]
+    field_simp
+    ring
+  refine ⟨s, l⁻¹ • x, ⟨lt_of_lt_of_le ht.1 hts, hs1⟩, lt_of_lt_of_le hδt hts, ?_⟩
+  simp only [velocity, pull, hclock, smul_smul, mul_inv_cancel₀ hp.ne', one_smul]
+  rw [zeroBefore_eq_of_nonneg u ht.1.le, norm_smul, Real.norm_eq_abs, abs_of_pos hp]
+  have hn : 0 ≤ ‖u (t, x)‖ := norm_nonneg _
+  nlinarith
+
+end NavierStokesR3.ParabolicScaling
+
+
+end
+
+
+noncomputable section
+
+namespace NavierStokesR3.ParabolicScaling
+
+open NavierStokes.ProblemStatement Set
+open scoped ContDiff
+
+theorem pull_smooth {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
+    {g : SpaceTime → V} (hg : ContDiff ℝ ∞ g) (a l : ℝ) :
+    ContDiff ℝ ∞ (pull a l g) := by
+  exact (hg.comp (((contDiff_fst.sub contDiff_const).const_smul (l ^ 2)).add
+    contDiff_const |>.prodMk (contDiff_snd.const_smul l))).const_smul a
+
+theorem pull_smooth_on {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
+    {g : SpaceTime → V} (hg : ContDiffOn ℝ ∞ g (Iio 1 ×ˢ univ))
+    (a : ℝ) {l : ℝ} (hl : 0 < l) :
+    ContDiffOn ℝ ∞ (pull a l g) (Iio 1 ×ˢ univ) := by
+  apply (hg.comp ?_ ?_).const_smul a
+  · exact (((contDiff_fst.sub contDiff_const).const_smul (l ^ 2)).add
+      contDiff_const |>.prodMk (contDiff_snd.const_smul l)).contDiffOn
+  · intro z hz
+    exact ⟨clock_lt_one hl hz.1, mem_univ _⟩
+
+theorem velocity_smooth {ν : ℝ} {u f : VelocityField} {p : PressureField} {K : Set Space}
+    (hc : ProblemStatement.CandidateProperties ν u p f K)
+    (hrest : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 ∧ p (t, x) = 0)
+    {l : ℝ} (hl : 1 < l) :
+    ContDiffOn ℝ ∞ (velocity l u) (Iio 1 ×ˢ univ) :=
+  pull_smooth_on (zeroBefore_smooth_on hc.velocity_smooth
+    (fun t ht x => (hrest t ht x).1)) l (by linarith)
+
+theorem pressure_smooth {ν : ℝ} {u f : VelocityField} {p : PressureField} {K : Set Space}
+    (hc : ProblemStatement.CandidateProperties ν u p f K)
+    (hrest : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 ∧ p (t, x) = 0)
+    {l : ℝ} (hl : 1 < l) :
+    ContDiffOn ℝ ∞ (pressure l p) (Iio 1 ×ˢ univ) :=
+  pull_smooth_on (zeroBefore_smooth_on hc.pressure_smooth
+    (fun t ht x => (hrest t ht x).2)) (l ^ 2) (by linarith)
+
+theorem zeroBefore_support {V : Type*} [Zero V] {g : SpaceTime → V} {K : Set Space}
+    (hg : ∀ t ∈ Ico (0 : ℝ) 1, tsupport (fun x => g (t, x)) ⊆ K)
+    {t : ℝ} (ht : t < 1) : tsupport (fun x => zeroBefore g (t, x)) ⊆ K := by
+  by_cases ht0 : 0 ≤ t
+  · simpa only [zeroBefore, ite_eq_left ht0] using hg t ⟨ht0, ht⟩
+  · simp [zeroBefore, ht0]
+
+theorem pull_zeroBefore_support {V : Type*} [Zero V] [SMulZeroClass ℝ V]
+    {g : SpaceTime → V} {K : Set Space}
+    (hg : ∀ t ∈ Ico (0 : ℝ) 1, tsupport (fun x => g (t, x)) ⊆ K)
+    (a : ℝ) {l : ℝ} (hl : 0 < l) {t : ℝ} (ht : t < 1) :
+    tsupport (fun x => pull a l (zeroBefore g) (t, x)) ⊆
+      (fun x : Space => l⁻¹ • x) '' K :=
+  ProblemStatement.tsupport_spatialScale_subset
+    (zeroBefore_support hg (clock_lt_one hl ht)) a l hl.ne'
+
+theorem velocity_support_before_one {ν : ℝ} {u f : VelocityField} {p : PressureField}
+    {K : Set Space} (hc : ProblemStatement.CandidateProperties ν u p f K)
+    {l t : ℝ} (hl : 1 < l) (ht : t < 1) :
+    tsupport (fun x => velocity l u (t, x)) ⊆ (fun x : Space => l⁻¹ • x) '' K :=
+  pull_zeroBefore_support hc.velocity_support l (by linarith) ht
+
+theorem pressure_support_before_one {ν : ℝ} {u f : VelocityField} {p : PressureField}
+    {K : Set Space} (hc : ProblemStatement.CandidateProperties ν u p f K)
+    {l t : ℝ} (hl : 1 < l) (ht : t < 1) :
+    tsupport (fun x => pressure l p (t, x)) ⊆ (fun x : Space => l⁻¹ • x) '' K :=
+  pull_zeroBefore_support hc.pressure_support (l ^ 2) (by linarith) ht
+
+theorem force_support {f : VelocityField} (hf : ProblemStatement.CompactPositiveTimeSupport f)
+    {l : ℝ} (hl : 1 < l) : ProblemStatement.CompactPositiveTimeSupport (force l f) := by
+  have hl0 : 0 < l := by linarith
+  have hd : 1 - l ^ 2 ≤ 0 := by nlinarith
+  have h := hf.affineScale (l ^ 3) l (l ^ 2) (1 - l ^ 2) hl0.ne'
+    (sq_pos_of_pos hl0) hd
+  have he : force l f = (fun z : SpaceTime => l ^ 3 • f (l ^ 2 * z.1 + (1 - l ^ 2), l • z.2)) := by
+    funext z
+    apply congrArg (fun s : ℝ => l ^ 3 • f (s, l • z.2))
+    dsimp [clock]
+    ring
+  rw [he]
+  exact h
+
+/-- The precise delayed parabolic scaling used in the periodic corollary. -/
+theorem compressedCandidate {ν : ℝ} {u f : VelocityField} {p : PressureField} {K : Set Space}
+    (hc : ProblemStatement.CandidateProperties ν u p f K)
+    (hrest : ∀ t : ℝ, |t| ≤ 3 / 8 → ∀ x : Space, u (t, x) = 0 ∧ p (t, x) = 0)
+    {l : ℝ} (hl : 1 < l) :
+    ProblemStatement.CandidateProperties ν (velocity l u) (pressure l p) (force l f)
+      ((fun x : Space => l⁻¹ • x) '' K) := by
+  have hl0 : 0 < l := by linarith
+  have hu := zeroBefore_smooth_on hc.velocity_smooth (fun t ht x => (hrest t ht x).1)
+  refine {
+    velocity_smooth := (velocity_smooth hc hrest hl).mono (fun z hz => ⟨hz.1.2, hz.2⟩)
+    pressure_smooth := (pressure_smooth hc hrest hl).mono (fun z hz => ⟨hz.1.2, hz.2⟩)
+    support_compact := ProblemStatement.isCompact_spatialScale_image hc.support_compact l
+    velocity_support := fun t ht => velocity_support_before_one hc hl ht.2
+    pressure_support := fun t ht => pressure_support_before_one hc hl ht.2
+    force_smooth := pull_smooth hc.force_smooth _ _
+    force_support := force_support hc.force_support hl
+    zero_initial_velocity := ?_
+    divergence_free := ?_
+    navier_stokes := ?_
+    energy_bounded := velocity_energy_bounded hc.energy_bounded hl
+    speed_unbounded := velocity_speed_unbounded hc.speed_unbounded hl
+  }
+  · intro x
+    change l • zeroBefore u (clock l 0, l • x) = 0
+    rw [zeroBefore_eq_zero_of_nonpos (z := (clock l 0, l • x))
+      (fun t ht y => (hrest t ht y).1) (clock_zero_nonpos hl.le), smul_zero]
+  · intro t ht x
+    rw [velocity, pull_divergence]
+    by_cases hs : 0 ≤ clock l t
+    · have he : (fun y => zeroBefore u (clock l t, y)) = fun y => u (clock l t, y) := by
+        funext y; exact zeroBefore_eq_of_nonneg u hs
+      simp only [spatialDivergence, spatialDerivative, he]
+      change (l * l) * spatialDivergence u (clock l t) (l • x) = 0
+      rw [hc.divergence_free _ ⟨hs, clock_lt_one hl0 ht.2⟩, mul_zero]
+    · have he : (fun y => zeroBefore u (clock l t, y)) = fun _ => 0 := by
+        funext y; exact zeroBefore_eq_zero_of_neg u (lt_of_not_ge hs)
+      simp [spatialDivergence, spatialDerivative, he]
+  · intro t ht x
+    have htime : DifferentiableAt ℝ (fun s => zeroBefore u (s, l • x)) (clock l t) := by
+      have hat := hu.contDiffAt (x := (clock l t, l • x)) ((isOpen_Iio.prod isOpen_univ).mem_nhds
+        ⟨clock_lt_one hl0 ht.2, mem_univ (l • x)⟩)
+      exact (hat.comp (clock l t) (contDiffAt_id.prodMk contDiffAt_const)).differentiableAt (by simp)
+    rw [velocity, pressure, pull_residual ν l _ _ t x htime,
+      zeroBefore_residual hc hrest (clock_lt_one hl0 ht.2)]
+    rfl
+
+end NavierStokesR3.ParabolicScaling
+end
+
 /-! Merged from `NavierStokes.PeriodicPaperSupport` (in a section, so its `open`s cannot leak). -/
 section
 /-!

@@ -1,10 +1,13 @@
-import NavierStokes.R3.H3WeakEmbedding
+import NavierStokes.PeriodicSobolev
+import NavierStokes.R3.ProblemStatement
+import Mathlib.MeasureTheory.Integral.Pi
+import Mathlib.MeasureTheory.Group.Integral
+import NavierStokes.R3.H3Approximation
+import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
 import NavierStokes.R3.CompactTimeIntegral
 import Mathlib.Analysis.Calculus.Deriv.Slope
 import Mathlib.Analysis.Calculus.MeanValue
 import Mathlib.MeasureTheory.Integral.DominatedConvergence
-import NavierStokes.R3.H3Approximation
-import NavierStokes.R3.H3Definitions
 import NavierStokes.R3.ViscousEnergyBalance
 import NavierStokes.R3.H3Products
 import NavierStokes.R3.ComparisonGronwall
@@ -24,6 +27,415 @@ The solution class uses genuine weak H³ jets with their L² topology, actual
 L² time differentiation, and the same forcing and initial velocity. No
 periodicity or pressure normalization is imposed on competing solutions.
 -/
+/-! Merged from `NavierStokes.R3.H3Definitions`. -/
+/-! # Derivative H³ norms on Euclidean three-space
+
+All integrals in this file use Lebesgue measure on the whole of `ℝ³`.
+The positive multiplicities of the eight mixed derivatives agree with the
+existing periodic derivative norm and define an equivalent H³ norm.
+-/
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped BigOperators ContDiff
+
+namespace NavierStokesR3.H3Embedding
+
+open NavierStokes.ProblemStatement NavierStokes.PeriodicIntegration
+
+def squareEnergy (f : Space → Space) : ℝ := ∫ x, ‖f x‖ ^ 2
+
+def mixedEnergy (f : Space → Space) : ℝ :=
+  squareEnergy f +
+  squareEnergy (spatialPartial 0 f) +
+  squareEnergy (spatialPartial 1 f) +
+  squareEnergy (spatialPartial 2 f) +
+  squareEnergy (spatialPartial 1 (spatialPartial 0 f)) +
+  squareEnergy (spatialPartial 2 (spatialPartial 0 f)) +
+  squareEnergy (spatialPartial 2 (spatialPartial 1 f)) +
+  squareEnergy (spatialPartial 2 (spatialPartial 1 (spatialPartial 0 f)))
+
+/-- Every ordered coordinate derivative of order at most three is included. -/
+def derivativeH3Energy (f : Space → Space) : ℝ :=
+  mixedEnergy f +
+    (∑ i : Fin 3, ∑ j : Fin 3,
+      squareEnergy (spatialPartial i (spatialPartial j f))) +
+    (∑ i : Fin 3, ∑ j : Fin 3, ∑ k : Fin 3,
+      squareEnergy (spatialPartial i (spatialPartial j (spatialPartial k f))))
+
+def derivativeH3Norm (f : Space → Space) : ℝ := Real.sqrt (derivativeH3Energy f)
+
+/-- Genuine square integrability, to exclude the totalized-integral convention
+for a nonintegrable derivative. -/
+def HasFiniteH3 (f : Space → Space) : Prop :=
+  Integrable (fun x => ‖f x‖ ^ 2) ∧
+    (∀ i, Integrable (fun x => ‖spatialPartial i f x‖ ^ 2)) ∧
+    (∀ i j, Integrable (fun x => ‖spatialPartial i (spatialPartial j f) x‖ ^ 2)) ∧
+    (∀ i j k, Integrable
+      (fun x => ‖spatialPartial i (spatialPartial j (spatialPartial k f)) x‖ ^ 2))
+
+theorem squareEnergy_nonneg (f : Space → Space) : 0 ≤ squareEnergy f :=
+  integral_nonneg (fun _ => sq_nonneg _)
+
+theorem mixedEnergy_nonneg (f : Space → Space) : 0 ≤ mixedEnergy f := by
+  unfold mixedEnergy
+  repeat' apply add_nonneg
+  all_goals exact squareEnergy_nonneg _
+
+theorem mixedEnergy_le_derivativeH3Energy (f : Space → Space) :
+    mixedEnergy f ≤ derivativeH3Energy f := by
+  have h2 : 0 ≤ ∑ i : Fin 3, ∑ j : Fin 3,
+      squareEnergy (spatialPartial i (spatialPartial j f)) := by
+    exact Finset.sum_nonneg (fun _ _ => Finset.sum_nonneg (fun _ _ => squareEnergy_nonneg _))
+  have h3 : 0 ≤ ∑ i : Fin 3, ∑ j : Fin 3, ∑ k : Fin 3,
+      squareEnergy (spatialPartial i (spatialPartial j (spatialPartial k f))) := by
+    exact Finset.sum_nonneg (fun _ _ => Finset.sum_nonneg
+      (fun _ _ => Finset.sum_nonneg (fun _ _ => squareEnergy_nonneg _)))
+  unfold derivativeH3Energy
+  linarith
+
+theorem derivativeH3Energy_nonneg (f : Space → Space) : 0 ≤ derivativeH3Energy f :=
+  (mixedEnergy_nonneg f).trans (mixedEnergy_le_derivativeH3Energy f)
+
+theorem derivativeH3Norm_nonneg (f : Space → Space) : 0 ≤ derivativeH3Norm f :=
+  Real.sqrt_nonneg _
+
+end NavierStokesR3.H3Embedding
+
+/-! Merged from `NavierStokes.R3.H3WeakEmbedding`. -/
+/-! # Sobolev embedding for genuine weak H³ fields
+
+The estimate is passed through a smooth compact approximation in L² of all
+weak jets. No classical derivatives of the limiting field are used.
+-/
+/-! Merged from `NavierStokes.R3.H3Embedding`. -/
+/-! # The whole-space H³ supremum estimate
+
+The unit-cube fundamental-theorem-of-calculus estimate is applied after
+translation to an arbitrary point. Each local derivative integral is bounded
+by its genuine Lebesgue integral over all of ℝ³.
+-/
+
+/-! Merged from `NavierStokes.R3.H3BoxIntegral`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+noncomputable section
+
+open Set MeasureTheory
+
+namespace NavierStokesR3.H3Embedding
+
+open NavierStokes.ProblemStatement NavierStokes.PeriodicIntegration
+
+private def unitMeasure : Measure ℝ := volume.restrict (Icc 0 1)
+
+private instance : IsFiniteMeasure unitMeasure := by
+  unfold unitMeasure
+  infer_instance
+
+private theorem unitPi_eq (n : ℕ) :
+    Measure.pi (fun _ : Fin n => unitMeasure) = volume.restrict (Icc 0 1) := by
+  unfold unitMeasure
+  rw [← Measure.restrict_pi_pi]
+  congr 1
+  ext x
+  simp [Set.mem_Icc, Pi.le_def]
+
+private theorem integrable_unitPi {n : ℕ} {g : (Fin n → ℝ) → ℝ}
+    (hg : Continuous g) : Integrable g (Measure.pi (fun _ : Fin n => unitMeasure)) := by
+  rw [unitPi_eq]
+  exact hg.integrableOn_Icc
+
+/-- The iterated coordinate integral used by the elementary FTC proof is
+exactly the ordinary product-volume integral on the cube. -/
+theorem boxIntegral_eq_cubeIntegral {h : Space → ℝ} (hh : Continuous h) :
+    NavierStokes.PeriodicSobolev.boxIntegral h = cubeIntegral h := by
+  have hi := integrable_unitPi (hh.comp toSpace.continuous)
+  let e := MeasurableEquiv.piFinSuccAbove (fun _ : Fin 3 => ℝ) 0
+  have he := (measurePreserving_piFinSuccAbove (fun _ : Fin 3 => unitMeasure) 0).symm
+  have hei : Integrable (fun z : ℝ × (Fin 2 → ℝ) => h (toSpace (e.symm z)))
+      (unitMeasure.prod (Measure.pi (fun _ : Fin 2 => unitMeasure))) := by
+    exact (he.integrable_comp_emb e.symm.measurableEmbedding).2 hi
+  have h2 (a : ℝ) : Integrable (fun y : Fin 2 → ℝ => h (toSpace (Fin.cons a y)))
+      (Measure.pi (fun _ : Fin 2 => unitMeasure)) := by
+    apply integrable_unitPi
+    apply hh.comp
+    apply toSpace.continuous.comp
+    fun_prop
+  have h2e := (measurePreserving_piFinTwo (fun _ : Fin 2 => unitMeasure)).symm
+  have h2i (a : ℝ) : Integrable (fun z : ℝ × ℝ => h (toSpace ![a, z.1, z.2]))
+      (unitMeasure.prod unitMeasure) := by
+    exact (h2e.integrable_comp_emb
+      (MeasurableEquiv.piFinTwo (fun _ : Fin 2 => ℝ)).symm.measurableEmbedding).2 (h2 a)
+  symm
+  calc
+    cubeIntegral h = ∫ y : Fin 3 → ℝ, h (toSpace y)
+        ∂Measure.pi (fun _ : Fin 3 => unitMeasure) := by
+      rw [unitPi_eq]
+      rfl
+    _ = ∫ z : ℝ × (Fin 2 → ℝ), h (toSpace (e.symm z))
+        ∂unitMeasure.prod (Measure.pi (fun _ : Fin 2 => unitMeasure)) :=
+      (he.integral_comp' (fun y => h (toSpace y))).symm
+    _ = ∫ a, (∫ y : Fin 2 → ℝ, h (toSpace (Fin.cons a y))
+        ∂Measure.pi (fun _ : Fin 2 => unitMeasure)) ∂unitMeasure := by
+      rw [integral_prod _ hei]
+      simp only [e, MeasurableEquiv.piFinSuccAbove_symm_apply, Fin.insertNthEquiv,
+        Fin.insertNth_zero, Equiv.coe_fn_mk, cast_eq]
+    _ = ∫ a, (∫ z : ℝ × ℝ, h (toSpace ![a, z.1, z.2])
+        ∂unitMeasure.prod unitMeasure) ∂unitMeasure := by
+      apply integral_congr_ae
+      filter_upwards with a
+      exact (h2e.integral_comp' (fun y : Fin 2 → ℝ => h (toSpace (Fin.cons a y)))).symm
+    _ = NavierStokes.PeriodicSobolev.boxIntegral h := by
+      apply integral_congr_ae
+      filter_upwards with a
+      exact integral_prod _ (h2i a)
+
+/-- A nonnegative box integral is at most the integral on all of ℝ³. -/
+theorem boxIntegral_le_integral {h : Space → ℝ} (hh : Continuous h)
+    (hi : Integrable h) (hn : ∀ x, 0 ≤ h x) :
+    NavierStokes.PeriodicSobolev.boxIntegral h ≤ ∫ x, h x := by
+  rw [boxIntegral_eq_cubeIntegral hh]
+  have he : MeasurePreserving toSpace volume volume := PiLp.volume_preserving_toLp (Fin 3)
+  have hei : Integrable (fun y : Coords => h (toSpace y)) :=
+    (he.integrable_comp_emb toSpace.toHomeomorph.measurableEmbedding).2 hi
+  calc
+    cubeIntegral h ≤ ∫ y : Coords, h (toSpace y) :=
+      integral_mono_measure Measure.restrict_le_self
+        (Filter.Eventually.of_forall (fun y => hn (toSpace y))) hei
+    _ = ∫ x, h x := he.integral_comp toSpace.toHomeomorph.measurableEmbedding h
+
+end NavierStokesR3.H3Embedding
+
+
+end
+
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped BigOperators ContDiff
+
+namespace NavierStokesR3.H3Embedding
+
+open NavierStokes.ProblemStatement NavierStokes.PeriodicIntegration
+
+theorem spatialPartial_translate (i : Fin 3) (f : Space → Space) (a : Space) :
+    spatialPartial i (fun x => f (x + a)) = fun x => spatialPartial i f (x + a) := by
+  funext x
+  exact congrArg (fun L : Space →L[ℝ] Space => L (coordinateVector i))
+    (fderiv_comp_add_right a)
+
+theorem squareEnergy_translate (f : Space → Space) (a : Space) :
+    squareEnergy (fun x => f (x + a)) = squareEnergy f :=
+  integral_add_right_eq_self (fun x => ‖f x‖ ^ 2) a
+
+theorem mixedEnergy_translate (f : Space → Space) (a : Space) :
+    mixedEnergy (fun x => f (x + a)) = mixedEnergy f := by
+  simp only [mixedEnergy, spatialPartial_translate, squareEnergy_translate]
+
+theorem HasFiniteH3.translate {f : Space → Space} (h : HasFiniteH3 f) (a : Space) :
+    HasFiniteH3 (fun x => f (x + a)) := by
+  have hi {g : Space → ℝ} (hg : Integrable g) : Integrable (fun x => g (x + a)) :=
+    ((measurePreserving_add_right volume a).integrable_comp hg.aestronglyMeasurable).2 hg
+  refine ⟨hi h.1, ?_, ?_, ?_⟩
+  · intro i
+    simpa only [spatialPartial_translate] using hi (h.2.1 i)
+  · intro i j
+    simpa only [spatialPartial_translate] using hi (h.2.2.1 i j)
+  · intro i j k
+    simpa only [spatialPartial_translate] using hi (h.2.2.2 i j k)
+
+theorem cubeMixedEnergy_le_mixedEnergy {f : Space → Space}
+    (hf : ContDiff ℝ ∞ f) (hi : HasFiniteH3 f) :
+    NavierStokes.PeriodicSobolev.mixedEnergy f ≤ mixedEnergy f := by
+  have hd (g : Space → Space) (hg : ContDiff ℝ ∞ g) (i : Fin 3) :=
+    NavierStokes.PeriodicUniqueness.spatial_partial_contDiff hg i
+  have h0 := hd f hf 0
+  have h1 := hd f hf 1
+  have h2 := hd f hf 2
+  have h10 := hd _ h0 1
+  have h20 := hd _ h0 2
+  have h21 := hd _ h1 2
+  have h210 := hd _ h10 2
+  have hb {g : Space → Space} (hg : Continuous g)
+      (hgi : Integrable (fun x => ‖g x‖ ^ 2)) :
+      NavierStokes.PeriodicSobolev.boxIntegral
+        (NavierStokes.PeriodicSobolev.sqField g) ≤ squareEnergy g :=
+    boxIntegral_le_integral (hg.norm.pow 2) hgi (fun x => sq_nonneg _)
+  exact add_le_add (add_le_add (add_le_add (add_le_add (add_le_add (add_le_add
+    (add_le_add (hb hf.continuous hi.1) (hb h0.continuous (hi.2.1 0)))
+    (hb h1.continuous (hi.2.1 1))) (hb h2.continuous (hi.2.1 2)))
+    (hb h10.continuous (hi.2.2.1 1 0))) (hb h20.continuous (hi.2.2.1 2 0)))
+    (hb h21.continuous (hi.2.2.1 2 1))) (hb h210.continuous (hi.2.2.2 2 1 0))
+
+/-- H³(ℝ³) controls the value at every spatial point, with a universal
+constant independent of the support or of the chosen point. -/
+theorem norm_sq_le_eight_derivativeH3Energy {f : Space → Space}
+    (hf : ContDiff ℝ ∞ f) (hi : HasFiniteH3 f) (x : Space) :
+    ‖f x‖ ^ 2 ≤ 8 * derivativeH3Energy f := by
+  have hs : ContDiff ℝ ∞ (fun y => f (y + x)) :=
+    hf.comp (contDiff_id.add contDiff_const)
+  have hlocal := NavierStokes.PeriodicSobolev.norm_sq_le_eight_mixedEnergy_on_cube hs 0
+    (fun _ => by simp)
+  have hglobal := cubeMixedEnergy_le_mixedEnergy hs (hi.translate x)
+  rw [mixedEnergy_translate] at hglobal
+  have hm := mixedEnergy_le_derivativeH3Energy f
+  simpa only [zero_add] using hlocal.trans (mul_le_mul_of_nonneg_left
+    (hglobal.trans hm) (by norm_num : (0 : ℝ) ≤ 8))
+
+/-- A convenient linear form of the whole-space Sobolev bound. -/
+theorem norm_le_three_derivativeH3Norm {f : Space → Space}
+    (hf : ContDiff ℝ ∞ f) (hi : HasFiniteH3 f) (x : Space) :
+    ‖f x‖ ≤ 3 * derivativeH3Norm f := by
+  have he := norm_sq_le_eight_derivativeH3Energy hf hi x
+  have hn := derivativeH3Norm_nonneg f
+  have hs : derivativeH3Norm f ^ 2 = derivativeH3Energy f :=
+    Real.sq_sqrt (derivativeH3Energy_nonneg f)
+  nlinarith [derivativeH3Energy_nonneg f]
+
+end NavierStokesR3.H3Embedding
+
+
+noncomputable section
+
+open Set Filter MeasureTheory
+open scoped ContDiff Topology InnerProductSpace BigOperators
+
+namespace NavierStokesR3.H3Embedding
+
+open NavierStokes.ProblemStatement NavierStokes.PeriodicIntegration
+open H3Comparison
+
+def weakH3Energy (f : Space → Space) (df : Fin 3 → Space → Space)
+    (ddf : Fin 3 → Fin 3 → Space → Space)
+    (dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space) : ℝ :=
+  squareEnergy f + squareEnergy (df 0) + squareEnergy (df 1) + squareEnergy (df 2) +
+    squareEnergy (ddf 1 0) + squareEnergy (ddf 2 0) + squareEnergy (ddf 2 1) +
+    squareEnergy (dddf 2 1 0) + (∑ i, ∑ j, squareEnergy (ddf i j)) +
+    (∑ i, ∑ j, ∑ k, squareEnergy (dddf i j k))
+
+def weakH3Norm (f : Space → Space) (df : Fin 3 → Space → Space)
+    (ddf : Fin 3 → Fin 3 → Space → Space)
+    (dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space) : ℝ :=
+  Real.sqrt (weakH3Energy f df ddf dddf)
+
+theorem weakH3Energy_nonneg (f : Space → Space) (df : Fin 3 → Space → Space)
+    (ddf : Fin 3 → Fin 3 → Space → Space)
+    (dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space) :
+    0 ≤ weakH3Energy f df ddf dddf := by
+  have h2 : 0 ≤ ∑ i, ∑ j, squareEnergy (ddf i j) :=
+    Finset.sum_nonneg (fun _ _ => Finset.sum_nonneg (fun _ _ => squareEnergy_nonneg _))
+  have h3 : 0 ≤ ∑ i, ∑ j, ∑ k, squareEnergy (dddf i j k) :=
+    Finset.sum_nonneg (fun _ _ => Finset.sum_nonneg (fun _ _ =>
+      Finset.sum_nonneg (fun _ _ => squareEnergy_nonneg _)))
+  unfold weakH3Energy
+  apply add_nonneg (add_nonneg _ h2) h3
+  repeat' apply add_nonneg
+  all_goals exact squareEnergy_nonneg _
+
+theorem squareEnergy_eq_norm_toLp {f : Space → Space} (hf : MemLp f 2 volume) :
+    squareEnergy f = ‖hf.toLp f‖ ^ 2 := by
+  rw [← real_inner_self_eq_norm_sq, L2.inner_def]
+  apply integral_congr_ae
+  filter_upwards [hf.coeFn_toLp] with x hx
+  rw [hx, real_inner_self_eq_norm_sq]
+
+theorem squareEnergy_tendsto_of_toLp {f : ℕ → Space → Space} {g : Space → Space}
+    (hf : ∀ n, MemLp (f n) 2 volume) (hg : MemLp g 2 volume)
+    (ht : Tendsto (fun n => (hf n).toLp (f n)) atTop (𝓝 (hg.toLp g))) :
+    Tendsto (fun n => squareEnergy (f n)) atTop (𝓝 (squareEnergy g)) := by
+  have he : (fun n => squareEnergy (f n)) = fun n => ‖(hf n).toLp (f n)‖ ^ 2 :=
+    funext (fun n => squareEnergy_eq_norm_toLp (hf n))
+  rw [he, squareEnergy_eq_norm_toLp hg]
+  exact ht.norm.pow 2
+
+theorem approximation_energy_tendsto {f : Space → Space} {df : Fin 3 → Space → Space}
+    {ddf : Fin 3 → Fin 3 → Space → Space}
+    {dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space}
+    (h : H3Approximation f df ddf dddf) :
+    Tendsto (fun n => derivativeH3Energy (h.approx n)) atTop
+      (𝓝 (weakH3Energy f df ddf dddf)) := by
+  have h0 := squareEnergy_tendsto_of_toLp h.approx_memLp h.memLp h.tendsto
+  have h1 (i) := squareEnergy_tendsto_of_toLp (fun n => h.derivative_approx_memLp n i)
+    (h.derivative_memLp i) (h.derivative_tendsto i)
+  have h2 (i j) := squareEnergy_tendsto_of_toLp (fun n => h.second_approx_memLp n i j)
+    (h.second_memLp i j) (h.second_tendsto i j)
+  have h3 (i j k) := squareEnergy_tendsto_of_toLp (fun n => h.third_approx_memLp n i j k)
+    (h.third_memLp i j k) (h.third_tendsto i j k)
+  apply ((((((((h0.add (h1 0)).add (h1 1)).add (h1 2)).add (h2 1 0)).add
+    (h2 2 0)).add (h2 2 1)).add (h3 2 1 0)).add ?_).add ?_
+  · exact tendsto_finsetSum _ (fun i _ => tendsto_finsetSum _ (fun j _ => h2 i j))
+  · exact tendsto_finsetSum _ (fun i _ => tendsto_finsetSum _ (fun j _ =>
+      tendsto_finsetSum _ (fun k _ => h3 i j k)))
+
+theorem approximation_finiteH3 {f : Space → Space} {df : Fin 3 → Space → Space}
+    {ddf : Fin 3 → Fin 3 → Space → Space}
+    {dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space}
+    (h : H3Approximation f df ddf dddf) (n : ℕ) : HasFiniteH3 (h.approx n) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact (memLp_two_iff_integrable_sq_norm (h.approx_memLp n).aestronglyMeasurable).1
+      (h.approx_memLp n)
+  · intro i
+    exact (memLp_two_iff_integrable_sq_norm
+      (h.derivative_approx_memLp n i).aestronglyMeasurable).1 (h.derivative_approx_memLp n i)
+  · intro i j
+    exact (memLp_two_iff_integrable_sq_norm
+      (h.second_approx_memLp n i j).aestronglyMeasurable).1 (h.second_approx_memLp n i j)
+  · intro i j k
+    exact (memLp_two_iff_integrable_sq_norm
+      (h.third_approx_memLp n i j k).aestronglyMeasurable).1 (h.third_approx_memLp n i j k)
+
+/-- The whole-space Sobolev estimate for almost every value of any weak H³
+representative. -/
+theorem ae_norm_sq_le_weakH3Energy {f : Space → Space} {df : Fin 3 → Space → Space}
+    {ddf : Fin 3 → Fin 3 → Space → Space}
+    {dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space}
+    (h : H3Approximation f df ddf dddf) :
+    ∀ᵐ x ∂volume, ‖f x‖ ^ 2 ≤ 8 * weakH3Energy f df ddf dddf := by
+  obtain ⟨ns, hns, hae⟩ := (tendstoInMeasure_of_tendsto_Lp h.tendsto).exists_seq_tendsto_ae
+  have ha : ∀ᵐ x ∂volume, ∀ n, (h.approx_memLp (ns n)).toLp (h.approx (ns n)) x =
+      h.approx (ns n) x :=
+    ae_all_iff.2 (fun n => (h.approx_memLp (ns n)).coeFn_toLp)
+  filter_upwards [hae, ha, h.memLp.coeFn_toLp] with x hx hax hfx
+  have ht : Tendsto (fun n => h.approx (ns n) x) atTop (𝓝 (f x)) := by
+    simpa only [hax, hfx] using hx
+  have hen := (approximation_energy_tendsto h).comp hns.tendsto_atTop
+  exact le_of_tendsto_of_tendsto (ht.norm.pow 2) (tendsto_const_nhds.mul hen)
+    (Filter.Eventually.of_forall (fun n =>
+      norm_sq_le_eight_derivativeH3Energy (h.smooth (ns n)) (approximation_finiteH3 h (ns n)) x))
+
+/-- A continuous representative of a weak H³ field satisfies the Sobolev
+bound at every point. -/
+theorem norm_sq_le_weakH3Energy {f : Space → Space} {df : Fin 3 → Space → Space}
+    {ddf : Fin 3 → Fin 3 → Space → Space}
+    {dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space}
+    (h : H3Approximation f df ddf dddf) (hf : Continuous f) (x : Space) :
+    ‖f x‖ ^ 2 ≤ 8 * weakH3Energy f df ddf dddf := by
+  have hc : IsClosed {x | ‖f x‖ ^ 2 ≤ 8 * weakH3Energy f df ddf dddf} :=
+    isClosed_le (hf.norm.pow 2) continuous_const
+  have heq := hc.ae_eq_univ_iff_eq.mp (show
+      {x | ‖f x‖ ^ 2 ≤ 8 * weakH3Energy f df ddf dddf} =ᵐ[volume] univ from by
+    filter_upwards [ae_norm_sq_le_weakH3Energy h] with y hy
+    exact propext ⟨fun _ => mem_univ y, fun _ => hy⟩)
+  change x ∈ {x | ‖f x‖ ^ 2 ≤ 8 * weakH3Energy f df ddf dddf}
+  rw [heq]
+  exact mem_univ _
+
+theorem norm_le_weakH3Norm {f : Space → Space} {df : Fin 3 → Space → Space}
+    {ddf : Fin 3 → Fin 3 → Space → Space}
+    {dddf : Fin 3 → Fin 3 → Fin 3 → Space → Space}
+    (h : H3Approximation f df ddf dddf) (hf : Continuous f) (x : Space) :
+    ‖f x‖ ≤ 3 * weakH3Norm f df ddf dddf := by
+  have he := norm_sq_le_weakH3Energy h hf x
+  have hn : 0 ≤ weakH3Norm f df ddf dddf := Real.sqrt_nonneg _
+  have hs : weakH3Norm f df ddf dddf ^ 2 = weakH3Energy f df ddf dddf :=
+    Real.sq_sqrt (weakH3Energy_nonneg f df ddf dddf)
+  nlinarith [weakH3Energy_nonneg f df ddf dddf]
+
+end NavierStokesR3.H3Embedding
+
 /-! Merged from `NavierStokes.R3.H3UniformApproximation`. -/
 /-! Merged from `NavierStokes.R3.H3Operations`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
 section
@@ -225,62 +637,17 @@ closed time interval's endpoints. -/
 def partialField (i : Fin 3) (u : VelocityField) : VelocityField :=
   fun z => spatialPartial i (fun y => u (z.1, y)) z.2
 
-private theorem infinity_add_one_le : (∞ : WithTop ℕ∞) + 1 ≤ ∞ := by
-  simpa only [ENat.coe_top_add_one] using (le_rfl : (∞ : WithTop ℕ∞) ≤ ∞)
 
-theorem partialField_contDiffOn {a b : ℝ} (hab : a < b) {u : VelocityField}
-    (hu : ContDiffOn ℝ ∞ u (slab a b)) (i : Fin 3) :
-    ContDiffOn ℝ ∞ (partialField i u) (slab a b) := by
-  have hs : UniqueDiffOn ℝ (slab a b) :=
-    (uniqueDiffOn_Icc hab).prod uniqueDiffOn_univ
-  have hc := (hu.fderivWithin hs infinity_add_one_le).clm_apply
-    (show ContDiffOn ℝ ∞ (fun _ : SpaceTime => ((0 : ℝ), coordinateVector i))
-      (slab a b) from contDiffOn_const)
-  apply hc.congr
-  intro z hz
-  change NavierStokes.ProblemStatement.spatialDerivative u z.1 z.2 (coordinateVector i) = _
-  rw [NavierStokes.PeriodicUniqueness.spatialDerivative_eq_within_comp hu hz.1 z.2]
-  rfl
 
-theorem partialField_support {a b : ℝ} {u : VelocityField} {K : Set Space}
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K) (i : Fin 3) :
-    ∀ t ∈ Icc a b, tsupport (fun x => partialField i u (t, x)) ⊆ K := by
-  intro t ht
-  change tsupport (fun x => fderiv ℝ (fun y => u (t, y)) x (coordinateVector i)) ⊆ K
-  exact (tsupport_fderiv_apply_subset ℝ (coordinateVector i)).trans (hsupp t ht)
 
 /-- An arbitrary ordered word of ordinary coordinate derivatives. -/
 def partialWord : List (Fin 3) → VelocityField → VelocityField
   | [], u => u
   | i :: is, u => partialField i (partialWord is u)
 
-theorem partialWord_contDiffOn {a b : ℝ} (hab : a < b) {u : VelocityField}
-    (hu : ContDiffOn ℝ ∞ u (slab a b)) (is : List (Fin 3)) :
-    ContDiffOn ℝ ∞ (partialWord is u) (slab a b) := by
-  induction is with
-  | nil => exact hu
-  | cons i is ih => exact partialField_contDiffOn hab ih i
-
-theorem partialWord_support {a b : ℝ} {u : VelocityField} {K : Set Space}
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K)
-    (is : List (Fin 3)) :
-    ∀ t ∈ Icc a b, tsupport (fun x => partialWord is u (t, x)) ⊆ K := by
-  induction is with
-  | nil => exact hsupp
-  | cons i is ih => exact partialField_support ih i
 
 
-theorem partialWord_square_continuousOn {a b : ℝ} (hab : a < b) {u : VelocityField}
-    {K : Set Space} (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K)
-    (is : List (Fin 3)) :
-    ContinuousOn (fun t => ∫ x : Space, ‖partialWord is u (t, x)‖ ^ 2) (Icc a b) := by
-  apply CompactTimeIntegral.continuousOn_integral hK
-    ((partialWord_contDiffOn hab hu is).continuousOn.norm.pow 2)
-  intro t ht x hx
-  change ‖partialWord is u (t, x)‖ ^ 2 = 0
-  rw [CompactEnergy.zero_outside (partialWord_support hsupp is t ht) hx]
-  simp
+
 
 end NavierStokesR3.H3Compact
 
@@ -310,12 +677,6 @@ open ProblemStatement H3Compact
 open NavierStokes.PeriodicIntegration (spatialPartial)
 open NavierStokes.PeriodicUniqueness (slab spatial_smooth)
 
-/-- Continuity in the derivative H³ topology on a time set. All derivatives
-through order three are square integrable at every time. -/
-def H3ContinuousOn (u : VelocityField) (s : Set ℝ) : Prop :=
-  (∀ t ∈ s, HasFiniteH3 (fun x => u (t, x))) ∧
-    ∀ t ∈ s, Tendsto (fun r => derivativeH3Norm (fun x => u (r, x) - u (t, x)))
-      (𝓝[s] t) (𝓝 0)
 
 
 
@@ -385,9 +746,6 @@ def velocityLp (h : H3Curve u s) (t : ℝ) : Lp Space 2 (volume : Measure Space)
   classical
   exact if ht : t ∈ s then (h.approximation t ht).memLp.toLp (fun x => u (t, x)) else 0
 
-theorem velocityLp_eq (h : H3Curve u s) {t : ℝ} (ht : t ∈ s) :
-    h.velocityLp t = (h.approximation t ht).memLp.toLp (fun x => u (t, x)) := by
-  simp only [velocityLp, dite_eq_left ht]
 
 
 def restrict (h : H3Curve u s) {r : Set ℝ} (hrs : r ⊆ s) : H3Curve u r where
@@ -428,106 +786,7 @@ namespace NavierStokesR3.H3Comparison
 
 open ProblemStatement
 
-theorem lp_norm_sq_eq_integral (v : Lp Space 2 (volume : Measure Space)) :
-    ‖v‖ ^ 2 = ∫ x : Space, ‖v x‖ ^ 2 := by
-  rw [← real_inner_self_eq_norm_sq, L2.inner_def]
-  apply integral_congr_ae
-  exact Filter.Eventually.of_forall (fun x => real_inner_self_eq_norm_sq (v x))
 
-/-- A compact spatially supported field whose pointwise time derivative is
-jointly continuous has the asserted derivative in the genuine L² space. -/
-theorem hasDerivAt_L2_of_compact_support
-    {a b t : ℝ} {u du : VelocityField} {K : Set Space}
-    (hK : IsCompact K) (hu : ContinuousOn u (Icc a b ×ˢ univ))
-    (hdu : ContinuousOn du (Icc a b ×ˢ univ))
-    (hsu : ∀ r ∈ Icc a b, ∀ x ∉ K, u (r, x) = 0)
-    (hsdu : ∀ r ∈ Icc a b, ∀ x ∉ K, du (r, x) = 0)
-    (hd : ∀ r ∈ Icc a b, ∀ x : Space,
-      HasDerivAt (fun s => u (s, x)) (du (r, x)) r)
-    (ht : t ∈ Ioo a b)
-    {F : ℝ → Lp Space 2 (volume : Measure Space)}
-    (hF : ∀ r ∈ Icc a b, F r =ᵐ[volume] fun x => u (r, x))
-    {D : Lp Space 2 (volume : Measure Space)} (hD : D =ᵐ[volume] fun x => du (t, x)) :
-    HasDerivAt F D t := by
-  have htt : t ∈ Icc a b := Ioo_subset_Icc_self ht
-  obtain ⟨C, hC⟩ := (isCompact_Icc.prod hK).exists_bound_of_continuousOn
-    (hdu.mono (Set.prod_mono (Subset.refl _) (subset_univ K)))
-  let M : ℝ := max C 0
-  have hM : 0 ≤ M := le_max_right _ _
-  have hbound (r : ℝ) (hr : r ∈ Icc a b) (x : Space) : ‖du (r, x)‖ ≤ M := by
-    by_cases hx : x ∈ K
-    · exact (hC (r, x) ⟨hr, hx⟩).trans (le_max_left _ _)
-    · rw [hsdu r hr x hx, norm_zero]
-      exact hM
-  let E : ℝ → Space → Space := fun r x => (r - t)⁻¹ • (u (r, x) - u (t, x)) - du (t, x)
-  have hEsupport (r : ℝ) (hr : r ∈ Icc a b) (x : Space) (hx : x ∉ K) : E r x = 0 := by
-    simp only [E, hsu r hr x hx, hsu t htt x hx, hsdu t htt x hx, sub_self,
-      smul_zero]
-  have hEnorm (r : ℝ) (hr : r ∈ Icc a b) (hrt : r ≠ t) (x : Space) : ‖E r x‖ ≤ 2 * M := by
-    have hlip := Convex.norm_image_sub_le_of_norm_hasDerivWithin_le
-      (fun s hs => (hd s hs x).hasDerivWithinAt) (fun s hs => hbound s hs x)
-      (convex_Icc a b) htt hr
-    have hslope : ‖(r - t)⁻¹ • (u (r, x) - u (t, x))‖ ≤ M := by
-      rw [norm_smul, norm_inv]
-      calc
-        ‖r - t‖⁻¹ * ‖u (r, x) - u (t, x)‖ ≤ ‖r - t‖⁻¹ * (M * ‖r - t‖) :=
-          mul_le_mul_of_nonneg_left hlip (inv_nonneg.mpr (norm_nonneg _))
-        _ = M := by
-          have hn : ‖r - t‖ ≠ 0 := norm_ne_zero_iff.mpr (sub_ne_zero.mpr hrt)
-          field_simp
-    exact (norm_sub_le _ _).trans (by linarith [hbound t htt x])
-  have hnear : ∀ᶠ r in 𝓝[≠] t, r ∈ Icc a b ∧ r ≠ t := by
-    filter_upwards [nhdsWithin_le_nhds (Ioo_mem_nhds ht.1 ht.2), self_mem_nhdsWithin]
-      with r hr hrt
-    exact ⟨Ioo_subset_Icc_self hr, hrt⟩
-  let bound : Space → ℝ := K.indicator (fun _ => (2 * M) ^ 2)
-  have hboundi : Integrable bound := by
-    exact (integrableOn_const (C := (2 * M) ^ 2) hK.measure_ne_top).integrable_indicator hK.measurableSet
-  have hmeas : ∀ᶠ r in 𝓝[≠] t, AEStronglyMeasurable (fun x => ‖E r x‖ ^ 2) volume := by
-    filter_upwards [hnear] with r hr
-    exact (((CompactTimeIntegral.continuous_slice hu hr.1).sub
-      (CompactTimeIntegral.continuous_slice hu htt)).const_smul (r - t)⁻¹ |>.sub
-      (CompactTimeIntegral.continuous_slice hdu htt)).norm.pow 2 |>.aestronglyMeasurable
-  have hdom : ∀ᶠ r in 𝓝[≠] t, ∀ᵐ x ∂volume, ‖‖E r x‖ ^ 2‖ ≤ bound x := by
-    filter_upwards [hnear] with r hr
-    apply Filter.Eventually.of_forall
-    intro x
-    rw [Real.norm_of_nonneg (sq_nonneg _)]
-    by_cases hx : x ∈ K
-    · dsimp only [bound]
-      rw [Set.indicator_of_mem hx]
-      exact pow_le_pow_left₀ (norm_nonneg _) (hEnorm r hr.1 hr.2 x) 2
-    · dsimp only [bound]
-      rw [Set.indicator_of_notMem hx, hEsupport r hr.1 x hx]
-      simp
-  have hpoint : ∀ᵐ x ∂volume, Tendsto (fun r => ‖E r x‖ ^ 2) (𝓝[≠] t) (𝓝 0) := by
-    apply Filter.Eventually.of_forall
-    intro x
-    have hs := (hd t htt x).tendsto_slope
-    have hc : Tendsto (fun _ : ℝ => du (t, x)) (𝓝[≠] t) (𝓝 (du (t, x))) :=
-      tendsto_const_nhds
-    simpa only [E, slope_def_module, sub_self, norm_zero, ne_eq, OfNat.ofNat_ne_zero,
-      not_false_eq_true, zero_pow] using (hs.sub hc).norm.pow 2
-  have hint := tendsto_integral_filter_of_dominated_convergence bound hmeas hdom hboundi hpoint
-  have hint0 : Tendsto (fun r => ∫ x, ‖E r x‖ ^ 2) (𝓝[≠] t) (𝓝 0) := by
-    simpa only [integral_zero] using hint
-  have hcoe (r : ℝ) (hr : r ∈ Icc a b) :
-      (slope F t r - D : Lp Space 2 (volume : Measure Space)) =ᵐ[volume] E r := by
-    filter_upwards [Lp.coeFn_sub (slope F t r) D,
-      Lp.coeFn_smul (r - t)⁻¹ (F r - F t), Lp.coeFn_sub (F r) (F t), hF r hr, hF t htt, hD]
-      with x h1 h2 h3 h4 h5 h6
-    simp only [Pi.smul_apply, Pi.sub_apply] at h1 h2 h3
-    rw [h1]
-    change ((r - t)⁻¹ • (F r - F t) : Lp Space 2 (volume : Measure Space)) x - D x = _
-    rw [h2, h3, h4, h5, h6]
-  have heq : (fun r => ‖slope F t r - D‖ ^ 2) =ᶠ[𝓝[≠] t] fun r => ∫ x, ‖E r x‖ ^ 2 := by
-    filter_upwards [hnear] with r hr
-    rw [lp_norm_sq_eq_integral]
-    exact integral_congr_ae ((hcoe r hr.1).fun_comp (fun x => ‖x‖ ^ 2))
-  have hsquare := hint0.congr' heq.symm
-  apply hasDerivAt_iff_tendsto_slope.mpr
-  apply tendsto_iff_norm_sub_tendsto_zero.mpr
-  simpa only [Real.sqrt_sq_eq_abs, abs_of_nonneg (norm_nonneg _), Real.sqrt_zero] using hsquare.sqrt
 
 end NavierStokesR3.H3Comparison
 
@@ -637,67 +896,8 @@ open ProblemStatement H3Embedding H3Compact
 open NavierStokes.PeriodicIntegration (spatialPartial)
 open NavierStokes.PeriodicUniqueness (slab spatial_smooth)
 
-/-- A compactly supported smooth spacetime field gives a continuous curve in
-the ordinary L² space, including closed time endpoints. -/
-theorem continuous_compact_slices_toLp {a b : ℝ} (hab : a < b)
-    {u : VelocityField} {K : Set Space} (hK : IsCompact K)
-    (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K)
-    {hm : ∀ t : Icc a b, MemLp (fun x => u (t, x)) 2 volume} :
-    Continuous (fun t : Icc a b => (hm t).toLp (fun x => u (t, x))) := by
-  rw [continuous_iff_continuousAt]
-  intro t
-  apply tendsto_iff_norm_sub_tendsto_zero.mpr
-  let w : VelocityField := fun z => u z - u (t, z.2)
-  have hw : ContDiffOn ℝ ∞ w (slab a b) :=
-    hu.sub (((spatial_smooth hu t.property).comp contDiff_snd).contDiffOn)
-  have hs : ∀ r ∈ Icc a b, tsupport (fun x => w (r, x)) ⊆ K := by
-    intro r hr
-    exact (tsupport_sub _ _).trans (union_subset (hsupp r hr) (hsupp t t.property))
-  have hc : Continuous (fun r : Icc a b => Real.sqrt (squareEnergy (fun x => w (r, x)))) :=
-    continuousOn_iff_continuous_domRestrict.mp
-      (partialWord_square_continuousOn hab hK hw hs []).sqrt
-  have he (r : Icc a b) :
-      ‖(hm r).toLp (fun x => u (r, x)) - (hm t).toLp (fun x => u (t, x))‖ =
-        Real.sqrt (squareEnergy (fun x => w (r, x))) := by
-    have hp := squareEnergy_eq_norm_toLp ((hm r).sub (hm t))
-    rw [MemLp.toLp_sub] at hp
-    rw [show (fun x => w (r, x)) = (fun x => u (r, x)) - (fun x => u (t, x)) from rfl,
-      hp, Real.sqrt_sq_eq_abs, abs_of_nonneg (norm_nonneg _)]
-  have hc0 : Real.sqrt (squareEnergy (fun x => w (t, x))) = 0 := by
-    simp [w, squareEnergy]
-  simp_rw [he]
-  exact hc0 ▸ hc.continuousAt.tendsto
 
-/-- Compact joint smoothness supplies all genuine weak H³ jets and the
-finite product of their L² topologies. -/
-def h3Curve_of_compact_slab {a b : ℝ} (hab : a < b)
-    {u : VelocityField} {K : Set Space} (hK : IsCompact K)
-    (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ t ∈ Icc a b, tsupport (fun x => u (t, x)) ⊆ K) :
-    H3Curve u (Icc a b) where
-  first := fun i => partialField i u
-  second := fun i j => partialField i (partialField j u)
-  third := fun i j k => partialField i (partialField j (partialField k u))
-  spatial_continuous := fun _t ht => (spatial_smooth hu ht).continuous
-  approximation := fun t ht => H3Approximation.of_contDiff_compact (spatial_smooth hu ht)
-    (CompactEnergy.slice_compact hK (hsupp t ht))
-  velocity_continuous := continuous_compact_slices_toLp hab hK hu hsupp
-  first_continuous := fun i => continuous_compact_slices_toLp hab hK
-    (partialWord_contDiffOn hab hu [i]) (partialWord_support hsupp [i])
-  second_continuous := fun i j => continuous_compact_slices_toLp hab hK
-    (partialWord_contDiffOn hab hu [i, j]) (partialWord_support hsupp [i, j])
-  third_continuous := fun i j k => continuous_compact_slices_toLp hab hK
-    (partialWord_contDiffOn hab hu [i, j, k]) (partialWord_support hsupp [i, j, k])
 
-/-- The exact candidate is a genuine C([0,T];H³(ℝ³)) curve for each shorter
-positive closed interval, with no PDE-specific assumptions needed here. -/
-def candidate_h3Curve {ν : ℝ} {u : VelocityField} {p : PressureField}
-    {f : VelocityField} {K : Set Space} (h : CandidateProperties ν u p f K)
-    {T : ℝ} (hT0 : 0 < T) (hT : T < 1) : H3Curve u (Icc 0 T) :=
-  h3Curve_of_compact_slab hT0 h.support_compact
-    (h.velocity_smooth.mono (fun _z hz => ⟨⟨hz.1.1, hz.1.2.trans_lt hT⟩, hz.2⟩))
-    (fun t ht => h.velocity_support t ⟨ht.1, ht.2.trans_lt hT⟩)
 
 end NavierStokesR3.H3Comparison
 end
@@ -862,112 +1062,13 @@ open ProblemStatement
 open NavierStokes.ProblemStatement (temporalDerivative advection spatialDerivative spatialDivergence)
 open NavierStokes.PeriodicUniqueness (slab spatial_smooth time_differentiable_at_interior)
 
-private theorem time_derivative {a b t : ℝ} {u : VelocityField}
-    (hu : ContDiffOn ℝ ∞ u (slab a b)) (ht : t ∈ Ioo a b) (x : Space) :
-    HasDerivAt (fun r => u (r, x)) (temporalDerivative u t x) t :=
-  (time_differentiable_at_interior hu ht x).hasDerivAt
 
-private theorem time_derivative_continuous {a b : ℝ} {u : VelocityField}
-    (hu : ContDiffOn ℝ ∞ u (slab a b)) :
-    ContinuousOn (fun z => temporalDerivative u z.1 z.2) (Ioo a b ×ˢ univ) :=
-  CompactTimeIntegral.continuousOn_timeDeriv_of_contDiffOn (hu.of_le (by simp))
 
-private theorem time_derivative_zero {a b t : ℝ} {u : VelocityField} {K : Set Space}
-    (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ r ∈ Icc a b, tsupport (fun x => u (r, x)) ⊆ K)
-    (ht : t ∈ Ioo a b) {x : Space} (hx : x ∉ K) : temporalDerivative u t x = 0 := by
-  exact CompactTimeIntegral.derivative_eq_zero_outside
-    (G := fun z => temporalDerivative u z.1 z.2)
-    (fun r hr y hy => CompactEnergy.zero_outside (hsupp r (Ioo_subset_Icc_self hr)) hy)
-    (fun r hr y => time_derivative hu hr y) ht hx
 
-theorem temporalDerivative_memLp_of_compact {a b t : ℝ} {u : VelocityField} {K : Set Space}
-    (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ r ∈ Icc a b, tsupport (fun x => u (r, x)) ⊆ K)
-    (ht : t ∈ Ioo a b) : MemLp (fun x => temporalDerivative u t x) 2 volume := by
-  have hc := CompactTimeIntegral.continuous_slice (time_derivative_continuous hu) ht
-  have hs : tsupport (fun x => temporalDerivative u t x) ⊆ K := by
-    apply closure_minimal _ hK.isClosed
-    intro x hx
-    by_contra hn
-    exact hx (time_derivative_zero hu hsupp ht hn)
-  exact hc.memLp_of_hasCompactSupport (hK.of_isClosed_subset (isClosed_tsupport _) hs)
 
-/-- The exact ordinary time derivative of a compact smooth velocity is also
-the derivative of its L²-valued time curve. -/
-theorem hasDerivAt_velocityLp_of_compact {a b t : ℝ} {u : VelocityField} {K : Set Space}
-    (hK : IsCompact K) (hu : ContDiffOn ℝ ∞ u (slab a b))
-    (hsupp : ∀ r ∈ Icc a b, tsupport (fun x => u (r, x)) ⊆ K)
-    (ht : t ∈ Ioo a b) (hc : H3Curve u (Icc a b)) :
-    HasDerivAt hc.velocityLp
-      ((temporalDerivative_memLp_of_compact hK hu hsupp ht).toLp
-        (fun x => temporalDerivative u t x)) t := by
-  let a' : ℝ := (a + t) / 2
-  let b' : ℝ := (t + b) / 2
-  have hsmall : Icc a' b' ⊆ Ioo a b := by
-    intro r hr
-    dsimp [a', b'] at hr
-    constructor <;> linarith [ht.1, ht.2, hr.1, hr.2]
-  have ht' : t ∈ Ioo a' b' := by
-    dsimp [a', b']
-    constructor <;> linarith [ht.1, ht.2]
-  apply hasDerivAt_L2_of_compact_support hK
-    (hu.continuousOn.mono (Set.prod_mono (hsmall.trans Ioo_subset_Icc_self) (Subset.refl _)))
-    ((time_derivative_continuous hu).mono (Set.prod_mono hsmall (Subset.refl _)))
-    (fun r hr x hx => CompactEnergy.zero_outside
-      (hsupp r (Ioo_subset_Icc_self (hsmall hr))) hx)
-    (fun r hr x hx => time_derivative_zero hu hsupp (hsmall hr) hx)
-    (fun r hr x => time_derivative hu (hsmall hr) x) ht'
-  · intro r hr
-    rw [hc.velocityLp_eq (Ioo_subset_Icc_self (hsmall hr))]
-    exact MemLp.coeFn_toLp _
-  · exact MemLp.coeFn_toLp _
 
-theorem weakAdvection_eq_advection (u : VelocityField) (t : ℝ) (x : Space) :
-    weakAdvection (fun x => u (t, x))
-      (fun i x => H3Compact.partialField i u (t, x)) x = advection u t x := by
-  unfold advection
-  conv_rhs => rw [← NavierStokes.PeriodicUniqueness.sum_coordinates (u (t, x))]
-  simp only [map_sum, map_smul]
-  rfl
 
-/-- All requirements of the ordinary classical H³ class follow from the
-actual compact smooth solution on a shorter slab. -/
-def strongSolution_of_compact_slab {ν a b : ℝ} {u f : VelocityField} {p : PressureField}
-    {K : Set Space} (hab : a < b) (hK : IsCompact K)
-    (hu : ContDiffOn ℝ ∞ u (slab a b)) (hp : ContDiffOn ℝ ∞ p (slab a b))
-    (hsupp : ∀ r ∈ Icc a b, tsupport (fun x => u (r, x)) ⊆ K)
-    (hdiv : ∀ t ∈ Ioo a b, ∀ x, spatialDivergence u t x = 0)
-    (hNS : ∀ t ∈ Ioo a b, ∀ x, navierStokesResidual ν u p t x = f (t, x)) :
-    StrongSolutionOnIcc ν f a b u p where
-  time_lt := hab
-  curve := h3Curve_of_compact_slab hab hK hu hsupp
-  timeDerivative := fun z => temporalDerivative u z.1 z.2
-  timeDerivative_memLp := fun _ ht => temporalDerivative_memLp_of_compact hK hu hsupp ht
-  hasDerivAt_velocity := fun _ ht => hasDerivAt_velocityLp_of_compact hK hu hsupp ht _
-  pressure_C1 := fun _ ht => (spatial_smooth hp (Ioo_subset_Icc_self ht)).of_le (by simp)
-  divergence_free := fun t ht => Filter.Eventually.of_forall (hdiv t ht)
-  navier_stokes := fun t ht => Filter.Eventually.of_forall (fun x => by
-    change temporalDerivative u t x + weakAdvection (fun x => u (t, x))
-      (fun i x => H3Compact.partialField i u (t, x)) x -
-      ν • NavierStokes.ProblemStatement.spatialLaplacian u t x +
-      NavierStokes.ProblemStatement.pressureGradient p t x = _
-    rw [weakAdvection_eq_advection]
-    exact hNS t ht x)
 
-/-- The actual candidate belongs to the ordinary classical H³ class on the
-whole half-open interval [0,1). -/
-def candidate_classicalH3Solution {ν : ℝ} {u : VelocityField} {p : PressureField}
-    {f : VelocityField} {K : Set Space} (h : CandidateProperties ν u p f K) :
-    ClassicalH3Solution ν f (fun _ => 0) 1 u p where
-  lifespan_pos := zero_lt_one
-  initial_velocity := h.zero_initial_velocity
-  on_shorter_interval := fun _S hS => strongSolution_of_compact_slab hS.1 h.support_compact
-    (h.velocity_smooth.mono (fun _ hz => ⟨⟨hz.1.1, hz.1.2.trans_lt hS.2⟩, hz.2⟩))
-    (h.pressure_smooth.mono (fun _ hz => ⟨⟨hz.1.1, hz.1.2.trans_lt hS.2⟩, hz.2⟩))
-    (fun t ht => h.velocity_support t ⟨ht.1, ht.2.trans_lt hS.2⟩)
-    (fun t ht => h.divergence_free t ⟨ht.1.le, ht.2.trans hS.2⟩)
-    (fun t ht => h.navier_stokes t ⟨ht.1, ht.2.trans hS.2⟩)
 
 end NavierStokesR3.H3Comparison
 end
@@ -1279,17 +1380,8 @@ def ClassicalH3Solution.restrict {ν T S : ℝ} {f u : VelocityField} {p : Press
 def VelocityAgreesOn (T : ℝ) (u v : VelocityField) : Prop :=
   ∀ t ∈ Ico (0 : ℝ) T, ∀ x : Space, u (t, x) = v (t, x)
 
-def HasClassicalH3Extension (ν : ℝ) (f : VelocityField) (initial : Space → Space)
-    (T : ℝ) (u : VelocityField) : Prop :=
-  ∃ S : ℝ, ∃ v : VelocityField, ∃ q : PressureField,
-    T < S ∧ Nonempty (ClassicalH3Solution ν f initial S v q) ∧ VelocityAgreesOn T u v
 
-def IsMaximalClassicalH3Solution (ν : ℝ) (f : VelocityField) (initial : Space → Space)
-    (T : ℝ) (u : VelocityField) (p : PressureField) : Prop :=
-  Nonempty (ClassicalH3Solution ν f initial T u p) ∧ ¬HasClassicalH3Extension ν f initial T u
 
-def admissibleH3Lifespans (ν : ℝ) (f : VelocityField) (initial : Space → Space) : Set ℝ :=
-  {T | ∃ u : VelocityField, ∃ p : PressureField, Nonempty (ClassicalH3Solution ν f initial T u p)}
 
 
 

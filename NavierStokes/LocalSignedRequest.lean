@@ -746,12 +746,6 @@ theorem physicalBarSigma_chart (P : SignedStressPrimitive.Patch) (e : ℕ)
   rw [hslice]
   exact torusAverage_coverPull_local l C k u hU hg hp v hs
 
-/-- This field has no band index: every normalized request below represents
-this same physical signed stress. -/
-noncomputable def physicalRequestedStress (P : SignedStressPrimitive.Patch) (q : S → ℝ)
-    (Fθ Fz : PressureStream.Lift S → ℝ) (x : ℝ × S) : SignedWaveUpdate.Vec2 :=
-  ![SignedStressPrimitive.physicalBarSigma P 2 q Fθ x,
-    SignedStressPrimitive.physicalBarSigma P 1 q Fz x]
 
 
 

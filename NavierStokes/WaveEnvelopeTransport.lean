@@ -115,8 +115,6 @@ open WeightedClasses
 variable {P V : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
   [NormedAddCommGroup V] [NormedSpace ℝ V]
 
-noncomputable def copyCell (g : Geometry) (r L : ℝ) (k : Frequency) : Set (P × Plane) :=
-  {z | g.coordinates k z.2 ∈ rectangle r L}
 
 
 

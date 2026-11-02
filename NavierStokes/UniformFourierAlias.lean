@@ -871,10 +871,7 @@ end FiberClass
 
 section BandScales
 
-/-- The actual slow scale, clipped only at the finitely many initial bands. -/
-noncomputable def bandSlow (n : ℕ) : ℝ := max 1 (ChartScales.S n)
 
-theorem one_le_bandSlow (n : ℕ) : 1 ≤ bandSlow n := le_max_left _ _
 
 
 
@@ -886,11 +883,6 @@ open WeightedClasses WeightedRadialPrimitive
 
 variable {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-/-- The concrete radial strip with the manuscript's actual band scales. -/
-noncomputable def chartStrip (a b cL cR : ℝ) (ha : 0 < a) (hcL : 0 < cL) (hcR : 0 < cR)
-    (h : ℝ) (hh : 0 < h) : StripData (ℝ × E) :=
-  logStripData a b cL cR ha hcL hcR (ChartScales.epsilon h) bandSlow
-    (ChartScales.epsilon_pos h) (ChartScales.epsilon_le_one h hh.le) one_le_bandSlow
 
 variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S] [FiniteDimensional ℝ S]
 

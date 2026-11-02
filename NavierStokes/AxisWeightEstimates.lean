@@ -412,37 +412,17 @@ theorem shiftedProductWeightSum_le {ε : ℝ} (hε : 0 < ε) (n m : ℕ) :
   exact hsub.trans (productWeightSum_le hε (n + 1) m)
 
 
-def mixedWeightSum (ε : ℝ) (r n m : ℕ) : ℝ :=
-  ∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
-    (((m.choose kl.1 : ℝ) * ij.2) / radialDivisor r n) *
-      weight ε ij.1 (kl.1 + 1) * weight ε ij.2 kl.2
 
 
-/-- The coefficient at radial degree n+1 of J_r((∂η f) D_Y g).
-The radial divisor is distributed over its finite convolution sum. -/
-def inverseMixedJet (r : ℕ) (f g : ℕ → ℕ → ℝ) (n m : ℕ) : ℝ :=
-  ∑ ij ∈ antidiagonal n, ∑ kl ∈ antidiagonal m,
-    (((m.choose kl.1 : ℝ) * ij.2) / radialDivisor r n) *
-      f ij.1 (kl.1 + 1) * g ij.2 kl.2
 
 
-/-- Coefficients of the radial averaging operator `Bf(Y)=∫₀¹ f(tY)dt`. -/
-def averageJet (f : ℕ → ℕ → ℝ) (n m : ℕ) : ℝ := f n m / ((n : ℝ) + 1)
 
-/-- Coefficients of the zero-datum primitive. -/
-def primitiveJet (f : ℕ → ℕ → ℝ) : ℕ → ℕ → ℝ
-  | 0, _ => 0
-  | n + 1, m => f n m / ((n : ℝ) + 1)
 
 /-- Coefficients of the regular zero-datum inverse of `Y f'' + r f'`. -/
 def regularInverseJet (r : ℕ) (f : ℕ → ℕ → ℝ) : ℕ → ℕ → ℝ
   | 0, _ => 0
   | n + 1, m => f n m / radialDivisor r n
 
-/-- The primitive is applied together with the parameter derivative. -/
-def parameterPrimitiveJet (f : ℕ → ℕ → ℝ) : ℕ → ℕ → ℝ
-  | 0, _ => 0
-  | n + 1, m => f n (m + 1) / ((n : ℝ) + 1)
 
 
 
@@ -456,10 +436,6 @@ theorem radialDivisor_ge_one {r : ℕ} (hr : 1 ≤ r) (n : ℕ) : 1 ≤ radialDi
 
 
 
-/-- Put the already estimated mixed coefficient in its output radial degree. -/
-def regularInverseMixedJet (r : ℕ) (f g : ℕ → ℕ → ℝ) : ℕ → ℕ → ℝ
-  | 0, _ => 0
-  | n + 1, m => inverseMixedJet r f g n m
 
 
 end

@@ -1292,9 +1292,6 @@ end NativeSources
 
 /-! ## A fixed native region for the selected carrier profiles -/
 
-noncomputable def carrierRegion (h a b : ℝ) : Set PhysicalGraphBounds.Slow :=
-  {p | p.1 ∈ Ioo (a / 8) (4 * b + 1) ∧
-    (p.2.2, p.2.1) ∈ PhysicalMeanDomain.normalizedSlowDomain (2 * h) (1 / 4) 4}
 
 
 
@@ -1811,16 +1808,6 @@ noncomputable def labelPotential (L : NativeLabel f.active) (a : ℝ) : Velocity
 noncomputable def labelPressure (L : NativeLabel f.active) (a : ℝ) : PressureField :=
   fun x => ((pressureFamily sys hh f).periodized a h sys.radius (positiveIndex L) x).re
 
-/-- Only coordinate domains and the original native phase domain occur in
-this set. Its definition contains no output-field equality. -/
-noncomputable def referencePatch (L : NativeLabel f.active) (a b delta : ℝ)
-    (j : PolarCharts.Index) : Set SpaceTime :=
-  {x | PhysicalGraphBounds.radialProjection x ∈ PolarCharts.chartDomain delta j ∧
-    PhysicalGraphBounds.scaledRadial L.val.1 x ∈ PhysicalGraphBounds.annulus a b ∧
-    PhysicalGraphBounds.scaledRadial L.val.1 x ∈ PolarCharts.chartDomain a j ∧
-    (PhysicalResidualBridge.commonGraph (ChartScales.Q L.val.1) h
-      (ChartScales.nativeIndex h L.val.1)).map (PhysicalCurlCovariance.polarCoordinates delta j x) ∈
-        (f.primary L).strip.domain}
 
 variable (G : ReferenceGeometry sys f) (L : NativeLabel f.active)
   (hPhi : ContDiffOn ℝ ∞ ((f.primary L).base.phase L.val.1) (f.primary L).strip.domain)

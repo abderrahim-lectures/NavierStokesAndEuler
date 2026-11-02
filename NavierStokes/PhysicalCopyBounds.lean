@@ -531,21 +531,6 @@ noncomputable def nativeSupportCells (g : BandLabel → Geometry) (U : BandLabel
     x ∈ ((nativeSupportCells g U hU hinj hs).cells I.1).carrier I.1.val.1 k ↔
       (g I.1).coordinates k x.2 ∈ U I.1 := Iff.rfl
 
-/-- For the actual localized coefficients, the support premise is itself
-derived from the literal cutoff factor. -/
-noncomputable def nativeCutoffSupportCells (g : BandLabel → Geometry) (U : BandLabel → Set Plane)
-    (hU : ∀ L, IsCompact (U L))
-    (hinj : ∀ L, InjOn TorusAverages.quotientPoint
-      ((fun z => (g L).center + (g L).basis z) '' U L))
-    (κ : BandLabel → Plane → ℝ) (hκ : ∀ L, support (κ L) ⊆ U L)
-    (v : TorusInverse.Frequency → WaveIndex H → LiftPoint → ℂ)
-    (he : ∀ k I x, F.amplitude k I x = κ I.1 ((g I.1).coordinates k x.2) • v k I x) :
-    SupportCells F :=
-  nativeSupportCells g U hU hinj (by
-    intro k I x hx
-    apply hκ I.1
-    intro hz
-    exact hx (by rw [he, hz, zero_smul]))
 
 
 end NativeCells

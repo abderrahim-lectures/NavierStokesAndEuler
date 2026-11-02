@@ -611,10 +611,6 @@ theorem physicalProfile_eq_clean_outside (P : Patch) (lam R a : ℝ) (c : Coeff)
 
 
 
-noncomputable def heatDebt (T : OutgoingTail.TailData) (ν K η : ℝ) : Coeff :=
-  ![HeatTailEdit.pressureDebt (HeatTailEdit.outgoingProfile T K η) T.h ν K,
-    HeatTailEdit.energyDebt (HeatTailEdit.outgoingProfile T K η) T.h ν K,
-    HeatTailEdit.angularDebt (HeatTailEdit.outgoingProfile T K η) T.h ν K]
 
 
 

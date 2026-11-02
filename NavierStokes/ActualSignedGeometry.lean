@@ -742,106 +742,8 @@ noncomputable def phaseCell (l : Λ) (n : ℕ) (k : TorusInverse.Frequency) : Se
     (nativeDomain H v a).carrier (reference l n)
 
 
-theorem copy_weight_eq (hr0 : 0 < r0) (l : Λ) (n : ℕ) (k : TorusInverse.Frequency)
-    {x : Native} (hx : x ∈ (viewStrip W U chart).domain) :
-    (preparedChart H v a hr0).weight (reference l n)
-        (copyPoint sys hdet (copyLabel H v a reference sign l n) (chart n) (index (chart n)) k x) =
-      (viewStrip W U chart).zeta x := by
-  have hp := (viewStrip_mem W U chart x).mp hx
-  have ht := BaseContextAssembly.nativeStrip_time W U hp
-  have hr := BaseContextAssembly.nativeStrip_radius W U hp
-  change PrimaryTargetBounds.movingWeight W (slowChange F.data.h _ _ x.1) = _
-  rw [movingWeight_slowChange W (ChartScales.Q_pos _) (ChartScales.Q_pos _) ht hr,
-    viewStrip_zeta]
 
-theorem copy_growth_le
-    (hchart : ∀ n, 1 ≤ chart n)
-    (hnear : ∀ l n, chart n ≤ BaseChartJets.cellBand (reference l n) + 4 ∧
-      BaseChartJets.cellBand (reference l n) ≤ chart n + 4)
-    (l : Λ) (n : ℕ) (k : TorusInverse.Frequency)
-    {x : Native} (hx : x ∈ (viewStrip W U chart).domain) :
-    (nativeDomain H v a).growth (reference l n)
-        (copyPoint sys hdet (copyLabel H v a reference sign l n) (chart n) (index (chart n)) k x) ≤
-      25 * (viewStrip W U chart).growth n x := by
-  have hp := (viewStrip_mem W U chart x).mp hx
-  have ht := BaseContextAssembly.nativeStrip_time W U hp
-  have hr := BaseContextAssembly.nativeStrip_radius W U hp
-  have he : (BaseContextAssembly.nativeStrip W (standardSlowRegion F.data.h_pos F.data.h_lt_half)).delta
-      (BaseContextAssembly.insertSlow (slowChange F.data.h (ChartScales.Q (chart n))
-        (ChartScales.Q (BaseChartJets.cellBand (reference l n))) x.1)) =
-      (viewStrip W U chart).delta x := by
-    change (viewStrip W (standardSlowRegion F.data.h_pos F.data.h_lt_half) id).delta
-      (slowChange F.data.h (ChartScales.Q (chart n))
-        (ChartScales.Q (BaseChartJets.cellBand (reference l n))) x.1, 0) = _
-    rw [viewStrip_delta, viewStrip_delta,
-      profileRadius_slowChange (ChartScales.Q_pos _) (ChartScales.Q_pos _) ht hr]
-  have hSn := PhysicalGraphBounds.S_ge_one (hchart n)
-  have hSm := S_window_le (hchart n) (hnear l n).2
-  have hmax : BaseContextAssembly.slowScale (BaseChartJets.cellBand (reference l n)) ≤
-      25 * BaseContextAssembly.slowScale (chart n) := by
-    unfold BaseContextAssembly.slowScale
-    rw [max_eq_right hSn]
-    exact max_le (by linarith) hSm
-  change BaseContextAssembly.slowScale (BaseChartJets.cellBand (reference l n)) *
-    max 1 ((BaseContextAssembly.nativeStrip W _).delta
-      (BaseContextAssembly.insertSlow (slowChange F.data.h (ChartScales.Q (chart n))
-        (ChartScales.Q (BaseChartJets.cellBand (reference l n))) x.1)))⁻¹ ≤ _
-  rw [he]
-  exact (mul_le_mul_of_nonneg_right hmax (zero_le_one.trans (le_max_left 1 _))).trans_eq (by
-    change (25 * BaseContextAssembly.slowScale (chart n)) * max 1 ((viewStrip W U chart).delta x)⁻¹ =
-      25 * (BaseContextAssembly.slowScale (chart n) * max 1 ((viewStrip W U chart).delta x)⁻¹)
-    ring)
 
-/-- The copy chart is assembled from the actual dyadic and slot maps.
-The only indexing restrictions are the active four-level window and
-the chosen common-cover budget; all analytic comparisons are derived. -/
-noncomputable def copyChart (hr0 : 0 < r0)
-    (hchart : ∀ n, 1 ≤ chart n)
-    (hnear : ∀ l n, chart n ≤ BaseChartJets.cellBand (reference l n) + 4 ∧
-      BaseChartJets.cellBand (reference l n) ≤ chart n + 4)
-    {budget : ℕ} (hi : CommonBaseContext.IndexBounds F.data.h index budget) :
-    ActualSignedControl.CopyChart (viewStrip W U chart) (nativeDomain H v a)
-      (preparedChart H v a hr0).weight
-      (phaseCell H v a sys hdet reference chart index sign) where
-  index := reference
-  linear l n _ := copyLinear sys hdet (copyLabel H v a reference sign l n) (chart n) (index (chart n))
-  shift l n k := copyPoint sys hdet (copyLabel H v a reference sign l n) (chart n) (index (chart n)) k 0
-  maps l n k x hx hi := by
-    rw [← copyPoint_affine]
-    exact hi
-  growthConstant := 25
-  linearConstant := slowChangeCost F.data.h +
-    25 * CommonCoverClass.bandArgumentCost (TorusAverages.slotChart vr vt hdet)
-      (budget + SlotColoring.nativeGap F.data.h)
-  growth_one := by norm_num
-  linear_one := by
-    have h1 := slowChangeCost_one F.data.h
-    have h2 := CommonCoverClass.bandArgumentCost_one_le (TorusAverages.slotChart vr vt hdet)
-      (budget + SlotColoring.nativeGap F.data.h)
-    linarith
-  growthDegree := 1
-  linearDegree := 1
-  growth_bound l n k x hx _ := by
-    rw [← copyPoint_affine, pow_one]
-    exact copy_growth_le H v a sys hdet U reference chart index sign hchart hnear l n k hx
-  linear_bound l n _ := by
-    rw [pow_one]
-    exact norm_copyLinear_le sys hdet F.data.h_pos.le hi (hchart n)
-      (a.large _ (reference l n).property).four_le (hnear l n).1 (hnear l n).2
-  weight_eq l n k x hx _ := by
-    rw [← copyPoint_affine]
-    exact copy_weight_eq H v a sys hdet U reference chart index sign hr0 l n k hx
-  ratioLower := 1 / 5
-  ratioUpper := 5
-  ratio_pos := by norm_num
-  ratio_one := by norm_num
-  scale_ratio l n := by
-    change 1 / 5 ≤ Real.sqrt (max 1 (ChartScales.S (chart n))) /
-        Real.sqrt (ChartScales.S (BaseChartJets.cellBand (reference l n))) ∧
-      Real.sqrt (max 1 (ChartScales.S (chart n))) /
-        Real.sqrt (ChartScales.S (BaseChartJets.cellBand (reference l n))) ≤ 5
-    rw [max_eq_right (PhysicalGraphBounds.S_ge_one (hchart n))]
-    exact sqrt_S_window (hchart n) (reference l n).val.property.1 (hnear l n).1 (hnear l n).2
 
 
 end PreparedCopies
@@ -1238,9 +1140,6 @@ noncomputable def ActivePairCondition (l : Λ) (n : ℕ) : Prop :=
 
 abbrev ActivePair := {q : Λ × ℕ // ActivePairCondition H v a reference chart q.1 q.2}
 
-noncomputable def activePhaseCell (l : Λ) (n : ℕ) (k : TorusInverse.Frequency) : Set Native :=
-  {x | ActivePairCondition H v a reference chart l n ∧
-    x ∈ phaseCell H v a sys hdet reference chart index sign l n k}
 
 variable [Countable Λ] [Nonempty (ActivePair H v a reference chart)]
 
@@ -1252,26 +1151,9 @@ noncomputable def activeReference (_ : Unit) (q : ℕ) : Label H v a :=
   reference (activeEnumeration H v a reference chart q).val.1
     (activeEnumeration H v a reference chart q).val.2
 
-noncomputable def activeChart (q : ℕ) : ℕ :=
-  chart (activeEnumeration H v a reference chart q).val.2
 
-noncomputable def activeSign (_ : Unit) (q : ℕ) : Fin 2 :=
-  sign (activeEnumeration H v a reference chart q).val.1
-    (activeEnumeration H v a reference chart q).val.2
 
-theorem active_near (q : ℕ) :
-    activeChart H v a reference chart q ≤ BaseChartJets.cellBand (activeReference H v a reference chart () q) + 4 ∧
-      BaseChartJets.cellBand (activeReference H v a reference chart () q) ≤ activeChart H v a reference chart q + 4 :=
-  (activeEnumeration H v a reference chart q).property.2
 
-/-- Every input of this chart is the original active pair. Its uniform
-bounds are valid without any comparison for inactive label-band pairs. -/
-noncomputable def activeCopyChart (hr0 : 0 < r0) {budget : ℕ}
-    (hi : CommonBaseContext.IndexBounds F.data.h index budget) :=
-  copyChart H v a sys hdet U (activeReference H v a reference chart)
-    (activeChart H v a reference chart) index (activeSign H v a reference chart sign) hr0
-    (fun q => (activeEnumeration H v a reference chart q).property.1)
-    (fun _ q => active_near H v a reference chart q) hi
 
 
 end ActiveCopies
@@ -1285,42 +1167,8 @@ noncomputable def cylinderNativeLinear : Cylinder →L[ℝ] Native :=
 @[simp] theorem cylinderNativeLinear_apply (x : Cylinder) :
     cylinderNativeLinear x = cylinderNative x := rfl
 
-theorem norm_cylinderNativeLinear : ‖cylinderNativeLinear‖ ≤ 1 := by
-  apply ContinuousLinearMap.opNorm_le_bound _ zero_le_one
-  intro x
-  change ‖(ParticularWaveBounds.liftAssoc Plane) x.1‖ ≤ 1 * ‖x‖
-  rw [LinearIsometryEquiv.norm_map, one_mul]
-  exact norm_fst_le x
 
-noncomputable def cylinderStrip (s : StripData Native) : StripData Cylinder :=
-  ParticularWaveBounds.reindexStrip (StateReindex.cylinder (ParticularWaveBounds.liftAssoc Plane))
-    (HarmonicWaveInteraction.productStrip s)
 
-noncomputable def cylinderCopyChart {Λ I i : Type} {s : StripData Native}
-    {V : JetDomain i Native} {weight : i → Native → ℝ} {K : Λ → ℕ → I → Set Native}
-    (c : ActualSignedControl.CopyChart s V weight K) :
-    ActualSignedControl.CopyChart (cylinderStrip s) V weight
-      (fun l n k => cylinderNative ⁻¹' K l n k) where
-  index := c.index
-  linear l n k := (c.linear l n k).comp cylinderNativeLinear
-  shift := c.shift
-  maps l n k x hx hk := c.maps l n k (cylinderNative x) hx hk
-  growthConstant := c.growthConstant
-  linearConstant := c.linearConstant
-  growth_one := c.growth_one
-  linear_one := c.linear_one
-  growthDegree := c.growthDegree
-  linearDegree := c.linearDegree
-  growth_bound l n k x hx hk := c.growth_bound l n k (cylinderNative x) hx hk
-  linear_bound l n k := by
-    exact (ContinuousLinearMap.opNorm_comp_le _ _).trans
-      ((mul_le_of_le_one_right (norm_nonneg _) norm_cylinderNativeLinear).trans (c.linear_bound l n k))
-  weight_eq l n k x hx hk := c.weight_eq l n k (cylinderNative x) hx hk
-  ratioLower := c.ratioLower
-  ratioUpper := c.ratioUpper
-  ratio_pos := c.ratio_pos
-  ratio_one := c.ratio_one
-  scale_ratio := c.scale_ratio
 
 
 /-! ## The actual cutoffs locate every nonzero native contribution -/

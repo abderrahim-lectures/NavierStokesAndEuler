@@ -620,8 +620,6 @@ theorem physicalSlowMask_tsupport_subset_physicalBox (D : ℝ) {n : ℕ} (hn : 1
   constructor <;> linarith [hj.1, hj.2]
 
 
-def labelMask (n : ℕ) (k : SlotColoring.Grid) (p : ℝ × SlotColoring.Position) : ℝ :=
-  dyadicMask (n : ℤ) p.1 * slowMask n k p.2
 
 
 

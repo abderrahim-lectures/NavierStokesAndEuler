@@ -96,8 +96,6 @@ def curves (P : Profile) (X : ℝ) : Curves :=
 def outputs (P : Profile) (h : ℝ) (P₀ : ℝ → ℝ) (X : ℝ) : Fin 4 → ℝ → ℝ :=
   stocks h X P₀ (P.curves X)
 
-def SmoothOnBand (P : Profile) (X₀ X₁ : ℝ) : Prop :=
-  ∀ X ∈ Icc X₀ X₁, ∀ i, ContDiffOn ℝ ∞ (P.curves X i) J
 
 def JetBound (P : Profile) (k : ℕ) (X₀ X₁ B : ℝ) : Prop :=
   ∀ X ∈ Icc X₀ X₁, ∀ i, Bound k (P.curves X i) B
@@ -107,27 +105,16 @@ end Profile
 
 
 
-/-- Values of all component parameter derivatives through order `k`, including zero. -/
-def jetValues {m : ℕ} (k : ℕ) (X₀ X₁ : ℝ) (f : Fin m → ℝ → ℝ → ℝ) : Set ℝ :=
-  {z | z = 0 ∨ ∃ i X, X ∈ Icc X₀ X₁ ∧ ∃ n, n ≤ k ∧ ∃ η, η ∈ J ∧
-    z = ‖iteratedFDerivWithin ℝ n (f i X) J η‖}
-
-/-- The maximum-component `C^k` norm in the parameter on the closed rectangle. -/
-def parameterNorm {m : ℕ} (k : ℕ) (X₀ X₁ : ℝ) (f : Fin m → ℝ → ℝ → ℝ) : ℝ :=
-  sSup (jetValues k X₀ X₁ f)
 
 
 
 
 
-def fieldDifference (P Q : Profile) : Fin 2 → ℝ → ℝ → ℝ :=
-  ![(fun X η => Q.E (X,η)-P.E (X,η)), (fun X η => Q.U (X,η)-P.U (X,η))]
+
 
 def historyDifference (P Q : Profile) (i : Fin 5) (X η : ℝ) : ℝ :=
   Q.history i X η-P.history i X η
 
-def outputDifference (h : ℝ) (P₀ : ℝ → ℝ) (P Q : Profile) (i : Fin 4) (X η : ℝ) : ℝ :=
-  Q.outputs h P₀ X i η-P.outputs h P₀ X i η
 
 
 end NavierStokes.SeedHandbackJets

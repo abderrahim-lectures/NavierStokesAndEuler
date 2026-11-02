@@ -435,8 +435,6 @@ theorem log_interval_primitive_uniform
       mul_le_mul_of_nonneg_left (by linarith) (mul_nonneg hA hD)
     _ = (D * (b - a)) * A := by ring
 
-def logCompactPrimitive (χ : ℝ → ℝ) (f : ℝ → V) (a b X : ℝ) : V :=
-  intervalIntegral f a X volume - χ (logPosition a X) • intervalIntegral f a b volume
 
 
 end LogIntegrals
@@ -447,8 +445,6 @@ section PhysicalIntegrals
 
 variable {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
 
-def radialCompactPrimitive (χ : ℝ → ℝ) (f : ℝ → V) (a b X : ℝ) : V :=
-  intervalIntegral f a X volume - χ X • intervalIntegral f a b volume
 
 /-- Any fixed pair of interior physical plateau thresholds gives positive
 logarithmic collars. This derives the collars from the endpoints. -/

@@ -50,7 +50,6 @@ theorem spacing_pos (a : ℝ) {n : ℕ} (hn : 1 ≤ n) : 0 < spacing a n := by
 
 def axisExponent (D : ℝ) : Fin 3 → ℝ := ![1 / 2, D, 1]
 def width (D : ℝ) (j : Fin 3) (n : ℕ) : ℝ := spacing (axisExponent D j) n
-def ratioBound (D : ℝ) : ℝ := (5 : ℝ) ^ 6 * (2 : ℝ) ^ (4 * (1 + |D|))
 
 theorem width_pos (D : ℝ) (j : Fin 3) {n : ℕ} (hn : 1 ≤ n) : 0 < width D j n :=
   spacing_pos _ hn
@@ -135,33 +134,18 @@ theorem color_proper (D : ℝ) {L M : Label} (h : Adj D L M) : color L ≠ color
 
 
 
-def indexRadius (D : ℝ) : ℕ := ⌈2 * (ratioBound D + 1) + 1⌉₊
-
-def indexCenter (D : ℝ) (L : Label) (m : ℕ) (j : Fin 3) : ℤ :=
-  ⌊width D j L.1 / width D j m * (L.2.1 j : ℝ)⌋
-
-def candidateGrids (D : ℝ) (L : Label) (m : ℕ) : Finset Grid :=
-  Fintype.piFinset (fun j => Finset.Icc (indexCenter D L m j - (indexRadius D : ℤ))
-    (indexCenter D L m j + (indexRadius D : ℤ)))
-
-def candidatesAtLevel (D : ℝ) (L : Label) (m : ℕ) : Finset Label :=
-  ((candidateGrids D L m).product (Finset.univ : Finset Bool)).image (fun gs => (m, gs))
-
-def candidates (D : ℝ) (L : Label) : Finset Label :=
-  (Finset.Icc (L.1 - 4) (L.1 + 4)).biUnion (candidatesAtLevel D L)
 
 
 
 
 
 
-def degreeBound (D : ℝ) : ℕ := 18 * (2 * indexRadius D + 1) ^ 3
 
 
-/-- The actual finite neighbor set, obtained by filtering an explicit finite box. -/
-def neighbors (D : ℝ) (L : Label) : Finset Label := by
-  classical
-  exact (candidates D L).filter (Adj D L)
+
+
+
+
 
 
 

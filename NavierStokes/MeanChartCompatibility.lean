@@ -425,9 +425,6 @@ noncomputable def temporalAtIndex (h : ℝ) (n i : ℕ)
     TemporalMeanUpdate.temporalInverse (TemporalMeanUpdate.centered f) z
 
 
-noncomputable def physicalTemporal (f : PressureStream.Lift S → ℝ)
-    (z : PressureStream.Lift S) : ℝ :=
-  -TemporalMeanUpdate.temporalInverse (TemporalMeanUpdate.centered f) z
 
 
 end TorusPullback
@@ -612,11 +609,6 @@ noncomputable def physicalToChart (h : ℝ) (n i : ℕ) :
       ((ChartScales.Q n ^ (-CoordinateAlgebra.D h) * z.2.1.1,
         ChartScales.Q n ^ (-1 : ℝ) * z.2.1.2), TemporalMeanUpdate.coverMap i z.2.2)) := rfl
 
-/-- Normalize a chart field of scaling degree `a` on the actual physical
-slow variables and absolute auxiliary lift. -/
-noncomputable def fieldOnPhysical (h : ℝ) (n i : ℕ) (a : ℝ)
-    (f : PressureStream.Lift Plane → ℝ) : PressureStream.Lift Plane → ℝ :=
-  coverPull (chartScale n) (slowToChart h n) i (ChartScales.Q n ^ (-a)) f
 
 
 theorem pressure_unit_factor (h : ℝ) (n : ℕ) :
@@ -627,16 +619,6 @@ theorem pressure_unit_factor (h : ℝ) (n : ℕ) :
   congr 1
   ring
 
-/-- A chart-specific instance of the existing reconstruction recipe. The
-physical endpoints and frequency are transported, rather than copied. -/
-noncomputable def bandReconstruction (h : ℝ) (n i : ℕ) (d a b M : ℝ) (hab : a < b) :
-    CorrectionState.ReconstructionData where
-  exponent := d
-  inner := chartScale n * a
-  outer := chartScale n * b
-  inner_lt_outer := mul_lt_mul_of_pos_left hab (chartScale_pos n)
-  frequency _ := radialFrequency h n i d M
-  radialDirection := vector .radial
 
 
 noncomputable def reconstructPressureFamily (r : ℕ → CorrectionState.ReconstructionData)
@@ -720,36 +702,9 @@ open TorusInverse
 
 variable {S : Type} [NormedAddCommGroup S] [NormedSpace ℝ S]
 
-/-- The potential uses the explicitly chosen common torus index. -/
-noncomputable def commonTemporalPotential (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (f : ℕ → PressureStream.Lift S → ℝ) (n : ℕ) :
-    PressureStream.Lift S → ℝ :=
-  PressureStream.streamPotential (r n).exponent (r n).inner (r n).outer ((r n).frequency n)
-    ((0 : S), (r n).radialDirection) (temporalAtIndex h n (index n) (f n))
 
-noncomputable def commonTemporalFields (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (epsilon : ℕ → ℝ) (axial : S × Plane)
-    (fθ fz : ℕ → PressureStream.Lift S → ℝ) : MeanIncrementBounds.Triple (PressureStream.Lift S) where
-  radial := fun n => PressureStream.streamBeta (epsilon n • axial)
-    (commonTemporalPotential r h index fz n)
-  angular := fun n => temporalAtIndex h n (index n) (fθ n)
-  axial := fun n => PressureStream.streamGamma
-    (PressureStream.physicalSpeed (r n).exponent ((r n).frequency n))
-    ((0 : S), (r n).radialDirection) (commonTemporalPotential r h index fz n)
 
-noncomputable def commonTemporalAlias (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (f : ℕ → PressureStream.Lift S → ℝ) (n : ℕ) :
-    PressureStream.Lift S → ℝ :=
-  PressureStream.divideRadius (RadialPullback.physicalAlias (r n).exponent (r n).inner
-    (r n).outer ((r n).frequency n) ((0 : S), (r n).radialDirection)
-    (PressureStream.weightedSource (temporalAtIndex h n (index n) (f n))))
 
-noncomputable def commonTemporalIncrement (r : ℕ → CorrectionState.ReconstructionData)
-    (h : ℝ) (index : ℕ → ℕ) (axial : S × Plane)
-    (c : CorrectionState.Context (PressureStream.Lift S))
-    (u : CorrectionState.State (PressureStream.Lift S)) :
-    MeanIncrementBounds.Triple (PressureStream.Lift S) :=
-  commonTemporalFields r h index c.operators.epsilon axial (u.thetaResidual c) (u.axialResidual c)
 
 variable [FiniteDimensional ℝ S]
 
@@ -765,10 +720,6 @@ section PhysicalTemporalFields
 
 open TorusInverse
 
-noncomputable def physicalAuxiliary (h : ℝ) (n i : ℕ) : Plane × Plane →L[ℝ] Plane × Plane :=
-  (slowToChart h n).prodMap (TemporalMeanUpdate.coverMap i)
-
-noncomputable def axialUnit : Plane × Plane := ((1, 0), (0, 0))
 
 
 
@@ -776,14 +727,7 @@ noncomputable def axialUnit : Plane × Plane := ((1, 0), (0, 0))
 
 
 
-/-- One physical vector field, constructed from the two physical sources. -/
-noncomputable def physicalTemporalFields (d a b M : ℝ)
-    (Fθ Fz : PressureStream.Lift Plane → ℝ) (z : PressureStream.Lift Plane) : Fin 3 → ℝ :=
-  ![PressureStream.streamBeta axialUnit
-      (PressureStream.streamPotential d a b M ((0 : Plane), vector .radial) (physicalTemporal Fz)) z,
-    physicalTemporal Fθ z,
-    PressureStream.streamGamma (PressureStream.physicalSpeed d M) ((0 : Plane), vector .radial)
-      (PressureStream.streamPotential d a b M ((0 : Plane), vector .radial) (physicalTemporal Fz)) z]
+
 
 
 end PhysicalTemporalFields

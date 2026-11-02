@@ -582,11 +582,6 @@ theorem canonical_Ns_hold_ratio_bound {v : TailData} {K : ℝ}
 
 
 
-noncomputable def angularSourceEta (c : Parameters) (h η y : ℝ) : ℝ :=
-  -4 * h * slope c.dropLength c.lam y * η * averagedDrop c y +
-    4 * h * dropCoefficient c.m y * η -
-      2 * dropCoefficient c.m y * η ^ 2 * shapeGradient η +
-        (D h + d η * dropCoefficient c.m y) * (shapeGradient η + η * deriv shapeGradient η)
 
 
 
@@ -602,16 +597,6 @@ noncomputable def angularSourceEta (c : Parameters) (h η y : ℝ) : ℝ :=
 
 /-! ## The axial parameter derivative at the beginning of the hold -/
 
-noncomputable def initialAxialDerivative (v : TailData) (η : ℝ) : ℝ :=
-  (12 * v.h * η ^ 2 + 6 * η ^ 2 - 2) * averagedDropSquare v.core v.core.holdStart -
-    (2 * v.h - 2 * η * shapeGradient η + d η * deriv shapeGradient η) * averagedEnergy v.core v.core.holdStart η +
-      2 * (2 * v.h * η + d η * shapeGradient η) * shapeGradient η * averagedEnergy v.core v.core.holdStart η +
-        4 * A v.h * entrancePressure v v.core.holdStart η +
-          (4 * A v.h + 2) * η * pressureGradient v v.core.holdStart η -
-            d η * deriv (pressureGradient v v.core.holdStart) η
-
-noncomputable def initialAxialDerivativeBound (P m : ℝ) : ℝ :=
-  256 + (32 + 16 * pressureBound) * energyEnvelope P (entranceTime m)
 
 
 
@@ -620,11 +605,8 @@ noncomputable def initialAxialDerivativeBound (P m : ℝ) : ℝ :=
 
 
 
-noncomputable def axialDerivativeWaitConstant (P m : ℝ) : ℝ :=
-  initialAxialDerivativeBound P m / initialEnergyLower P m + pressureSourceBound * initialEnergyUpper P m
 
-noncomputable def axialRatioDerivativeWaitConstant (P m : ℝ) : ℝ :=
-  axialDerivativeWaitConstant P m + 2 * axialWaitConstant P m
+
 
 
 
@@ -649,8 +631,6 @@ theorem canonical_Qs_hold_lower {v : TailData} {K : ℝ}
 
 
 
-noncomputable def holdConstant (P m : ℝ) : ℝ :=
-  206 + axialWaitConstant P m + axialRatioDerivativeWaitConstant P m
 
 
 

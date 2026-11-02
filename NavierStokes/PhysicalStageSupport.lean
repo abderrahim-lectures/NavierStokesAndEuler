@@ -250,17 +250,7 @@ variable {DA DP : Type} [NormedAddCommGroup DA] [NormedSpace ℝ DA]
   [NormedAddCommGroup DP] [NormedSpace ℝ DP] {IA KA IP KP : Type*}
 
 
-/-- The actual mean-domain type retains the strict normalized range
-`(1/2,2)` used by the construction. -/
-abbrev ActualMeanFamily (degree : ℝ) (N gap : ℕ) :=
-  PhysicalMeanJetBounds.CoherentFamily CorrectionInitialization.ActualPrimary.h degree N gap
-    CorrectionInitialization.ActualPrimary.standardRegion.carrier ℝ
 
-/-- Native support on the single fixed actual patch. -/
-abbrev ActualNativeSupport {degree : ℝ} {N gap : ℕ} (D : ActualMeanFamily degree N gap) :=
-  PhysicalMeanJetBounds.NativeSupport CorrectionInitialization.ActualPrimary.h
-    ActualInitialization.geometry.patch.a ActualInitialization.geometry.patch.b N
-    CorrectionInitialization.ActualPrimary.standardRegion.carrier D.native
 
 
 end FixedPatch

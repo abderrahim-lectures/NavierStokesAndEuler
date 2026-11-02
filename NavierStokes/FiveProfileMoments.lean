@@ -647,11 +647,6 @@ theorem physicalMoments_eq (P : Patch) (b A G : ℝ) (hA : A ≠ 0) (c : Coeff) 
   simp only [physicalDensity_eq]
   exact hc
 
-/-- The full physical derivative in the five raw bump coefficients is an
-explicit continuous linear equivalence. Its two actual moment determinants
-were proved nonzero above. -/
-noncomputable def actualLinearEquiv (P : Patch) (b A G : ℝ) (hb : GoodExponent b)
-    (hA : A ≠ 0) : Coeff ≃L[ℝ] Debt := (linearEquiv P b hb).trans (physicalEquiv A G hA)
 
 
 theorem physicalDensity_zero_outside (P : Patch) (b A G : ℝ) (c : Coeff) {x : ℝ}

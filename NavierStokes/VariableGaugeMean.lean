@@ -173,11 +173,7 @@ theorem qLength_contDiffOn {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1) :
   exact ((SimilarityCoordinates.coordinateQ_smooth hc hc1 hs).sqrt
     (SimilarityCoordinates.coordinateQ_spec hc hc1 hs).1.ne').contDiffWithinAt
 
-noncomputable def cutoffModel (d a b : ℝ) (y : MeanRankUpdate.ModelPoint) : ℝ :=
-  RadialPullback.physicalCutoff d a b (y.2.1 / Real.sqrt y.1)
 
-noncomputable def densityModel (a b : ℝ) (hab : a < b) (y : MeanRankUpdate.ModelPoint) : ℝ :=
-  (Real.sqrt y.1)⁻¹ * PressureStream.rho a b hab (y.2.1 / Real.sqrt y.1)
 
 
 

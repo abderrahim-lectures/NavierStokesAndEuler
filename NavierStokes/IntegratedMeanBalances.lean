@@ -465,9 +465,6 @@ theorem torusAverage_torusPartial_zero (v : ℝ × ℝ) {F : (P × ℝ) × ℝ �
     torusAverage_first_zero hF hp, torusAverage_second_zero hF hp]
   simp
 
-noncomputable def graphPartial (a : P → ℝ) (v : P) (w : ℝ × ℝ)
-    (F : (P × ℝ) × ℝ → ℝ) (q : (P × ℝ) × ℝ) : ℝ :=
-  slowPartial v F q + a q.1.1 * torusPartial w F q
 
 
 
@@ -557,31 +554,10 @@ theorem SmoothShell.weighted_integrable {a b : ℝ} {F : MeanField} (hF : Smooth
     (n : ℕ) (p : MeanParameter) : Integrable (fun r => r ^ n * F (r, p)) :=
   IntegratedMeanBalances.weighted_integrable (hF.slice_smooth p).continuous (hF.slice_compact p) n
 
-/-- The angular line of (32), after the actual torus average. Coordinates are
-`(R,(T,Z))`; `ε` is constant on a chart. The supplied fluxes are full averages
-of the pointwise products in (32), and the last radial divergence is the virtual stress. -/
-noncomputable def angularBalance (ε : ℝ) (v radialFlux axialFlux virtualFlux : MeanField)
-    (x : MeanPoint) : ℝ :=
-  (-ε) * parameterPartial (1, 0) v x +
-    radialDivergence 2 (fun r => radialFlux (r, x.2)) x.1 +
-    ε * parameterPartial (0, 1) axialFlux x -
-    ε * (angularRadialViscosity (fun r => v (r, x.2)) x.1 +
-      ε ^ 2 * parameterPartial (0, 1) (parameterPartial (0, 1) v) x) -
-    radialDivergence 2 (fun r => virtualFlux (r, x.2)) x.1
-
-/-- The axial line of (32), with pressure retained inside the axial flux. -/
-noncomputable def axialBalance (ε : ℝ) (γ radialFlux axialFlux pressure virtualFlux : MeanField)
-    (x : MeanPoint) : ℝ :=
-  (-ε) * parameterPartial (1, 0) γ x +
-    radialDivergence 1 (fun r => radialFlux (r, x.2)) x.1 +
-    ε * parameterPartial (0, 1) (fun y => axialFlux y + pressure y) x -
-    ε * (axialRadialViscosity (fun r => γ (r, x.2)) x.1 +
-      ε ^ 2 * parameterPartial (0, 1) (parameterPartial (0, 1) γ) x) -
-    radialDivergence 1 (fun r => virtualFlux (r, x.2)) x.1
 
 
 
-noncomputable def pressureTotal (gr : MeanField) : MeanParameter → ℝ := radialMoment 0 gr
+
 
 noncomputable def pressureCoefficient (ρ : MeanField) (p : MeanParameter) : ℝ :=
   radialMoment 2 ρ p / 2
@@ -643,15 +619,8 @@ theorem constructed_pressure_moment {d a b M : ℝ}
 
 end PressurePrimitive
 
-noncomputable def reconstructedMeanPressure (d a b M : ℝ) (hab : a < b) (v : ℝ × ℝ)
-    (f : PressureStream.Lift MeanParameter → ℝ) : MeanField :=
-  PressureStream.torusAverage (PressureStream.meanPressure d a b M hab v f)
 
-noncomputable def averagedRadialSource (f : PressureStream.Lift MeanParameter → ℝ) : MeanField :=
-  PressureStream.torusAverage f
 
-noncomputable def normalizedMeanDensity (a b : ℝ) (hab : a < b) (x : MeanPoint) : ℝ :=
-  PressureStream.rho a b hab x.1
 
 
 

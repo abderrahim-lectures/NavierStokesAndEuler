@@ -110,7 +110,6 @@ noncomputable def Xi : ℝ := 110
 noncomputable def matchingRadius (F : Profile) (C : ℝ) : ℝ :=
   ShapeTransition.resetRadius Xi C F.data.core.P
 noncomputable def matchFraction : ℝ := Real.exp (-5)
-noncomputable def matchRadius (F : Profile) (C : ℝ) : ℝ := matchingRadius F C * matchFraction
 
 theorem Xi_pos : 0 < Xi := by norm_num [Xi]
 theorem matchingRadius_pos (F : Profile) {C : ℝ} (hC : 0 < C) : 0 < matchingRadius F C :=
@@ -1685,12 +1684,8 @@ noncomputable def heatJoin : ℝ := c.radius * matchFraction
 noncomputable def heatBlend (X : ℝ) : ℝ := ShapeTransition.radialSwitch c.heatJoin 1 X
 noncomputable def heatedE (coef : ℝ → HeatedOutgoing.Coeff) (p : Point) : ℝ :=
   c.E p + c.heatBlend p.1 * (HeatedOutgoing.E F c.radius coef p - c.E p)
-noncomputable def heatedH (coef : ℝ → HeatedOutgoing.Coeff) (p : Point) : ℝ :=
-  Real.sqrt (2 * p.1) * c.heatedE coef p
 noncomputable def heatedPi (coef : ℝ → HeatedOutgoing.Coeff) (p : Point) : ℝ :=
   F.axisDatum p.2 + moments c.U (c.heatedE coef) p.1 p.2 4
-noncomputable def heatedf (coef : ℝ → HeatedOutgoing.Coeff) (p : Point) : ℝ :=
-  if p.1 ≤ Xi then c.f p else c.heatedE coef p / Real.sqrt (2 * p.1)
 
 theorem heatJoin_pos : 0 < c.heatJoin := mul_pos c.radius_pos matchFraction_pos
 theorem heatJoin_lt_radius : c.heatJoin < c.radius :=

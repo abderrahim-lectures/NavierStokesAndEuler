@@ -426,26 +426,6 @@ noncomputable def nativeCovariance (hzeta : ∀ x ∈ s.domain, 0 < s.zeta x) :
       (s.zeta_nonneg x hx) scale.lower_pos (scale.bounds l n).1 c.ratio_pos
       (c.scale_ratio l n).1 (c.scale_ratio l n).2).2.2
 
-/-- The requested copy-level `NativeCovariance` is a projection of the
-jointly proved record, retaining the same numerical margins. -/
-noncomputable def nativeCovarianceAt (hzeta : ∀ x ∈ s.domain, 0 < s.zeta x) (l : Λ) :
-    SignedCopyBounds.NativeCovariance s (K l)
-      (fun i n => c.pull (pulseMatrix F pref χ) l n i)
-      (fun i n x => scale.value l n ^ 2 • c.pull T l n i x) := by
-  let hc := h.nativeCovariance c scale hzeta
-  exact {
-    matrix_jets := fun j k => (hc.matrix_jets j k).each l
-    target_jets := fun j => (hc.target_jets j).each l
-    zeta_pos := hc.zeta_pos
-    determinantGap := hc.determinantGap
-    entryBound := hc.entryBound
-    primaryLower := hc.primaryLower
-    gap_pos := hc.gap_pos
-    entry_one := hc.entry_one
-    lower_pos := hc.lower_pos
-    determinant := hc.determinant l
-    entries := hc.entries l
-    lower := hc.lower l }
 
 include h
 
@@ -547,12 +527,7 @@ variable {a : PrimaryGeometryAssembly.Prepared H₀ v₀ upper B r0 N0}
   {s : StripData X} {K : Λ → ℕ → I → Set X}
   (copy : CopyChart s C.native C.weight K)
 
-noncomputable def copiedMatrix : Λ → I → ℕ → X → Mat2 :=
-  fun l i n => copy.pull (pulseMatrix (PrimaryGeometryAssembly.construction H₀ v₀ a hr0)
-    (preparedPrefactor r0 vr vt) C.coordinate) l n i
 
-noncomputable def copiedTarget (scale : PositiveScale Λ) : Λ → I → ℕ → X → Vec2 :=
-  fun l i n x => scale.value l n ^ 2 • copy.pull C.target l n i x
 
 noncomputable def copiedCoefficients (scale normal clock : PositiveScale Λ)
     (base : Λ → I → LinearWaveBounds.WaveCoefficients X)

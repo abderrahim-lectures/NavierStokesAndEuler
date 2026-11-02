@@ -260,8 +260,6 @@ def selectedDirect (a : ℕ → ℕ) : VelocityField :=
   SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ))
     (PhysicalWaveSum.physicalQ ActualPrimary.h) ActualCandidateAssembly.selectedDirectStages
 
-def selectedVelocity (a : ℕ → ℕ) : VelocityField :=
-  R3CompactCandidate.velocity (selectedPotential a) (selectedDirect a)
 
 
 theorem innerRadius_le_boxRadius : innerRadius ≤

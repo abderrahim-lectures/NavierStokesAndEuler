@@ -461,15 +461,6 @@ theorem meridionalComponents_updated (m t : MeanIncrementBounds.Triple Point) (n
 
 open CorrectionState CorrectionStep
 
-/-- The two scalar streams are evaluated at the actual successive states of
-the four-stage cycle. -/
-noncomputable def cycleMeanPotential {ι : Type} (p : CycleParameters ι)
-    (v : CycleCoefficients ι) (c : Context Point) (u : State Point)
-    (a : ℝ) (j : PolarCharts.Index) (G : ScaledGraph) (n : ℕ) : VelocityField :=
-  cartesianPotential a j G
-    (VariableGaugeMean.temporalPotential p.gauge p.timeExponent p.commonIndex c (p.afterSigned v c u) n) +
-  cartesianPotential a j G
-    (VariableGaugeMean.rankPotential p.gauge p.rank c (p.afterTemporal v c u) n)
 
 
 
@@ -477,16 +468,6 @@ noncomputable def cycleMeanPotential {ι : Type} (p : CycleParameters ι)
 
 open CorrectionInitialization CorrectionInitialization.GaugeInitialization
 
-noncomputable def initializedMeanPotential {ι : Type}
-    (g : VariableGaugeMean.GaugeData (ℝ × ℝ)) (r : RankData (ℝ × ℝ))
-    (h : ℝ) (index : ℕ → ℕ) (c : Context Point)
-    (labels : ℕ → Finset ι) (pieces : ι → PrimaryPiece (Point × ℝ))
-    (baseError : Oscillation Point) (a : ℝ) (j : PolarCharts.Index) (G : ScaledGraph) (n : ℕ) :
-    VelocityField :=
-  cartesianPotential a j G (VariableGaugeMean.temporalPotential g h index c
-    (primaryBands g c labels pieces baseError) n) +
-  cartesianPotential a j G (VariableGaugeMean.rankPotential g r c
-    (temporalBands g h index axial c labels pieces baseError) n)
 
 theorem initializedBands_mean {ι : Type}
     (g : VariableGaugeMean.GaugeData (ℝ × ℝ)) (r : RankData (ℝ × ℝ))
@@ -508,20 +489,9 @@ theorem initializedBands_mean {ι : Type}
 
 /-! ## Finite prefixes of the literal iteration -/
 
-noncomputable def meanIncrementComponents {ι : Type} (p : CycleParameters ι)
-    (v : CycleCoefficients ι) (c : Context Point) (u : State Point) (n : ℕ) :
-    CyclePhysicalPrefixes.Components :=
-  CyclePhysicalPrefixes.meridionalComponents (p.temporalIncrement v c u) n +
-    CyclePhysicalPrefixes.meridionalComponents (p.rankIncrement v c u) n
 
 
 
-/-- The finite sum is evaluated on the actual successive cycle states. -/
-noncomputable def cycleMeanPrefix {ι : Type} (p : ℕ → CycleParameters ι)
-    (c : Context Point) (seed : CycleState ι)
-    (a : ℝ) (j : PolarCharts.Index) (G : ScaledGraph) (n J : ℕ) : VelocityField :=
-  fun w => ∑ k ∈ Finset.range J, cycleMeanPotential (p k)
-    (CycleState.iterate p c seed k).coefficients c (CycleState.iterate p c seed k).state a j G n w
 
 
 end NavierStokes.ActualMeanPotentialRealization

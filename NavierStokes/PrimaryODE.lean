@@ -685,9 +685,6 @@ theorem referenceEigenvalue_lower {lam u ell v : ℝ} (hlam : 0 < lam) (hu : 0 �
   apply Real.sqrt_le_sqrt
   nlinarith [hs.2]
 
-noncomputable def referenceEnvelope {Q : Type} (lam u : Q → ℝ) (ell : ℝ) (z : Q × ℝ) : ℝ :=
-  GaussianEnvelope.envelope (GaussianEnvelope.referenceRate (lam z.1) (u z.1) ell)
-    (ell / 2) z.2
 
 section GaussianPrimary
 

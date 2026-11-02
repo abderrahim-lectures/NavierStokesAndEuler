@@ -95,10 +95,6 @@ theorem scale_contDiff {c : ℝ} (hc : 0 < c) (j : ℕ) {n : ℕ∞} :
 @[simp] theorem scale_zero (c : ℝ) (j : ℕ) : scale c j 0 = 0 := by simp [scale]
 
 
-/-- The coefficient produced when differentiating `scale c j * a`.
-This is an explicit differential expression in the chosen smooth factor. -/
-def sourceCoefficient (c : ℝ) (j : ℕ) (a : ℝ → ℝ) (x : ℝ) : ℝ :=
-  (2 * c + (3 - (j : ℝ)) * x ^ 2) * a x + x ^ 3 * deriv a x
 
 
 
@@ -109,9 +105,6 @@ theorem scale_pos (c : ℝ) (j : ℕ) {x : ℝ} (hx : 0 < x) : 0 < scale c j x :
   mul_pos (div_pos (edge_pos c hx) (pow_pos hx j)) (pow_pos hx 3)
 
 
-/-- The normalized factor with its rigorously identified endpoint value. -/
-def normalizedPrimitive (c : ℝ) (j : ℕ) (b : ℝ → ℝ) (x : ℝ) : ℝ :=
-  if x = 0 then b 0 / (2 * c) else primitive c j b x / scale c j x
 
 
 

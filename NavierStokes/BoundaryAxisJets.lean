@@ -370,8 +370,6 @@ theorem complexPartial_contDiffOn {S : Set ℝ} {U : Set ℂ} (hS : IsOpen S) (h
   exact complexPartial_eq_real_fderiv hU (hhol q.1 hq.1) hq.2
 
 
-noncomputable def mixedAxisJet (F : ℝ × ℂ → B) (k m : ℕ) (p : ℝ × ℂ) : B :=
-  iteratedDeriv m (fun z => axisJet F k (p.1, z)) p.2
 
 
 

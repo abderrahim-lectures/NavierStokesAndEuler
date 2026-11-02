@@ -242,11 +242,6 @@ section DiagonalIntegral
 
 variable {ι E : Type*} [Fintype ι] [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-/-- The actual coordinatewise regular inverse, for arbitrary nonnegative
-integer singular exponents. In the six-component system these are
-`(0,0,2,0,3,1)`. -/
-noncomputable def diagonalRegularPrimitive (c : ι → ℕ) (f : ℝ → ι → E) : ℝ → ι → E :=
-  fun r i => regularPrimitive (c i) (fun s => f s i) r
 
 
 end DiagonalIntegral

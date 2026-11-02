@@ -665,14 +665,6 @@ variable (D : AssemblyData Parameter) {h Qr : ℝ} {I : ℕ}
     D.gaussianInput D.aliasInput j D.background D.copy D.strip D.directions α κ)
 
 
-/-- The same reference corrected wave as a function of all free lifted
-variables. No graph evaluation occurs in this definition. -/
-noncomputable def referenceLiftVelocity (D : AssemblyData Parameter) (h Qr : ℝ) (I : ℕ) (j : ℤ) :
-    Cylinder → ComplexVector :=
-  vectorMode (referenceFrequency D j) (liftPhase D j)
-    (realizedCoefficient (referenceFrequency D j) PhysicalResidualBridge.ScaledGraph.radius
-      (PhysicalResidualBridge.commonGraph Qr h I).radial PhysicalResidualBridge.ScaledGraph.angular
-      (PhysicalResidualBridge.commonGraph Qr h I).axial (liftPhase D j) (liftRaw D j))
 
 
 end LiftedReference
@@ -690,9 +682,6 @@ variable (D : AssemblyData Parameter) {h Q Qr : ℝ} (hQ : 0 < Q) (hQr : 0 < Qr)
 
 end FullBand
 
-noncomputable def referenceLiftPressure (D : AssemblyData Parameter) (j : ℤ) : Cylinder → ℂ :=
-  mode (PhysicalParticularWave.referenceFrequency D j) (PhysicalParticularWave.liftPhase D j)
-    (fun x => PhysicalParticularWave.referenceRawPressure D j (PhysicalParticularWave.waveEquiv x))
 
 
 

@@ -682,13 +682,7 @@ end SlotFamily
 
 namespace SlotFamily
 
-noncomputable def derivativeError {s : StripData D} (g : SlotFamily s)
-    (u : ℕ → D → E) (n : ℕ) (x : D) : E :=
-  ((g.length n)⁻¹ * deriv profile (g.coordinate n x)) • u n x
 
-noncomputable def omittedSource {s : StripData D} (g : SlotFamily s)
-    (f : ℕ → D → E) (n : ℕ) (x : D) : E :=
-  (1 - profile (g.coordinate n x)) • f n x
 
 
 private theorem jet_eq_zero_of_eventually {u : D → E} {x : D}

@@ -112,65 +112,23 @@ theorem FiberAgreement.eventuallyEq {V : Type*} {U : Set Slow} (hU : IsOpen U) {
     (show p ∈ PhysicalMeanDomain.slowDomain (U ∩ positiveSlow) from ⟨hp, ht⟩)] with z hz
   exact h hz
 
-/-- A primitive model retains the fast torus coordinate and the physical
-radial variable; only the time coordinate is replaced by `q`. -/
-noncomputable def stableModel (coord : ℝ) (p : Lift) : Model :=
-  ((stableQ coord p.2.1, (p.1, p.2.1.2)), p.2.2)
 
 noncomputable def physicalModel (coord : ℝ) (p : Lift) : Model :=
   ((SimilarityCoordinates.coordinateQ coord p.2.1, (p.1, p.2.1.2)), p.2.2)
 
-noncomputable def modelDomain : Set Model := {y | 0 < y.1.1}
 
 
-theorem stableModel_contDiffOn {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1) :
-    ContDiffOn ℝ ∞ (stableModel coord)
-      (PhysicalMeanDomain.slowDomain (PositiveRepresentatives.stableTarget coord)) := by
-  intro p hp
-  have hq := (stableQ_contDiffAt hc hc1 hp).comp p contDiffAt_snd.fst
-  exact ((hq.prodMk (contDiffAt_fst.prodMk contDiffAt_snd.fst.snd)).prodMk
-    contDiffAt_snd.snd).contDiffWithinAt
 
-theorem stableModel_mem {coord : ℝ} {p : Lift}
-    (hp : p.2.1 ∈ PositiveRepresentatives.stableTarget coord) :
-    stableModel coord p ∈ modelDomain := stableQ_pos hp
 
-noncomputable def continuedSource (coord : ℝ) (F : Model → ℝ) : Lift → ℝ :=
-  F ∘ stableModel coord
 
 noncomputable def physicalSource (coord : ℝ) (F : Model → ℝ) : Lift → ℝ :=
   F ∘ physicalModel coord
 
-theorem continuedSource_smooth {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    {F : Model → ℝ} (hF : ContDiffOn ℝ ∞ F modelDomain) :
-    ContDiffOn ℝ ∞ (continuedSource coord F)
-      (PhysicalMeanDomain.slowDomain (PositiveRepresentatives.stableTarget coord)) :=
-  hF.comp (stableModel_contDiffOn hc hc1) (fun _ hp => stableModel_mem hp)
-
-theorem continuedSource_agreement {coord : ℝ} (hc : 0 < coord) (hc1 : coord < 1)
-    (F : Model → ℝ) (U : Set Slow) :
-    FiberAgreement U (continuedSource coord F) (physicalSource coord F) := by
-  intro p hp
-  simp only [continuedSource, physicalSource, comp_apply, stableModel, physicalModel,
-    stableQ_eq_coordinateQ hc hc1 hp.2]
-
-/-- A support condition on the explicit primitive model, before any mean
-operation is performed. -/
-def ModelSupported {V : Type*} [Zero V] (a b : ℝ) (F : Model → V) : Prop :=
-  ∀ y ∈ modelDomain, F y ≠ 0 →
-    y.1.2.1 ∈ Icc (Real.sqrt y.1.1 * a) (Real.sqrt y.1.1 * b)
-
-def ModelPeriodic (F : Model → ℝ) : Prop :=
-  ∀ y : MeanRankUpdate.ModelPoint, 0 < y.1 →
-    FourierAlias.TorusPeriodic (fun Y => F (y, Y))
 
 
-theorem continuedSource_supported {coord a b : ℝ} {F : Model → ℝ}
-    (hF : ModelSupported a b F) {U : Set Slow}
-    (hU : U ⊆ PositiveRepresentatives.stableTarget coord) :
-    VariableGaugeMean.SupportedGauge a b (stableLength coord) U (continuedSource coord F) := by
-  intro p hp hn
-  exact hF (stableModel coord p) (stableModel_mem (hU hp)) hn
+
+
+
 
 namespace Window
 
@@ -311,12 +269,6 @@ namespace SupportedContinuation
 
 variable {coord a b : ℝ} {W : Window coord a b} (hc : 0 < coord) (hc1 : coord < 1)
 
-noncomputable def ofModel (F : Model → ℝ) (hF : ContDiffOn ℝ ∞ F modelDomain)
-    (hs : ModelSupported a b F) : SupportedContinuation W (physicalSource coord F) where
-  value := continuedSource coord F
-  smooth := (continuedSource_smooth hc hc1 hF).mono (fun _ hp => W.stable hp)
-  supported := continuedSource_supported hs W.stable
-  agrees := continuedSource_agreement hc hc1 F W.carrier
 
 noncomputable def primitive {f : Lift → ℝ} (e : SupportedContinuation W f)
     (ha : 0 < a) (hab : a < b) {d : ℝ} (hd : 0 < d) (M : ℝ) (v : Slow) :
@@ -376,31 +328,7 @@ namespace SupportedContinuation
 
 variable {coord a b : ℝ} {W : Window coord a b}
 
-noncomputable def scaleSlow {f : Lift → ℝ} (e : SupportedContinuation W f)
-    {c : Slow → ℝ} (C : Slow → ℝ) (hC : ContDiffOn ℝ ∞ C W.carrier)
-    (he : EqOn C c (W.carrier ∩ positiveSlow)) :
-    SupportedContinuation W (fun p => c p.2.1 * f p) where
-  value := fun p => C p.2.1 * e.value p
-  smooth := (hC.comp contDiffOn_snd.fst (fun _ hp => hp)).mul e.smooth
-  supported := fun p hp hn => e.supported p hp (right_ne_zero_of_mul hn)
-  agrees := fun _ hp => congrArg₂ (fun x y : ℝ => x * y) (he hp) (e.agrees hp)
 
-noncomputable def finiteSum {ι : Type*} (s : Finset ι) (f : ι → Lift → ℝ)
-    (e : ∀ i, SupportedContinuation W (f i)) :
-    SupportedContinuation W (fun p => ∑ i ∈ s, f i p) where
-  value := fun p => ∑ i ∈ s, (e i).value p
-  smooth := ContDiffOn.sum (fun i _ => (e i).smooth)
-  supported := by
-    intro p hp hn
-    by_contra hr
-    apply hn
-    apply Finset.sum_eq_zero
-    intro i _
-    by_contra hi
-    exact hr ((e i).supported p hp hi)
-  agrees := by
-    intro p hp
-    exact Finset.sum_congr rfl (fun i _ => (e i).agrees hp)
 
 
 
@@ -414,13 +342,6 @@ variable {P Q V E : Type} [NormedAddCommGroup P] [NormedSpace ℝ P]
     [NormedAddCommGroup V] [NormedSpace ℝ V]
     [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
-/-- Reparameterize primitive ODE coefficients and forcing, while keeping
-the native-copy path and its entry point unchanged. -/
-noncomputable def pullLinearData (φ : P → Q) (d : CommonCoverSolve.LinearData Q V E) :
-    CommonCoverSolve.LinearData P V E where
-  coefficient := fun p => d.coefficient (φ p.1, p.2)
-  forcingMap := fun p => d.forcingMap (φ p.1, p.2)
-  source := fun p => d.source (φ p.1, p.2)
 
 
 
@@ -433,68 +354,15 @@ section ContinuedReferenceODE
 variable {V E : Type} [NormedAddCommGroup V] [NormedSpace ℝ V]
     [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
-noncomputable def stableParameter (coord : ℝ) (p : ℝ × Slow) : MeanRankUpdate.ModelPoint :=
-  (stableQ coord p.2, (p.1, p.2.2))
-
-noncomputable def physicalParameter (coord : ℝ) (p : ℝ × Slow) : MeanRankUpdate.ModelPoint :=
-  (SimilarityCoordinates.coordinateQ coord p.2, (p.1, p.2.2))
-
-noncomputable def continuedReferenceSolve (coord : ℝ)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) : Lift → E :=
-  fun p => (pullLinearData (stableParameter coord) d).commonSolve g hab κ ((p.1, p.2.1), p.2.2)
-
-noncomputable def physicalReferenceSolve (coord : ℝ)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {a b : ℝ} (hab : a ≤ b) (κ : Slow → ℝ) : Lift → E :=
-  fun p => (pullLinearData (physicalParameter coord) d).commonSolve g hab κ ((p.1, p.2.1), p.2.2)
 
 
 
 
 
-/-- Radial support of the primitive forcing propagates through the
-zero-entry Volterra solve and the actual sum of its native copies. -/
-theorem referenceSolve_model_supported
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {s t : ℝ} (hst : s ≤ t) (κ : Slow → ℝ)
-    {a b : ℝ} (hs : ModelSupported a b d.source) :
-    ModelSupported a b (d.commonSolve g hst κ) := by
-  intro y hy hn
-  by_contra hr
-  have hsource : ∀ Y : Slow, d.source (y.1, Y) = 0 := by
-    intro Y
-    by_contra hne
-    exact hr (hs (y.1, Y) hy hne)
-  have hcopy (k : TorusInverse.Frequency) : d.copySolve g hst k y = 0 :=
-    d.copySolve_zero_of_source_zero g hst k y.1 y.2 (fun _ _ => hsource _)
-  apply hn
-  simp only [CommonCoverSolve.LinearData.commonSolve, CommonCoverSolve.LinearData.localizedCopy,
-    hcopy, smul_zero, tsum_zero]
 
-/-- A real component of an actual reference solve supplies a primitive
-continuation for the mean calculus.  Its smoothness and support are derived
-from the ODE inputs, not assumed for the solved component. -/
-noncomputable def referenceContinuation {coord a b : ℝ} {W : Window coord a b}
-    (hc : 0 < coord) (hc1 : coord < 1)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {s t : ℝ} (hst : s ≤ t)
-    (hA : ContDiffOn ℝ ∞ d.coefficient (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hB : ContDiffOn ℝ ∞ d.forcingMap (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ d.source (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hs : ModelSupported a b d.source)
-    {κ : Slow → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsκ : tsupport κ ⊆ univ ×ˢ Ioo s t) (L : E →L[ℝ] ℝ) :
-    SupportedContinuation W (fun p => L (physicalReferenceSolve coord d g hst κ p)) := by
-  have hmodel := d.commonSolve_contDiffOn g hst PhysicalCoordinateBounds.positiveTime_isOpen
-    hA hB hf hκ hcκ hsκ
-  have hsmodel := referenceSolve_model_supported d g hst κ hs
-  refine SupportedContinuation.ofModel hc hc1 (fun y => L (d.commonSolve g hst κ y)) ?_ ?_
-  · exact (L.contDiff.comp_contDiffOn hmodel).mono (fun y hy => ⟨hy, mem_univ _⟩)
-  · intro y hy hn
-    apply hsmodel y hy
-    intro hz
-    exact hn (by simp only [hz, map_zero])
+
+
+
 
 end ContinuedReferenceODE
 
@@ -508,84 +376,16 @@ section FullReferenceCarrier
 variable {V E : Type} [NormedAddCommGroup V] [NormedSpace ℝ V]
     [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
-noncomputable def referenceCarrierModel
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {s t : ℝ} (hst : s ≤ t) (κ : Slow → ℝ)
-    (w : PeriodicPhaseAssembly.ClockWindow) (A B : MeanRankUpdate.ModelPoint → ℝ)
-    (frequency : ℝ) (L : E →L[ℝ] ℂ) (y : Model) : ℝ :=
-  (HarmonicCalculus.mode frequency (PeriodicPhaseAssembly.phase g w.cutoff A B)
-    (fun z => L (d.commonSolve g hst κ z)) y).re
 
 
-noncomputable def referenceCarrierContinuation {coord a b : ℝ} {W : Window coord a b}
-    (hc : 0 < coord) (hc1 : coord < 1)
-    (d : CommonCoverSolve.LinearData MeanRankUpdate.ModelPoint V E)
-    (g : CommonCoverSolve.Geometry) {s t : ℝ} (hst : s ≤ t)
-    (hM : ContDiffOn ℝ ∞ d.coefficient (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hL : ContDiffOn ℝ ∞ d.forcingMap (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hf : ContDiffOn ℝ ∞ d.source (PhysicalCoordinateBounds.positiveTime ×ˢ univ))
-    (hs : ModelSupported a b d.source)
-    {κ : Slow → ℝ} (hκ : ContDiff ℝ ∞ κ) (hcκ : HasCompactSupport κ)
-    (hsκ : tsupport κ ⊆ univ ×ˢ Ioo s t)
-    (w : PeriodicPhaseAssembly.ClockWindow) (A B : MeanRankUpdate.ModelPoint → ℝ)
-    (hA : ContDiffOn ℝ ∞ A PhysicalCoordinateBounds.positiveTime)
-    (hB : ContDiffOn ℝ ∞ B PhysicalCoordinateBounds.positiveTime)
-    (frequency : ℝ) (L : E →L[ℝ] ℂ) :
-    SupportedContinuation W
-      (physicalSource coord (referenceCarrierModel d g hst κ w A B frequency L)) := by
-  have hsol := d.commonSolve_contDiffOn g hst PhysicalCoordinateBounds.positiveTime_isOpen
-    hM hL hf hκ hcκ hsκ
-  have hphase := PeriodicPhaseAssembly.phase_contDiffOn g w hA hB
-  have hmode := HarmonicCalculus.contDiffOn_mode frequency hphase (L.contDiff.comp_contDiffOn hsol)
-  have hsmodel := referenceSolve_model_supported d g hst κ hs
-  refine SupportedContinuation.ofModel hc hc1
-    (referenceCarrierModel d g hst κ w A B frequency L) ?_ ?_
-  · exact (Complex.reCLM.contDiff.comp_contDiffOn hmode).mono (fun y hy => ⟨hy, mem_univ _⟩)
-  · intro y hy hn
-    apply hsmodel y hy
-    intro hz
-    exact hn (by simp only [referenceCarrierModel, HarmonicCalculus.mode, hz, map_zero,
-      zero_mul, Complex.zero_re])
 
 end FullReferenceCarrier
 
 section RankModels
 
-theorem rankAngular_model_supported (coord A B lam a b : ℝ) (hab : a < b)
-    (d : MeanRankUpdate.Debt) :
-    ModelSupported a b (fun y => MeanRankUpdate.angularModel coord A B lam a b d y.1) := by
-  intro y hy hn
-  have hr := MeanRankUpdate.angularIncrement_tsupport lam (MeanRankUpdate.modelAmplitude coord B y.1)
-    a b (MeanRankUpdate.modelVelocity A y.1) (Real.sqrt_pos.mpr hy) hab d (subset_tsupport _ hn)
-  exact ⟨hr.1.le, hr.2.le⟩
 
-theorem rankAxial_model_supported (coord A B lam a b : ℝ) (hab : a < b)
-    (d : MeanRankUpdate.Debt) :
-    ModelSupported a b (fun y => MeanRankUpdate.axialModel coord A B lam a b d y.1) := by
-  intro y hy hn
-  have hr := MeanRankUpdate.desiredAxialIncrement_tsupport lam (MeanRankUpdate.modelAmplitude coord B y.1)
-    a b (MeanRankUpdate.modelVelocity A y.1) (Real.sqrt_pos.mpr hy) hab d (subset_tsupport _ hn)
-  exact ⟨hr.1.le, hr.2.le⟩
 
-/-- The explicit five-row angular kernel supplies its own primitive
-continuation; its smoothness is not an additional source assumption. -/
-noncomputable def rankAngularContinuation {coord a b : ℝ} {W : Window coord a b}
-    (hc : 0 < coord) (hc1 : coord < 1) (A B lam : ℝ) (hB : B ≠ 0) (hab : a < b)
-    (d : MeanRankUpdate.Debt) :
-    SupportedContinuation W (MeanRankUpdate.chartKernel coord (MeanRankUpdate.angularModel coord A B lam a b d)) := by
-  apply SupportedContinuation.ofModel hc hc1 (fun y => MeanRankUpdate.angularModel coord A B lam a b d y.1)
-  · exact (MeanRankUpdate.angularModel_contDiffOn coord A B lam a b hB d).comp
-      contDiffOn_fst (fun _ hy => hy)
-  · exact rankAngular_model_supported coord A B lam a b hab d
 
-noncomputable def rankAxialContinuation {coord a b : ℝ} {W : Window coord a b}
-    (hc : 0 < coord) (hc1 : coord < 1) (A B lam : ℝ) (hB : B ≠ 0) (hab : a < b)
-    (d : MeanRankUpdate.Debt) :
-    SupportedContinuation W (MeanRankUpdate.chartKernel coord (MeanRankUpdate.axialModel coord A B lam a b d)) := by
-  apply SupportedContinuation.ofModel hc hc1 (fun y => MeanRankUpdate.axialModel coord A B lam a b d y.1)
-  · exact (MeanRankUpdate.axialModel_contDiffOn coord A B lam a b hB d).comp
-      contDiffOn_fst (fun _ hy => hy)
-  · exact rankAxial_model_supported coord A B lam a b hab d
 
 end RankModels
 
@@ -610,57 +410,13 @@ noncomputable def physicalDomain (U : Set Slow) : Set SpaceTime := physicalSlow 
 theorem physicalDomain_open {U : Set Slow} (hU : IsOpen U) : IsOpen (physicalDomain U) :=
   hU.preimage physicalSlow_contDiff.continuous
 
-theorem radius_pos_of_projection {w : SpaceTime}
-    (hw : PhysicalGraphBounds.radialProjection w ≠ 0) : 0 < AnnularEndpoint.radius w :=
-  (norm_pos_iff.mpr hw).trans_le (PolarCharts.norm_le_radius _)
 
-theorem radius_contDiffAt {w : SpaceTime} (hw : PhysicalGraphBounds.radialProjection w ≠ 0) :
-    ContDiffAt ℝ ∞ AnnularEndpoint.radius w := by
-  have hs : w.2 0 ^ 2 + w.2 1 ^ 2 ≠ 0 := by
-    intro hz
-    apply hw
-    apply Prod.ext
-    · change w.2 0 = 0
-      nlinarith [sq_nonneg (w.2 1), sq_nonneg (w.2 0)]
-    · change w.2 1 = 0
-      nlinarith [sq_nonneg (w.2 1), sq_nonneg (w.2 0)]
-  change ContDiffAt ℝ ∞ (fun z : SpaceTime => Real.sqrt (z.2 0 ^ 2 + z.2 1 ^ 2)) w
-  exact ((((AxisymmetricFields.projection 0).contDiff.comp contDiff_snd).contDiffAt.pow 2).add
-    (((AxisymmetricFields.projection 1).contDiff.comp contDiff_snd).contDiffAt.pow 2)).sqrt hs
 
-theorem physicalLift_contDiffAt (h : ℝ) (n : ℕ) {w : SpaceTime}
-    (hw : PhysicalGraphBounds.radialProjection w ≠ 0) : ContDiffAt ℝ ∞ (physicalLift h n) w :=
-  (radius_contDiffAt hw).prodMk (physicalSlow_contDiff.contDiffAt.prodMk
-    (PhysicalGraphBounds.contDiffAt_nativeGraph h n hw))
 
 noncomputable def physicalScalar (h : ℝ) (n : ℕ) (f : Lift → ℝ) : SpaceTime → ℝ :=
   f ∘ physicalLift h n
 
-theorem physicalScalar_zero_germ (h : ℝ) (n : ℕ) {U : Set Slow} (hU : IsOpen U)
-    {c e : ℝ} {f : Lift → ℝ} (hs : PhysicalMeanDomain.SupportedOn c e U f)
-    {w : SpaceTime} (hw : w ∈ physicalDomain U) (hr : AnnularEndpoint.radius w < c) :
-    physicalScalar h n f =ᶠ[𝓝 w] fun _ => 0 := by
-  filter_upwards [(physicalDomain_open hU).mem_nhds hw,
-    AnnularEndpoint.radius_continuous.continuousAt (gt_mem_nhds hr)] with z hz hzr
-  by_contra hn
-  exact (not_lt_of_ge (hs (physicalLift h n z) hz hn).1) hzr
 
-/-- A positive lower radial support bound removes the coordinate singularity
-on the symmetry axis.  No smoothness of the graph at the axis is assumed. -/
-theorem physicalScalar_smooth (h : ℝ) (n : ℕ) {U : Set Slow} (hU : IsOpen U)
-    {c e : ℝ} (hc : 0 < c) {f : Lift → ℝ}
-    (hf : ContDiffOn ℝ ∞ f (PhysicalMeanDomain.slowDomain U))
-    (hs : PhysicalMeanDomain.SupportedOn c e U f) :
-    ContDiffOn ℝ ∞ (physicalScalar h n f) (physicalDomain U) := by
-  intro w hw
-  by_cases ha : PhysicalGraphBounds.radialProjection w = 0
-  · have hr : AnnularEndpoint.radius w = 0 := by
-      simp only [AnnularEndpoint.radius, ha, PolarCharts.radius, Prod.fst_zero, Prod.snd_zero,
-        zero_pow (by decide : 2 ≠ 0), zero_add, Real.sqrt_zero]
-    exact (contDiffAt_const.congr_of_eventuallyEq
-      (physicalScalar_zero_germ h n hU hs hw (hr ▸ hc))).contDiffWithinAt
-  · exact ((hf.contDiffAt ((PhysicalMeanDomain.slowDomain_open hU).mem_nhds hw)).comp w
-      (physicalLift_contDiffAt h n ha)).contDiffWithinAt
 
 /-- `streamPotential` is already the azimuthal component of the vector
 potential, including its division by the radial variable. -/
@@ -673,65 +429,13 @@ noncomputable def azimuthalPotential (h : ℝ) (n : ℕ) (f : Lift → ℝ) (w :
 noncomputable def angularField (h : ℝ) (n : ℕ) (f : Lift → ℝ) : SpaceTime → Space :=
   azimuthalPotential h n f
 
-theorem azimuthalPotential_smooth (h : ℝ) (n : ℕ) {U : Set Slow} (hU : IsOpen U)
-    {c e : ℝ} (hc : 0 < c) {f : Lift → ℝ}
-    (hf : ContDiffOn ℝ ∞ f (PhysicalMeanDomain.slowDomain U))
-    (hs : PhysicalMeanDomain.SupportedOn c e U f) :
-    ContDiffOn ℝ ∞ (azimuthalPotential h n f) (physicalDomain U) := by
-  intro w hw
-  by_cases ha : PhysicalGraphBounds.radialProjection w = 0
-  · have hr : AnnularEndpoint.radius w = 0 := by
-      simp [AnnularEndpoint.radius, ha, PolarCharts.radius]
-    have he : azimuthalPotential h n f =ᶠ[𝓝 w] fun _ => 0 := by
-      filter_upwards [physicalScalar_zero_germ h n hU hs hw (hr ▸ hc)] with z hz
-      simp only [azimuthalPotential, hz, mul_zero, zero_smul, add_zero]
-    exact (contDiffAt_const.congr_of_eventuallyEq he).contDiffWithinAt
-  · have hR := radius_contDiffAt ha
-    have hRn := (radius_pos_of_projection ha).ne'
-    have hψ := (physicalScalar_smooth h n hU hc hf hs).contDiffAt
-      ((physicalDomain_open hU).mem_nhds hw)
-    have h0 : ContDiffAt ℝ ∞ (fun z : SpaceTime => z.2 0) w :=
-      ((AxisymmetricFields.projection 0).contDiff.comp contDiff_snd).contDiffAt
-    have h1 : ContDiffAt ℝ ∞ (fun z : SpaceTime => z.2 1) w :=
-      ((AxisymmetricFields.projection 1).contDiff.comp contDiff_snd).contDiffAt
-    exact ((((h1.neg.div hR hRn).mul hψ).smul contDiffAt_const).add
-      (((h0.div hR hRn).mul hψ).smul contDiffAt_const)).contDiffWithinAt
 
 namespace SupportedContinuation
 
 variable {coord a b : ℝ} {W : Window coord a b} {f : Lift → ℝ}
 
-noncomputable def physicalExtension (e : SupportedContinuation W f) (h : ℝ) (n : ℕ)
-    {x : Space} (hx : (0, x 2) ∈ W.carrier) :
-    JointResidualLimits.OneSidedExtension (physicalScalar h n f) x where
-  value := physicalScalar h n e.value
-  domain := physicalDomain W.carrier
-  isOpen := physicalDomain_open W.isOpen
-  mem := by simpa only [physicalDomain, mem_preimage, physicalSlow, sub_self] using hx
-  smooth := physicalScalar_smooth h n W.isOpen W.lower_pos e.smooth (W.fixed_support e.supported)
-  agrees := by
-    intro w hw
-    exact e.agrees ⟨hw.1, show 0 < 1 - w.1 from sub_pos.mpr hw.2.1⟩
 
-noncomputable def azimuthalExtension (e : SupportedContinuation W f) (h : ℝ) (n : ℕ)
-    {x : Space} (hx : (0, x 2) ∈ W.carrier) :
-    JointResidualLimits.OneSidedExtension (azimuthalPotential h n f) x where
-  value := azimuthalPotential h n e.value
-  domain := physicalDomain W.carrier
-  isOpen := physicalDomain_open W.isOpen
-  mem := by simpa only [physicalDomain, mem_preimage, physicalSlow, sub_self] using hx
-  smooth := azimuthalPotential_smooth h n W.isOpen W.lower_pos e.smooth (W.fixed_support e.supported)
-  agrees := by
-    intro w hw
-    have he := (e.physicalExtension h n hx).agrees hw
-    change physicalScalar h n e.value w = physicalScalar h n f w at he
-    dsimp only [azimuthalPotential]
-    rw [he]
 
-noncomputable def angularExtension (e : SupportedContinuation W f) (h : ℝ) (n : ℕ)
-    {x : Space} (hx : (0, x 2) ∈ W.carrier) :
-    JointResidualLimits.OneSidedExtension (angularField h n f) x :=
-  e.azimuthalExtension h n hx
 
 end SupportedContinuation
 

@@ -699,22 +699,7 @@ end PositiveOrder
 
 section Uniqueness
 
-/-- A competing solution is given by actual holomorphic continuous paths
-on the positive and reflected negative radial intervals. -/
-def SidePathSolution {R : ℝ} (hR : 0 ≤ R) (U : Set ℂ) (A₀ A₁ : Coeff) (f : Field)
-    (V : Bool → ℂ → NilpotentVolterra.Path R) : Prop :=
-  (∀ b, DifferentiableOn ℂ (V b) U) ∧
-  ∀ b z, z ∈ U → V b z = NilpotentVolterra.pathInverse hR exponent
-    (NilpotentVolterra.rhsPath (sideData hR b (matrixPath R A₀))
-      (sideData hR b (matrixPath R A₁)) (sideData hR b (forcingPath R f)) (V b) z)
 
-noncomputable def candidateLift {R : ℝ} (hR : 0 ≤ R) (A₀ A₁ : Coeff) (f : Field)
-    (V : Bool → ℂ → NilpotentVolterra.Path R) : Field :=
-  glue
-    (NilpotentVolterra.liftedField hR (sideData hR false (matrixPath R A₀))
-      (sideData hR false (matrixPath R A₁)) (sideData hR false (forcingPath R f)) (V false))
-    (NilpotentVolterra.liftedField hR (sideData hR true (matrixPath R A₀))
-      (sideData hR true (matrixPath R A₁)) (sideData hR true (forcingPath R f)) (V true))
 
 
 end Uniqueness

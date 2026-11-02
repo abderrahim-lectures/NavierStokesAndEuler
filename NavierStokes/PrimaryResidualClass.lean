@@ -218,11 +218,6 @@ noncomputable def gaussianCoefficients (c : CorrectionState.Context D)
   fun n i => ErrorHarmonics.conjugatePair 1
     (fun x => LinearWaveBounds.excludedSlotError (directions c) ψ a.amplitude 0 n (x, 0) i)
 
-noncomputable def goodCoefficients (s : StripData D) (c : CorrectionState.Context D)
-    (a : LinearWaveBounds.WaveCoefficients (D × ℝ)) (ψ : ℕ → D × ℝ → ℝ) :
-    HarmonicResidual.BlockCoefficients D :=
-  fun n i => ErrorHarmonics.conjugatePair 1
-    (fun x => a.constructedGood (HarmonicWaveInteraction.productStrip s) (directions c) ψ n (x, 0) i)
 
 theorem wave_slice {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {s : StripData D} {P : ℕ → D → ℝ} {α : ℝ} {f : ℕ → D × ℝ → E}

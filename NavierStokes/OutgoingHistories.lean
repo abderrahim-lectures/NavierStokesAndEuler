@@ -848,24 +848,13 @@ noncomputable def shapeRate (eta : ℝ) : ℝ := 2 * eta / (1 + eta ^ 2)
 
 /-! ## The ideal past also fixes the source primitives -/
 
-noncomputable def incomingSq (d : TailData) (eta : ℝ) : ℝ :=
-  (3 / 5) * (4 * (1 - 2 * d.h * eta ^ 2) - 1) - d.h * (1 - 8 * eta ^ 2) +
-    (axialExponent d.h + 4 * coordinateFactor eta) * eta * shapeRate eta
 
 
 
 
 
 
-noncomputable def incomingSnConstant (d : TailData) (eta : ℝ) : ℝ :=
-  -4 * velocityExponent d.h * eta * (1 - 8 * eta ^ 2) -
-    4 * (axialExponent d.h + 4 * coordinateFactor eta) * eta -
-      coordinateFactor eta * deriv (SchedulePressure.axisPressure d) eta +
-        4 * velocityExponent d.h * eta * SchedulePressure.axisPressure d eta
 
-noncomputable def incomingSnGrowing (d : TailData) (eta : ℝ) : ℝ :=
-  d.core.P ^ 2 * shape eta ^ 2 *
-    (5 * coordinateFactor eta * shapeRate eta + (10 * velocityExponent d.h + 1) * eta)
 
 
 
@@ -877,12 +866,6 @@ noncomputable def incomingSnGrowing (d : TailData) (eta : ℝ) : ℝ :=
 /-! ## Entrance-radius factors -/
 
 noncomputable def physicalX (XR : ℝ) (p : Point) : ℝ := XR * X p
-noncomputable def physicalH (XR : ℝ) (w : ResetWitness d K) (p : Point) : ℝ := Real.sqrt (2 * XR) * H w p
-noncomputable def physicalM (XR : ℝ) (d : TailData) (Amp : ℝ → ℝ) (p : Point) : ℝ := XR * M d Amp p
-noncomputable def physicalI (XR : ℝ) (w : ResetWitness d K) (p : Point) : ℝ := XR * Real.sqrt (2 * XR) * I w p
-noncomputable def physicalJ (XR : ℝ) (w : ResetWitness d K) (Amp : ℝ → ℝ) (p : Point) : ℝ :=
-  XR * Real.sqrt (2 * XR) * J w Amp p
-noncomputable def physicalS (XR : ℝ) (w : ResetWitness d K) (Amp : ℝ → ℝ) (p : Point) : ℝ := XR * S w Amp p
 
 
 

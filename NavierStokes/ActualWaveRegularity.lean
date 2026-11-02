@@ -637,46 +637,6 @@ theorem block_eq_mode :
 
 end SignedAngles
 
-/-- The existing native angular inputs imply the smaller qualitative
-record. Their quantitative-domain smoothness field is not extended or used. -/
-noncomputable def signedAngles_of_inputs (p : PeriodizedSignedParameters Point I) (s : StripData Point)
-    (request : ℕ → Cylinder → SignedWaveUpdate.Vec2) (m : ℕ → ℝ) (i₀ : I)
-    (hθ : p.directions.angular = ((0 : Point), 1))
-    (hf : ∀ n, p.base.frequency n * m n = (p.angularFrequency n : ℝ))
-    (h : ∀ i, SignedWaveUpdate.AngularInputs (HarmonicWaveInteraction.productStrip s)
-      p.directions p.base (p.matrix i) (p.target i) request (p.mask i) (p.fundamental i)
-        (p.normalMotion i) (p.action i) (p.cutoff i) m) : SignedAngles p s request := by
-  refine ⟨m, ?_, ?_, ?_, hf, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro n
-    have he := (h i₀).radius n
-    simp only [hθ] at he
-    exact he
-  · intro n; simpa only [hθ] using (h i₀).radialField n
-  · intro n; simpa only [hθ] using (h i₀).phase n
-  · intro i n
-    have he := (h i).matrix n
-    simp only [hθ] at he
-    exact he
-  · intro i n
-    have he := (h i).primary_target n
-    simp only [hθ] at he
-    exact he
-  · intro n
-    have he := (h i₀).signed_target n
-    simp only [hθ] at he
-    exact he
-  · intro i n
-    have he := (h i).mask n
-    simp only [hθ] at he
-    exact he
-  · intro i n
-    have he := (h i).fundamental n
-    simp only [hθ] at he
-    exact he
-  · intro i n
-    have he := (h i).cutoff n
-    simp only [hθ] at he
-    exact he
 
 /-- All fields use the literal post-particular request.  The old state,
 profile, and native data are not reselected. -/

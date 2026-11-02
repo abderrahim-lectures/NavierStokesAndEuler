@@ -727,12 +727,6 @@ theorem holdLag_matches (d : TailData) :
   · rw [tailLag_initial]
     exact decayHold_hits_target d
 
-/-- Every existing core has the scalar parameters used in this tail construction. -/
-def tailDataOfCore (c : OutgoingSchedule.Parameters) : TailData where
-  core := c
-  h := c.lam / 4
-  h_pos := div_pos c.lam_pos (by norm_num)
-  h_small := by linarith [c.lam_pos]
 
 
 /-! ## The exact flattening slope and the unchanged axial histories -/
@@ -791,10 +785,6 @@ theorem flattened_hasDerivAt (d : TailData) (eta : ℝ) {y : ℝ}
   ring
 
 
-def extendedAngularMoment (d : TailData) (amp : ℝ → ℝ) (eta y : ℝ) : ℝ :=
-  (5 / 2) * Real.sqrt 2 * d.core.P * eta * shape eta +
-    ∫ t in (0 : ℝ)..y,
-      Real.sqrt 2 * Real.exp (3 * t / 2) * finalAngular d (t, eta) * axial d.core amp (t, eta)
 
 
 

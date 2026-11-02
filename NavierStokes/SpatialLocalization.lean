@@ -290,9 +290,6 @@ noncomputable def localizedVelocity (A : VelocityField) : VelocityField :=
 noncomputable def localizedPressure (p : PressureField) : PressureField :=
   TimeLocalization.activatedPressure (periodicPressure p)
 
-/-- The same time activation can be performed on the actual potential. -/
-noncomputable def localizedPotential (A : VelocityField) : VelocityField :=
-  TimeLocalization.activatedVelocity (periodicPotential A)
 
 
 

@@ -239,8 +239,6 @@ theorem slowOrder_mono {h : ℝ} (hh : 0 ≤ h) : Monotone (slowOrder h) := by
   unfold slowOrder
   exact mul_le_mul_of_nonneg_right (by exact_mod_cast (Nat.mul_le_mul_left 2 hij)) hh
 
-noncomputable def pairTailSize (N : ℕ) (K : ℕ → ℕ → ℝ) : ℝ :=
-  ∑ ij ∈ (pairs N).filter (fun ij => N < ij.1 + ij.2), |K ij.1 ij.2|
 
 
 
@@ -249,18 +247,9 @@ noncomputable def transportKernel (h e α : ℝ) (v u f : ℕ → InnerProfile)
   transportPair w.1 α (fun j => v j w) (fun j => u j w) (fun j => f j w)
     (fun j => partialX (f j) w) (fun j => Z h (e + slowOrder h j) (f j) w)
 
-noncomputable def transportTailSize (N : ℕ) (h e α : ℝ)
-    (v u f : ℕ → InnerProfile) (w : InnerPoint) : ℝ :=
-  pairTailSize N (transportKernel h e α v u f w) +
-    |Z2 h (e + slowOrder h N) (f N) w|
 
 
 
-noncomputable def pressureTailSize (N : ℕ) (h C : ℝ) (f : SlowProfiles)
-    (w : InnerPoint) : ℝ :=
-  transportTailSize N h 0 (-1 / 2) f.flux f.axial f.flux w +
-    |omegaCoefficient h f N w| +
-    |2 * w.1 * C⁻¹ ^ 2| * pairTailSize N (fun i j => f.phi i w * f.phi j w)
 
 
 

@@ -713,18 +713,6 @@ theorem leadingVirtualStress_eq (n : ℕ) {x : Point} (hT : 0 < x.2.1.1) (hR : 0
   · exact (BaseChartJets.normalizedCoordinates_eta F.data.h_pos F.data.h_lt_half
       (p := slowCoordinates x) hT).le
 
-noncomputable def waveCoefficients (phase : ℕ → Point × ℝ → ℝ)
-    (amplitude : ℕ → Point × ℝ → HarmonicCalculus.ComplexVector)
-    (pressure : ℕ → Point × ℝ → ℂ) (frequency : ℕ → ℝ) :
-    LinearWaveBounds.WaveCoefficients (Point × ℝ) where
-  radius _ x := x.1.1
-  radialBase n x := radialBase H v upper B n x.1
-  frequencyBase n x := frequencyBase H v upper B n x.1
-  axialBase n x := axialBase H v upper B n x.1
-  phase := phase
-  amplitude := amplitude
-  pressure := pressure
-  frequency := frequency
 
 
 noncomputable def radialSlow (n : ℕ) (p : Slow) : ℝ :=
@@ -748,10 +736,6 @@ theorem radialSlow_smoothAt (n : ℕ) {p : Slow} (hp : 0 < p.2.2) :
   exact (physicalComponent_smoothAt H v upper B n 0 (x := insertSlow p) hp).comp p
     insertSlow.contDiff.contDiffAt
 
-/-- The slot clock can vary with the native construction. Its slow and
-angular coordinates stay literal, so no phase estimate enters the binding. -/
-noncomputable def nativeCoordinates (clock : ℕ → Point → ℝ) (n : ℕ) (x : Point × ℝ) : PhaseCalculus.Slot :=
-  (slowCoordinates x.1, (x.2, clock n x.1))
 
 
 
@@ -806,8 +790,6 @@ theorem native_stress_properties (U : LocalSignedRequest.SlowRegion (2 * F.data.
 
 end ActualFields
 
-noncomputable def constructedContext (upper : ℝ) (B : ℕ) : CorrectionState.Context Point :=
-  nativeContext FinalSlowBase.actualProfile.certificate FinalSlowBase.actualProfile.modulation upper B
 
 
 end NavierStokes.BaseContextAssembly

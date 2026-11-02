@@ -63,8 +63,6 @@ def cross {R : Type*} [CommRing R] (u v : Vec3 R) : Vec3 R :=
 
 
 
-noncomputable def curlSymbol (ξ A : Vec3 ℂ) : Vec3 ℂ :=
-  cross (Complex.I • ξ) A
 
 /-- The coefficient of the potential (30), with the oscillatory exponential
 factored out. `k` is its nonzero frequency and `n` its phase normal. -/
@@ -92,9 +90,6 @@ def cylindricalCurl {F : Type*} [CommRing F]
     Dz (A 0) - Dr (A 2),
     Dr (A 1) + q * A 1 - q * Dθ (A 0)]
 
-def cylindricalDiv {F : Type*} [CommRing F]
-    (Dr Dθ Dz : F →+ F) (q : F) (v : Vec3 F) : F :=
-  Dr (v 0) + q * v 0 + q * Dθ (v 1) + Dz (v 2)
 
 
 end NavierStokes.CurlGeometry
@@ -234,9 +229,6 @@ theorem potential_periodic {times : Set ℝ} {Φ : PressureField} {a : VelocityF
 
 
 
-/-- The coefficient remaining after removing the sine oscillation. -/
-def strippedRemainder (k : ℝ) (B : VelocityField) : VelocityField :=
-  fun z => (1 / k) • SpatialCurl.spatialCurl B z
 
 
 

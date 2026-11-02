@@ -755,17 +755,8 @@ theorem physicalBarSigma_eq_negative_primitive (P : Patch) (e : ℕ) {q : E → 
   physicalSigma_eq_negative_primitive P e hq hpos (PressureStream.torusAverage_contDiff hF)
     (physical_torusAverage_supported P hs) z
 
-/-- Residual units in the q-chart: q^(2A+1/2) times the physical residual. -/
-noncomputable def normalizedResidual (q : E → ℝ) (A : ℝ) (F : ℝ × E → ℝ) (z : ℝ × E) : ℝ :=
-  q z.2 ^ (2 * A + 1 / 2) * nativeSource q F z
 
-noncomputable def qChartTensor (P : Patch) (e : ℕ) (q : E → ℝ) (A : ℝ)
-    (F : ℝ × E → ℝ) (z : ℝ × E) : ℝ :=
-  q z.2 ^ (2 * A) * physicalSigma P e q F (lengthScale q z.2 * z.1, z.2)
 
-noncomputable def qChartBump (P : Patch) (e : ℕ) (q : E → ℝ) (A : ℝ)
-    (F : ℝ × E → ℝ) (z : ℝ × E) : ℝ :=
-  q z.2 ^ (2 * A + 1 / 2) * physicalBump P e q F (lengthScale q z.2 * z.1, z.2)
 
 
 
@@ -782,8 +773,6 @@ section IntegratedBalances
 open IntegratedMeanBalances
 
 
-noncomputable def axialMomentPotential (axialFlux gr ρ : MeanField) (p : MeanParameter) : ℝ :=
-  axialDefect axialFlux gr p + pressureCoefficient ρ p * pressureTotal gr p
 
 
 
@@ -798,10 +787,6 @@ variable {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 
 
-noncomputable def changeChart (ρ : E → ℝ) (A : ℝ) (F : ℝ × E → ℝ) (z : ℝ × E) : ℝ :=
-  ρ z.2 ^ (-2 * A) * F (z.1 / Real.sqrt (ρ z.2), z.2)
-noncomputable def inverseChangeChart (ρ : E → ℝ) (A : ℝ) (F : ℝ × E → ℝ) (z : ℝ × E) : ℝ :=
-  ρ z.2 ^ (2 * A) * F (Real.sqrt (ρ z.2) * z.1, z.2)
 
 
 
