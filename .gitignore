@@ -11,3 +11,6 @@ paper/*.out
 paper/*.fls
 paper/*.fdb_latexmk
 paper/*.xdv
+
+# python bytecode from scripts/
+__pycache__/
