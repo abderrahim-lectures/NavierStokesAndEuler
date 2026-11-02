@@ -530,9 +530,7 @@ open scoped ContDiff Topology BigOperators
 variable {B N0 : ℕ}
 
 noncomputable def copies (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
-    (l : SignedLabel B N0) : PeriodizedWaveBounds.CopyData FullPoint Frequency :=
-  (parameters l).copyData ActualPrimaryBounds.strip request
-
+    (l : SignedLabel B N0) : PeriodizedWaveBounds.CopyData FullPoint Frequency := NavierStokes.ActualSignedOutputBounds.copies request l
 noncomputable def localGaussian (request : ℕ → FullPoint → SignedWaveUpdate.Vec2)
     (l : SignedLabel B N0) (n : ℕ) (k : Frequency) : FullPoint → HarmonicCalculus.ComplexVector :=
   (copies request l).localGaussian (directions B) n k

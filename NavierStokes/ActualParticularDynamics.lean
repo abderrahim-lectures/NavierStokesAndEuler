@@ -178,10 +178,7 @@ theorem normalWeight_eq (l : Label B N0) (n : ℕ) (j : ℤ) (hj : j ≠ 0) :
   simp only [PhysicalParticularWave.normalWeight, ActualPrimaryDynamics.normalScale,
     ActualPrimaryDynamics.radialScale_eq]
 
-noncomputable def data (x : CycleState (Label B N0)) (l : Label B N0) (j : ℤ) :=
-  (parameters x l).copyData (assembly x l).context (assembly x l).state
-    (assembly x l).carrierBlock (assembly x l).gaussianInput (assembly x l).aliasInput j
-
+noncomputable def data (x : CycleState (Label B N0)) (l : Label B N0) (j : ℤ) := NavierStokes.ActualParticularStageControls.data x l j
 theorem data_phase {x : CycleState (Label B N0)} (H : PreservesCarriers x)
     (l : Label B N0) (j : ℤ) :
     (data x l j).background.phase = (background l).phase := by

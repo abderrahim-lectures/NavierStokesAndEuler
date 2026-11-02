@@ -344,8 +344,7 @@ noncomputable def sourceState (B N0 : ℕ) : State Point :=
 noncomputable def primaryState (B N0 : ℕ) : State Point :=
   VariableGaugeMean.reconstructState ActualPrimary.commonGauge (ActualPrimary.commonContext B) (sourceState B N0)
 
-noncomputable def axial : TorusInverse.Plane × TorusInverse.Plane := ((0, 1), 0)
-
+noncomputable def axial : TorusInverse.Plane × TorusInverse.Plane := NavierStokes.ActualInitialMean.axial
 noncomputable def temporalState (B N0 : ℕ) : State Point :=
   VariableGaugeMean.temporalStageState ActualPrimary.commonGauge ActualPrimary.h
     (CommonWindow.index ActualPrimary.h) axial (ActualPrimary.commonContext B) (primaryState B N0)

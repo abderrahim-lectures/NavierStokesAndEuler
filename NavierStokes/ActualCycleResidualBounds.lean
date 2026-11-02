@@ -492,11 +492,7 @@ theorem realization_native_smooth {h : ℝ} {N : ℕ} {gap : ℕ → ℕ} {U : S
 
 /-! ## The fixed exterior base and the full physical endpoint -/
 
-noncomputable def active : Set ProblemStatement.SpaceTime :=
-  {w | (SlowBorelBase.cartesianChart ActualPrimary.h w).2.1 ∈
-    Icc (NominalConeAssembly.activeLeft ActualPrimary.nominal)
-      (NominalConeAssembly.activeRight ActualPrimary.nominal)}
-
+noncomputable def active : Set ProblemStatement.SpaceTime := NavierStokes.ActualPolarCoverage.active
 theorem actual_upper_covers_exterior :
     BaseExterior.nominalExteriorRadius ActualPrimary.nominal ≤ ActualPrimary.upper := by
   let R := NominalConeAssembly.activeRight ActualPrimary.nominal

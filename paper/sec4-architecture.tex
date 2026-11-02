@@ -350,3 +350,25 @@ modules (26{,}089 lines, in the migration commit), 6{,}330 unreachable
 \lean{theorem}/\lean{lemma} declarations, 547 further declarations of which most are
 definitions (3{,}693 lines), 208 lines of library substitution, and 249 modules folded into
 the single file that imported them.
+
+\paragraph{Definition-level duplication, which the probes above cannot see.} All the
+measurements so far compare \emph{statements}. A definition can also be written twice: two
+\lean{def}s with the same type and the same value are the same constant under two names. A
+probe over the environment's definitions (grouping by the pair (type, value)) finds
+\textbf{131 such groups} in \file{NavierStokes}: 70 of them type abbreviations
+(\lean{Label}, \lean{Index}, \lean{Coeff}, \lean{Point} defined three or four times in
+sibling modules) and 61 constants with a real value (\lean{forceConstant},
+\lean{logTaper}/\lean{outgoingTaper}, \lean{potential}/\lean{summedPotential},
+\lean{subBlock}, \lean{dr}/\lean{dY}, \lean{normalization}).
+
+This is the same phenomenon as the duplicated hypothesis blocks, at the level of
+definitions, and it has the same cause: two files that cannot see each other each write the
+formula. It is also a live hazard --- fix one copy and the other silently disagrees.
+
+Only \textbf{7} of the duplicated definitions can be collapsed mechanically, by rewriting
+the duplicate's body to the name it duplicates. The other 85 are blocked by the import
+layering: the module holding the canonical definition is not imported by the module holding
+the copy, and it cannot be, because the copy sits \emph{above} the original in the
+dependency order. Repairing them is not a rewrite but an architectural act --- introduce a
+common ancestor module that both siblings import --- and that adds modules to a tree this
+section has been shrinking. We did the seven and recorded the rest.

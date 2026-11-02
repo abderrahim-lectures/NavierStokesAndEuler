@@ -593,15 +593,9 @@ open JointResidualLimits (OneSidedExtension AwayExtensions)
 open scoped Topology ContDiff
 
 /-- The literal potential sum for the fixed selected stage sequence. -/
-def potentialSum (a : ℕ → ℕ) : VelocityField :=
-  SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ)) (PhysicalWaveSum.physicalQ h)
-    selectedPotentialStages
-
+def potentialSum (a : ℕ → ℕ) : VelocityField := NavierStokes.LocalAngularGrowth.selectedPotential a
 /-- The literal direct angular sum for the fixed selected stage sequence. -/
-def directSum (a : ℕ → ℕ) : VelocityField :=
-  SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ)) (PhysicalWaveSum.physicalQ h)
-    selectedDirectStages
-
+def directSum (a : ℕ → ℕ) : VelocityField := NavierStokes.LocalAngularGrowth.selectedDirect a
 /-- The literal pressure sum for the fixed selected stage sequence. -/
 def pressureSum (a : ℕ → ℕ) : PressureField :=
   SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ)) (PhysicalWaveSum.physicalQ h)

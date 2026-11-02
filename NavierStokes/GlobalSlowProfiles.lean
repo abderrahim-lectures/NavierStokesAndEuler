@@ -28,8 +28,7 @@ abbrev History := ℕ → Field
 abbrev region (S : Set ℝ) := (univ : Set ℝ) ×ˢ S
 abbrev Smooth (S : Set ℝ) (f : Field) := ContDiffOn ℝ ∞ f (region S)
 noncomputable def dr := ProfileHistories.radialPartial
-noncomputable def de := ProfileHistories.parameterPartial
-
+noncomputable def de := NavierStokes.SlowStressSupport.de
 structure Regular (S : Set ℝ) (f : Field) : Prop where
   smooth : Smooth S f
   even : ∀ eta ∈ S, ∀ R, f (-R, eta) = f (R, eta)
