@@ -1,8 +1,14 @@
 import NavierStokes.PeriodicUniqueness
 import Mathlib.Analysis.Calculus.LineDeriv.IntegrationByParts
 import NavierStokes.R3.CompactTimeIntegral
-import NavierStokes.R3.ScalarEnergyBound
-import NavierStokes.R3.CompactForceBound
+import Mathlib.Analysis.Calculus.Deriv.MeanValue
+import Mathlib.Analysis.SpecialFunctions.ExpDeriv
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Ring
+import NavierStokes.ProblemStatement
+import Mathlib.MeasureTheory.Integral.Bochner.Set
+import Mathlib.MeasureTheory.Measure.Haar.InnerProductSpace
+import Mathlib.Topology.Algebra.Support
 
 /-!
 # Energy of compactly supported fields on Euclidean three-space
@@ -11,6 +17,151 @@ All integrals in this module are the standard Lebesgue volume integrals on
 `ProblemStatement.Space`. Compact support supplies integrability; no finite
 replacement measure or convention about nonintegrable functions is used.
 -/
+
+/-! Merged from `NavierStokes.R3.ScalarEnergyBound`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# A scalar bound for the forced energy inequality
+
+The integrating factor controls an energy whose time derivative is bounded by
+the energy plus a constant. Only derivatives in the interior of the time
+interval are required.
+-/
+
+
+noncomputable section
+
+open Set
+
+namespace NavierStokesR3.ScalarEnergyBound
+
+/-- The shifted energy has a nonincreasing integrating factor. -/
+theorem forced_gronwall_weighted {T C : ℝ} {E E' : ℝ → ℝ}
+    (hT : 0 ≤ T) (hcont : ContinuousOn E (Icc 0 T)) (hinitial : E 0 = 0)
+    (hderiv : ∀ t ∈ Ioo 0 T, HasDerivAt E (E' t) t)
+    (hbound : ∀ t ∈ Ioo 0 T, E' t ≤ E t + C) :
+    ∀ t ∈ Icc 0 T, (E t + C) * Real.exp (-t) ≤ C := by
+  let G : ℝ → ℝ := fun t => Real.exp (-t) * (E t + C)
+  let G' : ℝ → ℝ := fun t => Real.exp (-t) * (E' t - (E t + C))
+  have hgcont : ContinuousOn G (Icc 0 T) :=
+    (Real.continuous_exp.comp continuous_id.neg).continuousOn.mul
+      (hcont.add continuousOn_const)
+  have hgderiv (t : ℝ) (ht : t ∈ Ioo 0 T) : HasDerivAt G (G' t) t := by
+    have hexp := (hasDerivAt_id t).neg.exp
+    convert! hexp.mul ((hderiv t ht).add_const C) using 1
+    try dsimp [G, G']
+    ring
+  have hG : AntitoneOn G (Icc 0 T) := by
+    apply antitoneOn_of_hasDerivWithinAt_nonpos (convex_Icc 0 T) hgcont
+    · intro t ht
+      exact (hgderiv t (by simpa only [interior_Icc] using ht)).hasDerivWithinAt
+    · intro t ht
+      exact mul_nonpos_of_nonneg_of_nonpos (Real.exp_pos _).le
+        (sub_nonpos.mpr (hbound t (by simpa only [interior_Icc] using ht)))
+  intro t ht
+  have hle := hG ⟨le_rfl, hT⟩ ht ht.1
+  simpa [G, hinitial, mul_comm] using hle
+
+/-- The scalar forced Gronwall estimate with zero initial energy. -/
+theorem forced_gronwall {T C : ℝ} {E E' : ℝ → ℝ}
+    (hT : 0 ≤ T) (hcont : ContinuousOn E (Icc 0 T)) (hinitial : E 0 = 0)
+    (hderiv : ∀ t ∈ Ioo 0 T, HasDerivAt E (E' t) t)
+    (hbound : ∀ t ∈ Ioo 0 T, E' t ≤ E t + C) :
+    ∀ t ∈ Icc 0 T, E t ≤ C * (Real.exp t - 1) := by
+  intro t ht
+  have hweighted := forced_gronwall_weighted hT hcont hinitial hderiv hbound t ht
+  have hmul := mul_le_mul_of_nonneg_right hweighted (Real.exp_pos t).le
+  have hexp : Real.exp (-t) * Real.exp t = 1 := by
+    rw [← Real.exp_add]
+    simp
+  rw [mul_assoc, hexp, mul_one] at hmul
+  calc
+    E t ≤ C * Real.exp t - C := by linarith
+    _ = C * (Real.exp t - 1) := by ring
+
+/-- A bound independent of the endpoint of an interval contained in `[0, 1]`. -/
+theorem forced_gronwall_uniform {T C : ℝ} {E E' : ℝ → ℝ}
+    (hT : 0 ≤ T) (hT1 : T ≤ 1) (hC : 0 ≤ C)
+    (hcont : ContinuousOn E (Icc 0 T)) (hinitial : E 0 = 0)
+    (hderiv : ∀ t ∈ Ioo 0 T, HasDerivAt E (E' t) t)
+    (hbound : ∀ t ∈ Ioo 0 T, E' t ≤ E t + C) :
+    ∀ t ∈ Icc 0 T, E t ≤ C * Real.exp 1 := by
+  intro t ht
+  calc
+    E t ≤ C * (Real.exp t - 1) :=
+      forced_gronwall hT hcont hinitial hderiv hbound t ht
+    _ ≤ C * Real.exp t := mul_le_mul_of_nonneg_left (by linarith) hC
+    _ ≤ C * Real.exp 1 :=
+      mul_le_mul_of_nonneg_left (Real.exp_le_exp.mpr (ht.2.trans hT1)) hC
+
+end NavierStokesR3.ScalarEnergyBound
+
+
+end
+
+
+/-! Merged from `NavierStokes.R3.CompactForceBound`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# A uniform spatial square-integral bound for compactly supported forces
+
+Compact spacetime support gives one compact spatial set supporting all slices.
+Continuity of the parameterized integral then supplies a finite bound on the
+closed time interval `[0, 1]`.
+-/
+
+
+noncomputable section
+
+open Set MeasureTheory
+
+namespace NavierStokesR3.CompactForceBound
+
+open NavierStokes.ProblemStatement
+
+/-- A continuous force of compact spacetime support has uniformly bounded
+spatial square integrals on the unit time interval. -/
+theorem exists_uniform_l2sq_bound {f : VelocityField}
+    (hf : Continuous f) (hcf : HasCompactSupport f) :
+    ∃ C : ℝ, 0 ≤ C ∧ ∀ t ∈ Icc (0 : ℝ) 1,
+      Integrable (fun x : Space => ‖f (t, x)‖ ^ 2) volume ∧
+        (∫ x : Space, ‖f (t, x)‖ ^ 2 ∂volume) ≤ C := by
+  let K : Set Space := Prod.snd '' tsupport f
+  have hK : IsCompact K := hcf.isCompact.image continuous_snd
+  have hzero (t : ℝ) (x : Space) (hx : x ∉ K) : f (t, x) = 0 := by
+    apply image_eq_zero_of_notMem_tsupport
+    intro hz
+    exact hx ⟨(t, x), hz, rfl⟩
+  have hcompact (t : ℝ) : HasCompactSupport (fun x : Space => ‖f (t, x)‖ ^ 2) := by
+    apply HasCompactSupport.intro hK
+    intro x hx
+    simp only [hzero t x hx, norm_zero, zero_pow (by decide : 2 ≠ 0)]
+  have hint (t : ℝ) : Integrable (fun x : Space => ‖f (t, x)‖ ^ 2) volume := by
+    have hslice : Continuous (fun x : Space => f (t, x)) :=
+      hf.comp (continuous_const.prodMk continuous_id)
+    exact (hslice.norm.pow 2).integrable_of_hasCompactSupport (hcompact t)
+  have hcontinuous :
+      ContinuousOn (fun t : ℝ => ∫ x : Space, ‖f (t, x)‖ ^ 2 ∂volume)
+        (Icc (0 : ℝ) 1) := by
+    apply continuousOn_integral_of_compact_support hK
+    · exact (hf.norm.pow 2).continuousOn
+    · intro t x _ hx
+      simp only [hzero t x hx, norm_zero, zero_pow (by decide : 2 ≠ 0)]
+  obtain ⟨C, hC, hbound⟩ :=
+    (isCompact_Icc.image_of_continuousOn hcontinuous).isBounded.exists_pos_norm_le
+  refine ⟨C, hC.le, ?_⟩
+  intro t ht
+  refine ⟨hint t, ?_⟩
+  have hnorm := hbound _ ⟨t, ht, rfl⟩
+  exact (le_abs_self _).trans (by simpa only [Real.norm_eq_abs] using hnorm)
+
+end NavierStokesR3.CompactForceBound
+
+
+end
+
 
 
 noncomputable section

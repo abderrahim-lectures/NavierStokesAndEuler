@@ -1,7 +1,62 @@
 import NavierStokes.ClosedIntervalCkOperators
-import NavierStokes.MomentRepairPicard
+import NavierStokes.SmoothMomentRepair
 import NavierStokes.QuadraticLinearization
 import NavierStokes.SmoothQuadraticBranch
+
+
+/-! Merged from `NavierStokes.MomentRepairPicard`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-! Compatibility of the same quadratic correction in two Banach norms.
+Both solutions are limits of the same zero-started Picard iterates. -/
+
+/-! Merged from `NavierStokes.MomentRepairPicardConvergence`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-! # Convergence of the actual quadratic moment-repair iterates
+
+The Banach fixed-point theorem is applied to the explicit correction iteration
+on its invariant quantitative ball. The returned solution is the limit of
+those iterates starting from zero.
+-/
+
+noncomputable section
+
+open Set Function Filter
+open scoped Topology NNReal
+
+namespace NavierStokes.MomentRepairPicardConvergence
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+
+
+end NavierStokes.MomentRepairPicardConvergence
+
+
+end
+
+
+noncomputable section
+
+open Filter Function
+open scoped Topology
+
+namespace NavierStokes.MomentRepairPicard
+
+variable {E₀ Eₖ : Type*}
+  [NormedAddCommGroup E₀] [NormedSpace ℝ E₀]
+  [NormedAddCommGroup Eₖ] [NormedSpace ℝ Eₖ]
+
+
+
+
+
+
+
+end NavierStokes.MomentRepairPicard
+
+
+end
 
 noncomputable section
 

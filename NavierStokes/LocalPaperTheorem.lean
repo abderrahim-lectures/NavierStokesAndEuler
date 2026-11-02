@@ -1,10 +1,10 @@
 import NavierStokes.LocalPotentialRebundle
 import NavierStokes.LocalResidualFlatness
 import NavierStokes.LocalScheduleWitness
-import NavierStokes.LocalScheduleAngular
+import NavierStokes.ActualCandidateAssembly
 import NavierStokes.LocalScaleApproach
 import NavierStokes.LocalJetBounds
-import NavierStokes.LocalPaperDomain
+import NavierStokes.LocalAngularGrowth
 
 /-!
 # The local theorem, with all conclusions for the same fields
@@ -13,6 +13,176 @@ The finite-stage construction selects one schedule retaining all residual
 orders. Its smooth endpoint extensions, angular asymptotic, and literal heat
 exterior are then combined without choosing new fields for different clauses.
 -/
+
+/-! Merged from `NavierStokes.LocalPaperDomain`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-! # A common local domain for the paper's heat-exterior formula -/
+
+noncomputable section
+
+namespace NavierStokes.LocalPaperDomain
+
+open Set Filter ProblemStatement CorrectionInitialization
+open scoped Topology
+
+def residualBand : ℕ :=
+  ActualCandidateConstruction.residualBand ActualCandidateConstruction.selectedBudget
+    ActualCandidateConstruction.selectedThreshold
+
+def qstar (a : ℕ → ℕ) : ℝ :=
+  min (ChartScales.Q residualBand) ((1 / 2) / (|(a 0 : ℝ)| + 1))
+
+def innerEdge : ℝ := NominalConeAssembly.activeLeft ActualPrimary.nominal
+
+def outerEdge : ℝ :=
+  max innerEdge (max (NominalConeAssembly.activeRight ActualPrimary.nominal)
+    (BaseExterior.nominalExteriorRadius ActualPrimary.nominal)) + 1
+
+def radius (w : SpaceTime) : ℝ :=
+  AxisymmetricFields.radialEnergy w.2 / PhysicalWaveSum.physicalQ ActualPrimary.h w
+
+
+theorem qstar_pos (a : ℕ → ℕ) : 0 < qstar a :=
+  lt_min (ChartScales.Q_pos _) (div_pos (by norm_num) (by positivity))
+
+theorem innerEdge_pos : 0 < innerEdge := NominalConeAssembly.activeLeft_pos _
+
+theorem innerEdge_lt_outerEdge : innerEdge < outerEdge := by
+  have := le_max_left innerEdge
+    (max (NominalConeAssembly.activeRight ActualPrimary.nominal)
+      (BaseExterior.nominalExteriorRadius ActualPrimary.nominal))
+  dsimp only [outerEdge]
+  linarith
+
+theorem exterior_conditions {a : ℕ → ℕ} {w : SpaceTime} (ht : w.1 < 1)
+    (hq : PhysicalWaveSum.physicalQ ActualPrimary.h w < qstar a)
+    (hX : outerEdge ≤ radius w) :
+    w ∈ ActualExteriorPrefix.exteriorDomain residualBand ∧
+      w ∈ BaseExterior.cartesianExterior ActualPrimary.h
+        (BaseExterior.nominalExteriorRadius ActualPrimary.nominal) ∧
+      |(a 0 : ℝ) * PhysicalWaveSum.physicalQ ActualPrimary.h w| < 1 / 2 := by
+  have hright : NominalConeAssembly.activeRight ActualPrimary.nominal < radius w := by
+    have h1 := le_max_left (NominalConeAssembly.activeRight ActualPrimary.nominal)
+      (BaseExterior.nominalExteriorRadius ActualPrimary.nominal)
+    have h2 := le_max_right innerEdge
+      (max (NominalConeAssembly.activeRight ActualPrimary.nominal)
+        (BaseExterior.nominalExteriorRadius ActualPrimary.nominal))
+    dsimp only [outerEdge] at hX
+    linarith
+  have hext : BaseExterior.nominalExteriorRadius ActualPrimary.nominal < radius w := by
+    have h1 := le_max_right (NominalConeAssembly.activeRight ActualPrimary.nominal)
+      (BaseExterior.nominalExteriorRadius ActualPrimary.nominal)
+    have h2 := le_max_right innerEdge
+      (max (NominalConeAssembly.activeRight ActualPrimary.nominal)
+        (BaseExterior.nominalExteriorRadius ActualPrimary.nominal))
+    dsimp only [outerEdge] at hX
+    linarith
+  refine ⟨ActualExteriorPrefix.mem_exteriorDomain.mpr ⟨ht,
+    hq.trans_le (min_le_left _ _), ?_⟩, ⟨ht, hext⟩, ?_⟩
+  · intro ha
+    exact (not_le_of_gt hright) ha.2
+  · have hpos := PhysicalWaveSum.physicalQ_pos ActualPrimary.outgoing.data.h_pos
+      ActualPrimary.outgoing.data.h_lt_half ht
+    have hδ := (lt_div_iff₀ (show 0 < |(a 0 : ℝ)| + 1 by positivity)).mp
+      (hq.trans_le (min_le_right _ _))
+    rw [abs_mul, abs_of_pos hpos]
+    nlinarith
+
+/-- The three strict exterior conditions persist on a neighborhood. -/
+theorem exterior_conditions_eventually {a : ℕ → ℕ} {w : SpaceTime}
+    (hw : w ∈ ActualExteriorPrefix.exteriorDomain residualBand)
+    (he : w ∈ BaseExterior.cartesianExterior ActualPrimary.h
+      (BaseExterior.nominalExteriorRadius ActualPrimary.nominal))
+    (hc : |(a 0 : ℝ) * PhysicalWaveSum.physicalQ ActualPrimary.h w| < 1 / 2) :
+    ∀ᶠ z in 𝓝 w,
+      z ∈ ActualExteriorPrefix.exteriorDomain residualBand ∧
+      z ∈ BaseExterior.cartesianExterior ActualPrimary.h
+        (BaseExterior.nominalExteriorRadius ActualPrimary.nominal) ∧
+      |(a 0 : ℝ) * PhysicalWaveSum.physicalQ ActualPrimary.h z| < 1 / 2 := by
+  have hq := (PhysicalWaveSum.physicalQ_smoothAt ActualPrimary.outgoing.data.h_pos
+    ActualPrimary.outgoing.data.h_lt_half he.1).continuousAt
+  filter_upwards [(ActualExteriorPrefix.exteriorDomain_open residualBand).mem_nhds hw,
+    (BaseExterior.cartesianExterior_isOpen ActualPrimary.outgoing.data.h_pos
+      ActualPrimary.outgoing.data.h_lt_half _).mem_nhds he,
+    ((hq.const_mul (a 0 : ℝ)).abs).eventually_lt_const hc] with z hz hez hcz
+  exact ⟨hz, hez, hcz⟩
+
+end NavierStokes.LocalPaperDomain
+
+
+end
+
+
+/-! Merged from `NavierStokes.LocalScheduleAngular`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# Solenoidality for every admissible actual schedule
+
+The literal direct angular sum, its spatial localization, and the mixed
+velocity retain their divergence equation for any selected schedule.
+-/
+
+noncomputable section
+
+namespace NavierStokes.LocalScheduleAngular
+
+open Set Filter ProblemStatement ActualCandidateAssembly
+open CorrectionInitialization.ActualPrimary
+open scoped Topology ContDiff
+
+abbrev Schedule (a : ℕ → ℕ) : Prop :=
+  MixedCandidateWitness.SelectedSchedule h
+    (ActualCandidateConstruction.qbig ActualCandidateConstruction.selectedBudget
+      ActualCandidateConstruction.selectedThreshold)
+    selectedPotentialStages selectedDirectStages selectedPressureStages a
+
+abbrev potentialSum (a : ℕ → ℕ) : VelocityField :=
+  SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ)) (PhysicalWaveSum.physicalQ h)
+    selectedPotentialStages
+
+abbrev directSum (a : ℕ → ℕ) : VelocityField :=
+  SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ)) (PhysicalWaveSum.physicalQ h)
+    selectedDirectStages
+
+abbrev pressureSum (a : ℕ → ℕ) : PressureField :=
+  SolenoidalDiagonal.potentialSum (fun j => (a j : ℝ)) (PhysicalWaveSum.physicalQ h)
+    selectedPressureStages
+
+theorem directSum_divergence {a : ℕ → ℕ} (ha : Schedule a)
+    {w : SpaceTime} (ht : w.1 < 1) : spatialDivergence (directSum a) w.1 w.2 = 0 := by
+  obtain ⟨_, hap, _, ham, hat, hgap, _, _⟩ := ha
+  have ha0 : 0 < (a 0 : ℝ) := by exact_mod_cast hap 0
+  have hamin (j : ℕ) : (a 0 : ℝ) ≤ (a j : ℝ) := by
+    exact_mod_cast ham.monotone (Nat.zero_le j)
+  exact LocalAngularDiagonal.angularSum_divergence outgoing.data.h_pos
+    outgoing.data.h_lt_half
+    (directData ActualCandidateConstruction.selectedBudget
+      ActualCandidateConstruction.selectedThreshold ActualCandidateConstruction.selectedThreshold_geometry)
+    hat ha0 hamin (hgap 0) ht
+
+
+theorem mixed_divergence {a : ℕ → ℕ} (ha : Schedule a)
+    {w : SpaceTime} (ht : w.1 < 1) :
+    spatialDivergence
+      (fun y => SpatialCurl.spatialCurl (potentialSum a) y + directSum a y) w.1 w.2 = 0 := by
+  have hs := ha.2.2.2.2.2.2.1
+  have hA := hs.potential.contDiffAt (PhysicalWaveSum.preterminal_open.mem_nhds ht)
+  have hB := hs.direct.contDiffAt (PhysicalWaveSum.preterminal_open.mem_nhds ht)
+  have hc := SpatialCurl.contDiffAt_spatialCurl hA (by simp : (∞ : WithTop ℕ∞) + 1 ≤ ∞)
+  rw [MixedPeriodicAssembly.spatialDivergence_add
+    ((hc.comp w.2 (contDiffAt_const.prodMk contDiffAt_id)).differentiableAt (by simp))
+    ((hB.comp w.2 (contDiffAt_const.prodMk contDiffAt_id)).differentiableAt (by simp)),
+    SpatialCurl.spatialDivergence_spatialCurl _ _ _
+      ((hA.comp w.2 (contDiffAt_const.prodMk contDiffAt_id)).of_le (by simp)),
+    directSum_divergence ha ht, add_zero]
+
+end NavierStokes.LocalScheduleAngular
+
+
+end
+
 
 noncomputable section
 

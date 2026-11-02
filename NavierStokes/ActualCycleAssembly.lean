@@ -1,7 +1,7 @@
 import NavierStokes.ActualCycleParameters
 import NavierStokes.ActualCarrierGeometry
 import NavierStokes.ScalarParticularSupport
-import NavierStokes.ActualCarrierTransport
+import NavierStokes.ActualCarrierTransportBase
 import NavierStokes.ActualCoreSupport
 import NavierStokes.ActualWaveRegularityData
 
@@ -13,6 +13,60 @@ coordinate are shared by the current block and both wave increments.
 Support comes from the canonical source carrier and the actual native
 mask/cutoff product.  Quantitative wave bounds are separate inputs.
 -/
+
+/-! Merged from `NavierStokes.ActualCarrierTransport`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# Binding the primitive carrier transport to the actual cycle parameters
+
+The geometry and support proofs live below the stage controls in
+`ActualCarrierTransportBase`.  This module identifies them with the literal
+canonical parameter record without adding a solved-field assumption.
+-/
+
+noncomputable section
+
+namespace NavierStokes.ActualCarrierTransport
+
+open Set Function
+open CorrectionInitialization CorrectionInitialization.ActualPrimary
+
+export ActualCarrierTransportBase
+  (Point Parameter Plane Index associatedPoint parameterDomain Ordered
+   associatedPoint_mem_domain slowMap slowMap_eq slowMap_continuous
+   slowCore slowCore_closed referenceLength referenceLength_pos clock clock_pos
+   spatialLabel referenceGeometry gap geometry reference_refine
+   sourceRegion sourceRegion_closed domain_log_band carrier_band_distance
+   ordered_of_carrier carrier_empty_of_not_ordered coordinates_clock native_coordinates
+   mem_sourceRegion labelCarrier_iff_sourceRegion activeSlowCore activeSlowCore_closed
+   canonicalSourceRegion canonicalSourceRegion_closed labelCarrier_iff_canonicalSourceRegion
+   cutoff cutoff_eq_native reference_outer_injective geometry_outer_injective)
+
+variable {B N0 : ℕ}
+
+@[simp] theorem domain_eq :
+    ActualCarrierTransportBase.domain = ActualInitialization.geometry.domain := rfl
+
+@[simp] theorem labelCarrier_eq (l : Index B N0) (n : ℕ) :
+    ActualCarrierTransportBase.labelCarrier l n = ActualInitialization.labelCarrier l n := rfl
+
+
+
+theorem canonical_cutoff (l : Index B N0) (n : ℕ) :
+    (ActualParticularStageControls.canonicalParameters (l.2,l.1)).cutoff n =
+      ActualGaussianCoverage.nativeCutoff slots.radius (referenceLength l)
+        slots.radius_pos (referenceLength_pos l) (clock l n) :=
+  ActualCarrierTransportBase.cutoff_eq_native l n
+
+
+
+
+end NavierStokes.ActualCarrierTransport
+
+
+end
+
 
 noncomputable section
 

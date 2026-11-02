@@ -1,5 +1,5 @@
 import NavierStokes.PeriodicLocalization
-import NavierStokes.PeriodizeLatticeCover
+import Mathlib.Algebra.Order.Floor.Ring
 import NavierStokes.ResidualRegularity
 import NavierStokes.R3.ProblemStatement
 
@@ -12,6 +12,38 @@ point the periodization agrees locally with a single translated field.
 Ordinary derivatives, including the nonlinear advection term, therefore
 preserve the whole-space equation at its original viscosity.
 -/
+
+/-! Merged from `NavierStokes.PeriodizeLatticeCover`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# A nearest integer lattice point
+
+Every spatial point lies in a translate of the closed fundamental cube.
+-/
+
+noncomputable section
+
+namespace NavierStokes.PeriodicLocalization
+
+open ProblemStatement
+
+/-- Rounding each coordinate places a point in the closed fundamental cube. -/
+theorem exists_lattice_near (x : Space) :
+    ∃ n : Lattice, ∀ i : Fin 3, |(x - lattice n) i| ≤ 1 / 2 := by
+  refine ⟨fun i => ⌊x i + 1 / 2⌋, ?_⟩
+  intro i
+  change |x i - (⌊x i + 1 / 2⌋ : ℝ)| ≤ 1 / 2
+  have hlo := Int.floor_le (x i + 1 / 2)
+  have hhi := Int.lt_floor_add_one (x i + 1 / 2)
+  rw [abs_le]
+  constructor <;> linarith
+
+end NavierStokes.PeriodicLocalization
+
+
+end
+
 
 noncomputable section
 

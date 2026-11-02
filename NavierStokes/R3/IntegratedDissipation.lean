@@ -1,7 +1,9 @@
 import NavierStokes.R3.ViscousEnergyBalance
-import NavierStokes.R3.SpatialCauchySchwarz
-import NavierStokes.R3.SharpEnergyBound
-import NavierStokes.R3.ForceL2Norm
+import NavierStokes.R3.CompactEnergy
+import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.Analysis.SpecialFunctions.Sqrt
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+import Mathlib.Tactic.Linarith
 import Mathlib.MeasureTheory.Integral.IntegralEqImproper
 
 /-!
@@ -12,6 +14,210 @@ used as a substitute for finiteness of the dissipation. The energy balance is
 first integrated on shorter closed time intervals, then an exhaustion proves
 integrability on the entire half-open interval.
 -/
+
+/-! Merged from `NavierStokes.R3.ForceL2Norm`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# The time primitive of the spatial L² norm of a compact force
+
+All spatial and temporal integrals use ordinary Lebesgue volume.
+-/
+
+noncomputable section
+
+open Set Filter MeasureTheory Function
+open scoped Topology BigOperators ContDiff InnerProductSpace
+
+namespace NavierStokesR3.CompactEnergy
+
+open NavierStokes.ProblemStatement
+
+/-- The ordinary spatial L² norm, used with square-integrable slices. -/
+def l2Norm (f : VelocityField) (t : ℝ) : ℝ := Real.sqrt (l2Sq f t)
+
+/-- The time integral of the spatial L² norm starting at time zero. -/
+def cumulativeForceNorm (f : VelocityField) (T : ℝ) : ℝ :=
+  ∫ t in (0 : ℝ)..T, l2Norm f t
+
+theorem l2Norm_nonneg (f : VelocityField) (t : ℝ) : 0 ≤ l2Norm f t :=
+  Real.sqrt_nonneg _
+
+/-- A compact spacetime support supplies one compact spatial support for every
+slice, and therefore continuity of the full spatial square integral. -/
+theorem l2Sq_continuous {f : VelocityField} (hf : Continuous f)
+    (hcf : HasCompactSupport f) : Continuous (l2Sq f) := by
+  let K : Set Space := Prod.snd '' tsupport f
+  have hK : IsCompact K := hcf.isCompact.image continuous_snd
+  rw [← continuousOn_univ]
+  apply CompactTimeIntegral.continuousOn_integral
+    (F := fun z : SpaceTime => ‖f z‖ ^ 2) hK (hf.norm.pow 2).continuousOn
+  intro t ht x hx
+  have hz : f (t, x) = 0 := by
+    apply image_eq_zero_of_notMem_tsupport
+    intro h
+    exact hx ⟨(t, x), h, rfl⟩
+  simp [hz]
+
+theorem l2Norm_continuous {f : VelocityField} (hf : Continuous f)
+    (hcf : HasCompactSupport f) : Continuous (l2Norm f) :=
+  (l2Sq_continuous hf hcf).sqrt
+
+theorem l2Norm_intervalIntegrable {f : VelocityField} (hf : Continuous f)
+    (hcf : HasCompactSupport f) (a b : ℝ) :
+    IntervalIntegrable (l2Norm f) volume a b :=
+  (l2Norm_continuous hf hcf).intervalIntegrable a b
+
+@[simp] theorem cumulativeForceNorm_zero (f : VelocityField) :
+    cumulativeForceNorm f 0 = 0 := by
+  simp [cumulativeForceNorm]
+
+theorem cumulativeForceNorm_continuous {f : VelocityField} (hf : Continuous f)
+    (hcf : HasCompactSupport f) : Continuous (cumulativeForceNorm f) :=
+  intervalIntegral.continuous_primitive (l2Norm_intervalIntegrable hf hcf) 0
+
+theorem cumulativeForceNorm_hasDerivAt {f : VelocityField} (hf : Continuous f)
+    (hcf : HasCompactSupport f) (t : ℝ) :
+    HasDerivAt (cumulativeForceNorm f) (l2Norm f t) t := by
+  have hc := l2Norm_continuous hf hcf
+  exact intervalIntegral.integral_hasDerivAt_right (hc.intervalIntegrable 0 t)
+    hc.aestronglyMeasurable.stronglyMeasurableAtFilter hc.continuousAt
+
+
+
+/-- The exact square-primitive identity needed in the integrated energy bound. -/
+theorem integral_l2Norm_cumulative_eq_sq {f : VelocityField} (hf : Continuous f)
+    (hcf : HasCompactSupport f) (T : ℝ) :
+    (∫ t in (0 : ℝ)..T, 2 * l2Norm f t * cumulativeForceNorm f t) =
+      (cumulativeForceNorm f T) ^ 2 := by
+  have hc := l2Norm_continuous hf hcf
+  have hF := cumulativeForceNorm_continuous hf hcf
+  have hderiv (t : ℝ) :
+      HasDerivAt (fun s => (cumulativeForceNorm f s) ^ 2)
+        (2 * l2Norm f t * cumulativeForceNorm f t) t := by
+    convert! (cumulativeForceNorm_hasDerivAt hf hcf t).pow 2 using 1
+    norm_num
+    ring
+  have h := intervalIntegral.integral_eq_sub_of_hasDerivAt
+    (fun t _ => hderiv t) (((continuous_const.mul hc).mul hF).intervalIntegrable 0 T)
+  simpa using h
+
+end NavierStokesR3.CompactEnergy
+
+
+end
+
+
+/-! Merged from `NavierStokes.R3.SharpEnergyBound`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# The sharp scalar estimate for forced kinetic energy
+
+Regularizing the square root removes the apparent singularity at zero energy.
+The estimate requires derivatives only in the interior of the time interval.
+-/
+
+noncomputable section
+
+open Set MeasureTheory
+
+namespace NavierStokesR3.SharpEnergyBound
+
+/-- A zero-initial-energy differential inequality controls the square root of
+the energy by the time integral of the forcing norm. -/
+theorem sqrt_energy_le_integral {T : ℝ} {E E' q : ℝ → ℝ}
+    (hT : 0 ≤ T) (hcont : ContinuousOn E (Icc 0 T))
+    (hnonneg : ∀ t ∈ Icc 0 T, 0 ≤ E t) (hinitial : E 0 = 0)
+    (hq : ContinuousOn q (Icc 0 T)) (hqnonneg : ∀ t ∈ Ioo 0 T, 0 ≤ q t)
+    (hderiv : ∀ t ∈ Ioo 0 T, HasDerivAt E (E' t) t)
+    (hbound : ∀ t ∈ Ioo 0 T, E' t ≤ 2 * Real.sqrt (E t) * q t) :
+    Real.sqrt (E T) ≤ ∫ t in 0..T, q t := by
+  apply le_of_forall_pos_le_add
+  intro ε hε
+  have hpos (t : ℝ) (ht : t ∈ Icc 0 T) : 0 < E t + ε ^ 2 :=
+    add_pos_of_nonneg_of_pos (hnonneg t ht) (sq_pos_of_pos hε)
+  have hscont : ContinuousOn (fun t => Real.sqrt (E t + ε ^ 2)) (Icc 0 T) :=
+    Real.continuous_sqrt.comp_continuousOn (hcont.add continuousOn_const)
+  have hsderiv (t : ℝ) (ht : t ∈ Ioo 0 T) :
+      HasDerivWithinAt (fun t => Real.sqrt (E t + ε ^ 2))
+        (E' t / (2 * Real.sqrt (E t + ε ^ 2))) (Ioi t) t :=
+    ((hderiv t ht).add_const (ε ^ 2)).sqrt
+      (ne_of_gt (hpos t ⟨ht.1.le, ht.2.le⟩)) |>.hasDerivWithinAt
+  have hsbound (t : ℝ) (ht : t ∈ Ioo 0 T) :
+      E' t / (2 * Real.sqrt (E t + ε ^ 2)) ≤ q t := by
+    apply (div_le_iff₀ (mul_pos (by norm_num : (0 : ℝ) < 2)
+      (Real.sqrt_pos.2 (hpos t ⟨ht.1.le, ht.2.le⟩)))).2
+    have hsqrt : Real.sqrt (E t) ≤ Real.sqrt (E t + ε ^ 2) :=
+      Real.sqrt_le_sqrt (le_add_of_nonneg_right (sq_nonneg ε))
+    have hmul := mul_le_mul_of_nonneg_right hsqrt (hqnonneg t ht)
+    nlinarith [hbound t ht]
+  have h := intervalIntegral.sub_le_integral_of_hasDeriv_right_of_le
+    hT hscont hsderiv (hq.integrableOn_Icc) hsbound
+  have hzero : Real.sqrt (E 0 + ε ^ 2) = ε := by
+    rw [hinitial, zero_add, Real.sqrt_sq hε.le]
+  rw [hzero] at h
+  have hsqrt : Real.sqrt (E T) ≤ Real.sqrt (E T + ε ^ 2) :=
+    Real.sqrt_le_sqrt (le_add_of_nonneg_right (sq_nonneg ε))
+  linarith
+
+
+end NavierStokesR3.SharpEnergyBound
+
+
+end
+
+
+/-! Merged from `NavierStokes.R3.SpatialCauchySchwarz`. The body is wrapped in a section so that its `open`s cannot leak into this file. -/
+section
+
+/-!
+# Spatial Cauchy--Schwarz for the force work
+
+The integrals use ordinary Euclidean volume. Square integrability supplies
+the two finite L² norms appearing in the bound.
+-/
+
+noncomputable section
+
+open Set MeasureTheory
+open scoped InnerProductSpace
+
+namespace NavierStokesR3.CompactEnergy
+
+open NavierStokes.ProblemStatement
+
+/-- Cauchy--Schwarz bounds the force work by the product of the ordinary
+spatial L² norms. The force only needs finite L² norm and continuity. -/
+theorem work_le_sqrt_l2Sq {u f : VelocityField} {t : ℝ}
+    (hu : Continuous (fun x : Space => u (t, x)))
+    (hf : Continuous (fun x : Space => f (t, x)))
+    (hcu : HasCompactSupport (fun x : Space => u (t, x)))
+    (hf_sq : Integrable (fun x : Space => ‖f (t, x)‖ ^ 2)) :
+    (∫ x : Space, ⟪u (t, x), f (t, x)⟫_ℝ) ≤
+      Real.sqrt (l2Sq u t) * Real.sqrt (l2Sq f t) := by
+  have huLp : MemLp (fun x : Space => u (t, x)) 2 volume :=
+    (memLp_two_iff_integrable_sq_norm hu.aestronglyMeasurable).mpr
+      (integrable_norm_sq hu hcu)
+  have hfLp : MemLp (fun x : Space => f (t, x)) 2 volume :=
+    (memLp_two_iff_integrable_sq_norm hf.aestronglyMeasurable).mpr hf_sq
+  have hholder := integral_mul_norm_le_Lp_mul_Lq Real.HolderConjugate.two_two
+    (by simpa using huLp) (by simpa using hfLp)
+  have hprod : Integrable (fun x : Space => ‖u (t, x)‖ * ‖f (t, x)‖) :=
+    huLp.norm.integrable_mul hfLp.norm
+  calc
+    (∫ x : Space, ⟪u (t, x), f (t, x)⟫_ℝ) ≤
+        ∫ x : Space, ‖u (t, x)‖ * ‖f (t, x)‖ :=
+      integral_mono (integrable_inner_left hu hf hcu) hprod
+        (fun x => real_inner_le_norm _ _)
+    _ ≤ Real.sqrt (l2Sq u t) * Real.sqrt (l2Sq f t) := by
+      simpa only [Real.rpow_two, ← Real.sqrt_eq_rpow, l2Sq] using hholder
+
+end NavierStokesR3.CompactEnergy
+
+
+end
+
 
 noncomputable section
 
