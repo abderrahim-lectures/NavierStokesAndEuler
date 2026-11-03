@@ -1,4 +1,3 @@
-import NavierStokes.ConeAlgebra
 import NavierStokes.StressActivation
 import NavierStokes.UniformCone
 import NavierStokes.NaturalEntrance
