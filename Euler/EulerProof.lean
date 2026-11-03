@@ -2428,11 +2428,9 @@ theorem liftedPressure_hasDerivAt (κ : ℝ) (m : Vector3)
     (S.orthogonalProjectionOnto.hasFDerivAt.comp_hasDerivAt 0 hf)
   have hval := S.subtypeL.hasFDerivAt.comp_hasDerivAt 0 hsol
   convert hval using 1
-  · rfl
-  · rfl
-  · rfl
-  · simp [liftedPressure, pressureSolver, projectedInverse, projectedOperator,
-      S, G, G', ContinuousLinearMap.comp_apply, map_sub]
+  all_goals simp only [liftedPressure, pressureSolver, projectedInverse,
+    projectedOperator, S, G, G', ContinuousLinearMap.comp_apply, map_sub,
+    Submodule.starProjection_eq_self_iff]
 
 theorem pressure_translation_hasDerivAt (κ : ℝ) (m : Vector3) (a : LiftTangent)
     (A : LiftDomain period → Vector3 →L[ℝ] Vector3)
@@ -5491,7 +5489,7 @@ theorem fourier_L1_le_sobolevNorm (d : ℕ) (s : ℝ) (hs : (d : ℝ) < 2 * s)
     ext ξ
     simp only [Pi.smul_apply', weightedFourier_apply, smul_smul, besselWeight_neg_mul, one_smul]
   have hh := eLpNorm_smul_le_mul_eLpNorm (p := 2) (q := 2) (r := 1)
-    ((weightedFourier d s f).memLp 2 volume).aestronglyMeasurable (reciprocal_weight_memLp d s hs).aestronglyMeasurable
+    (reciprocal_weight_memLp d s hs).aestronglyMeasurable ((weightedFourier d s f).memLp 2 volume).aestronglyMeasurable
   rw [hid] at hh
   have hfin : eLpNorm (besselWeight d (-s)) 2 volume *
       eLpNorm (weightedFourier d s f) 2 volume ≠ ⊤ :=
@@ -6482,15 +6480,16 @@ theorem eLpNorm_cover_chart {F : Type*} [NormedAddCommGroup F]
 /-- A localized lift is controlled by the genuine cylinder norm, with explicit chart multiplicity. -/
 theorem eLpNorm_localized_le {F G : Type*} [NormedAddCommGroup F] [NormedAddCommGroup G]
     (f : LiftDomain period → F) (hf : AEStronglyMeasurable f (liftMeasure period))
-    (g : Domain 4 → G) (hsupp : Function.support g ⊆ ({z : EulerSobolev.Domain 4 | |z 0| ≤ 2 * period}))
+    (g : Domain 4 → G) (hg : AEStronglyMeasurable g volume)
+    (hsupp : Function.support g ⊆ ({z : EulerSobolev.Domain 4 | |z 0| ≤ 2 * period}))
     (B : ℝ≥0) (hb : ∀ z, ‖g z‖ ≤ B * ‖f (euclideanCover period z)‖) :
     eLpNorm g 2 volume ≤ (B : ℝ≥0∞) * (6 : ℝ≥0∞) ^ (1/2 : ℝ) *
       eLpNorm f 2 (liftMeasure period) := by
-  rw [← eLpNorm_restrict_eq_of_support_subset hsupp]
+  rw [← eLpNorm_restrict_eq_of_support_subset hg hsupp]
   calc
     _ ≤ eLpNorm g 2 (chartMeasure period) := eLpNorm_mono_measure g (chartSupport_measure_le period)
     _ ≤ (B : ℝ≥0∞) * eLpNorm (f ∘ euclideanCover period) 2 (chartMeasure period) :=
-      eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul (Filter.Eventually.of_forall hb) 2
+      eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul hg (Filter.Eventually.of_forall hb) 2
     _ = _ := by rw [eLpNorm_cover_chart period f hf, mul_assoc]
 
 /-- The localized-lift estimate as an inequality between ordinary real L² norms. -/
@@ -6499,7 +6498,7 @@ theorem localized_L2_le {F : Type*} [NormedAddCommGroup F]
     (g : 𝓢(Domain 4, ℂ)) (hsupp : Function.support g ⊆ ({z : EulerSobolev.Domain 4 | |z 0| ≤ 2 * period}))
     (B : ℝ≥0) (hb : ∀ z, ‖g z‖ ≤ B * ‖f (euclideanCover period z)‖) :
     ‖g.toLp 2‖ ≤ (B : ℝ) * (6 : ℝ) ^ (1/2 : ℝ) * ‖hf.toLp f‖ := by
-  have h := eLpNorm_localized_le period f hf.aestronglyMeasurable g hsupp B hb
+  have h := eLpNorm_localized_le period f hf.aestronglyMeasurable g g.aestronglyMeasurable hsupp B hb
   have hfin : (B : ℝ≥0∞) * (6 : ℝ≥0∞) ^ (1/2 : ℝ) *
       eLpNorm f 2 (liftMeasure period) ≠ ⊤ := by
     finiteness
@@ -8206,6 +8205,7 @@ theorem localize_pureDerivative_L2_le (n : ℕ) (i : Fin 3) (f : Domain 3 → F)
     simp only [PiLp.norm_single, norm_one, Finset.prod_const_one, mul_one] at hA
     exact hA.trans (localize_tensor_bound n f hf x z)
   have hA := eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul (μ := (volume : Measure (Domain 3)))
+    (pureDerivative 3 n (EuclideanSpace.single i 1) (localize f hf x)).aestronglyMeasurable
     (Filter.Eventually.of_forall hb) 2
   have hfin : (unitBumpCoefficient n : ℝ≥0∞) *
       eLpNorm (fun z => derivativeMagnitude n f (x+z)) 2 volume ≠ ⊤ := by finiteness
