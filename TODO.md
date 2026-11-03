@@ -11,8 +11,15 @@ script named beside them.
 * **2 (merge)**: nothing to merge — already at its fixed point.
 * **3 (collapse collapsible duplicates)**: applied and verified; the remaining
   blocked groups are item 4.
-* **5 (unused imports)**: `scripts/UnusedImports.py` in place; a 6-file sample
-  found **23 redundant imports of 32**. Full sweep running (background job).
+* **5 (unused imports)**: analysed, **blocked**. `scripts/UnusedImports.py` tests
+  each import by elaborating that file alone: of 124 files scanned it finds **455
+  redundant imports**. Applying them breaks the build at **286 sites in 7 files**,
+  because removing an import from `F` also removes it from everything that imports
+  `F` and was getting it transitively. Restricting to files nothing imports is
+  vacuous — every one of the 124 has an importer. The mechanical version is
+  therefore: remove from `F` *and* add the same import to each importer of `F` that
+  breaks. That is a per-importer rewrite, not a sweep, and it is not obviously a
+  win (it can move an import from one file to five).
 
 ## 1. Re-run the unused-declaration prune (mechanical)
 
