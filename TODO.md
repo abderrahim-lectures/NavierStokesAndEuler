@@ -95,7 +95,20 @@ Same method.
 
 Same method.
 
-## 9. Euler: the 61 first-wave errors
+## 9. Euler: the 61 first-wave errors — **started, branch `fix/euler-errors`**
+
+Progress: 4 sites repaired in `EulerProof.lean` (28 -> 25 error sites). Each was
+a distinct Mathlib API change and each is recorded in the commit message:
+
+* `orthogonalProjectionOnto` is now `starProjection` (`Submodule.starProjection_eq_self_iff`);
+* `eLpNorm_smul_le_mul_eLpNorm` takes the *scalar's* measurability first;
+* `eLpNorm_restrict_eq_of_support_subset` gained an `AEStronglyMeasurable` argument;
+* `eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul` likewise takes measurability first.
+
+Known next: three `apply eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul` sites
+(`VolumeSobolevComposition`, `CylinderPhysicalTensorLp`, `CylinderJetLp`) need a
+measurability bullet before their `filter_upwards`.
+
 
 `scripts/SorryPatch.py` already produces the list of modules. The first wave is
 clean (it comes from twenty theorems). Repair them in dependency order; each fixed
