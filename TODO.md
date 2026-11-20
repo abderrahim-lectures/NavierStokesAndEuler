@@ -97,6 +97,22 @@ Same method.
 
 ## 9. Euler: the 61 first-wave errors
 
+**Status after this session: 8 of the 28 sites repaired. `EulerProof.lean` 28 -> 20;
+whole-library Euler errors 29 -> 21.** Fixed, each a distinct Mathlib change:
+`starProjection` rename; `eLpNorm_smul_le_mul_eLpNorm` argument order;
+`eLpNorm_restrict_eq_of_support_subset` gaining a measurability argument;
+`eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul` argument order (2 sites); `SchwartzMap`
+having no `aestronglyMeasurable` field (2 sites); `MemLp` no longer a structure
+(`hq.1`); `eLpNorm_mono` taking measurability first; `eLpNorm_norm` gaining one.
+
+The 20 that remain, by kind: **three** need a measurability witness for an *iterated
+field derivative* of a product or a sum — `iteratedFieldDerivative` is a genuine
+derivative, not a continuous linear map applied to the field, so measurability does not
+compose and the development has no lemma for it (the gap in paper §6.3); **two** are
+`eLpNorm_mono` on a `PiLp` carrier where measurability must be rebuilt from the
+coordinate `MemLp` hypotheses; **four** are `Application type mismatch` at 7839, 8302,
+8369, 8949; the rest are downstream `unsolved goals`.
+
 `scripts/SorryPatch.py` already produces the list of modules. The first wave is
 clean (it comes from twenty theorems). Repair them in dependency order; each fixed
 theorem exposes the next wave, so this is a multi-session job. Full state in
