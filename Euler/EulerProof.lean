@@ -6498,7 +6498,7 @@ theorem localized_L2_le {F : Type*} [NormedAddCommGroup F]
     (g : 𝓢(Domain 4, ℂ)) (hsupp : Function.support g ⊆ ({z : EulerSobolev.Domain 4 | |z 0| ≤ 2 * period}))
     (B : ℝ≥0) (hb : ∀ z, ‖g z‖ ≤ B * ‖f (euclideanCover period z)‖) :
     ‖g.toLp 2‖ ≤ (B : ℝ) * (6 : ℝ) ^ (1/2 : ℝ) * ‖hf.toLp f‖ := by
-  have h := eLpNorm_localized_le period f hf.aestronglyMeasurable g g.aestronglyMeasurable hsupp B hb
+  have h := eLpNorm_localized_le period f hf.aestronglyMeasurable g g.continuous.aestronglyMeasurable hsupp B hb
   have hfin : (B : ℝ≥0∞) * (6 : ℝ≥0∞) ^ (1/2 : ℝ) *
       eLpNorm f 2 (liftMeasure period) ≠ ⊤ := by
     finiteness
@@ -7391,7 +7391,8 @@ theorem postcomp_sobolevNorm_le (s : ℕ) (L : F →L[ℝ] G) (hL : ‖L‖ ≤ 
   intro w _
   rw [iteratedFieldDerivative_postcomp period L w f hf]
   apply ENNReal.toReal_mono (hfL2 n (by have := Finset.mem_range.1 hn; omega) w).eLpNorm_ne_top
-  apply eLpNorm_mono
+  apply eLpNorm_mono (L.continuous.comp_aestronglyMeasurable
+    (hfL2 n (by have := Finset.mem_range.1 hn; omega) w).aestronglyMeasurable)
   intro x
   have h := L.le_opNorm (iteratedFieldDerivative period w f x)
   exact h.trans ((mul_le_mul_of_nonneg_right hL (norm_nonneg _)).trans_eq (one_mul _))
@@ -8205,14 +8206,14 @@ theorem localize_pureDerivative_L2_le (n : ℕ) (i : Fin 3) (f : Domain 3 → F)
     simp only [PiLp.norm_single, norm_one, Finset.prod_const_one, mul_one] at hA
     exact hA.trans (localize_tensor_bound n f hf x z)
   have hA := eLpNorm_le_nnreal_smul_eLpNorm_of_ae_le_mul (μ := (volume : Measure (Domain 3)))
-    (pureDerivative 3 n (EuclideanSpace.single i 1) (localize f hf x)).aestronglyMeasurable
+    (pureDerivative 3 n (EuclideanSpace.single i 1) (localize f hf x)).continuous.aestronglyMeasurable
     (Filter.Eventually.of_forall hb) 2
   have hfin : (unitBumpCoefficient n : ℝ≥0∞) *
       eLpNorm (fun z => derivativeMagnitude n f (x+z)) 2 volume ≠ ⊤ := by finiteness
   have hB := ENNReal.toReal_mono hfin hA
   have he : eLpNorm (fun z => derivativeMagnitude n f (x+z)) 2 volume =
       eLpNorm (derivativeMagnitude n f) 2 volume := by
-    simpa only [Function.comp_def] using eLpNorm_comp_measurePreserving (p := (2 : ℝ≥0∞)) hq.1 htrans
+    simpa only [Function.comp_def] using eLpNorm_comp_measurePreserving (p := (2 : ℝ≥0∞)) hq.aestronglyMeasurable htrans
   rw [he] at hB
   simp only [ENNReal.toReal_mul, ENNReal.coe_toReal] at hB
   rw [SchwartzMap.norm_toLp]
