@@ -6696,8 +6696,15 @@ theorem eLpNorm_wordMagnitude_le (n : ℕ) (f : LiftDomain period → F)
     funext x
     simp [wordMagnitude]
   rw [he]
-  simpa only [eLpNorm_norm] using eLpNorm_sum_le
-    (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+  calc eLpNorm (∑ w : Fin n → Fin 4, fun x => ‖iteratedFieldDerivative period w f x‖) 2
+        (liftMeasure period)
+      ≤ ∑ w : Fin n → Fin 4,
+          eLpNorm (fun x => ‖iteratedFieldDerivative period w f x‖) 2 (liftMeasure period) :=
+        eLpNorm_sum_le (by norm_num : (1 : ℝ≥0∞) ≤ 2)
+    _ = ∑ w : Fin n → Fin 4,
+          eLpNorm (iteratedFieldDerivative period w f) 2 (liftMeasure period) := by
+        refine Finset.sum_congr rfl fun w _ => ?_
+        exact eLpNorm_norm _ (hf w).aestronglyMeasurable
 
 theorem totalMagnitude_memLp (s : ℕ) (f : LiftDomain period → F)
     (hf : ∀ n ≤ s, ∀ w : Fin n → Fin 4,
